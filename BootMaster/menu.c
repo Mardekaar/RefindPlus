@@ -107,13 +107,13 @@ BOOLEAN SubScreenBoot        = FALSE;
 REFIT_MENU_ENTRY MenuEntryNo = {
     L"No",
     TAG_RETURN,
-    1, 0, 0,
+    1, 0,
     NULL, NULL, NULL
 };
 REFIT_MENU_ENTRY MenuEntryYes = {
     L"Yes",
     TAG_RETURN,
-    1, 0, 0,
+    1, 0,
     NULL, NULL, NULL
 };
 
@@ -604,14 +604,14 @@ INTN FindMenuShortcutEntry (
             }
 
             if (Shortcut[0]) {
-                for (i = 0; i < Screen->EntryCount; i++) {
-                    if (Screen->Entries[i]->ShortcutDigit  == Shortcut[0] ||
-                        Screen->Entries[i]->ShortcutLetter == Shortcut[0]
-                    ) {
-                        FoundMatch = TRUE;
-                        break;
-                    }
-                } // for
+                if (Shortcut[0] != 0 && Shortcut[0] != 'O') {
+                    for (i = 0; i < Screen->EntryCount; i++) {
+                        if (Screen->Entries[i]->ShortcutKey == Shortcut[0]) {
+                            FoundMatch = TRUE;
+                            break;
+                        }
+                    } // for
+                }
             }
         } // if/else StrLen (Shortcut) > 1
 

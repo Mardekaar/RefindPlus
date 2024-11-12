@@ -429,8 +429,7 @@ typedef struct _refit_menu_entry {
     CHAR16                    *Title;
     UINTN                      Tag;
     UINTN                      Row;
-    CHAR16                     ShortcutDigit;
-    CHAR16                     ShortcutLetter;
+    CHAR16                     ShortcutKey;
     EG_IMAGE                  *Image;
     EG_IMAGE                  *BadgeImage;
     struct _refit_menu_screen *SubScreen;

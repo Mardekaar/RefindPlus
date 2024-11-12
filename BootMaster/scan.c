@@ -93,6 +93,29 @@ LOADER_LIST {
 };
 
 
+#if REFIT_DEBUG > 0
+static
+BOOLEAN IsToolSet (
+    UINTN    ToolTag
+) {
+    UINTN    i;
+    BOOLEAN  ToolSet;
+
+
+    ToolSet = FALSE;
+    for (i = 0; i < NUM_TOOLS; i++) {
+        if (GlobalConfig.ShowTools[i] == ToolTag) {
+            ToolSet = TRUE;
+
+            break;
+        }
+    }
+
+    return ToolSet;
+} // static BOOLEAN IsToolSet()
+#endif
+
+
 static
 BOOLEAN IsInstallerMac (
     REFIT_VOLUME *Volume
@@ -243,14 +266,13 @@ REFIT_MENU_ENTRY * CopyMenuEntry (
         return NULL;
     }
 
-    NewEntry->Tag            =  Entry->Tag;
-    NewEntry->Row            =  Entry->Row;
-    NewEntry->ShortcutDigit  =  Entry->ShortcutDigit;
-    NewEntry->ShortcutLetter =  Entry->ShortcutLetter;
-    NewEntry->Title          = (Entry->Title      != NULL) ? StrDuplicate   (Entry->Title)      : NULL;
-    NewEntry->Image          = (Entry->Image      != NULL) ? egCopyImage    (Entry->Image)      : NULL;
-    NewEntry->BadgeImage     = (Entry->BadgeImage != NULL) ? egCopyImage    (Entry->BadgeImage) : NULL;
-    NewEntry->SubScreen      = (Entry->SubScreen  != NULL) ? CopyMenuScreen (Entry->SubScreen)  : NULL;
+    NewEntry->Tag         =  Entry->Tag;
+    NewEntry->Row         =  Entry->Row;
+    NewEntry->ShortcutKey =  Entry->ShortcutKey;
+    NewEntry->Title       = (Entry->Title      != NULL) ? StrDuplicate   (Entry->Title)      : NULL;
+    NewEntry->Image       = (Entry->Image      != NULL) ? egCopyImage    (Entry->Image)      : NULL;
+    NewEntry->BadgeImage  = (Entry->BadgeImage != NULL) ? egCopyImage    (Entry->BadgeImage) : NULL;
+    NewEntry->SubScreen   = (Entry->SubScreen  != NULL) ? CopyMenuScreen (Entry->SubScreen)  : NULL;
 
     return NewEntry;
 } // REFIT_MENU_ENTRY * CopyMenuEntry()
@@ -885,7 +907,6 @@ VOID SetLoaderDefaults (
     CHAR16                 *DisplayName;
     CHAR16                 *NoExtension;
     CHAR16                 *VentoyName;
-    CHAR16                  ShortcutLetter;
     BOOLEAN                 GotFlag;
     BOOLEAN                 MacFlag;
     BOOLEAN                 GotUEFI;
@@ -915,10 +936,9 @@ VOID SetLoaderDefaults (
     }
 
     BREAD_CRUMB(L"%a:  3", __func__);
-    ShortcutLetter =     0;
-    TargetName     =  NULL;
-    OSIconName     =  NULL;
-    FoundVentoy    = FALSE;
+    TargetName  =  NULL;
+    OSIconName  =  NULL;
+    FoundVentoy = FALSE;
     if (AllowGraphicsMode) {
         ThisIconName              =  NULL;
         VetVolIcon   = MacFlag    = FALSE;
@@ -1081,8 +1101,7 @@ VOID SetLoaderDefaults (
                     !MyStriCmp (OSIconName, L"CoreServices")
                 ) {
                     BREAD_CRUMB(L"%a:  3a 1b 3b 3a 1", __func__);
-                    ShortcutLetter = OSIconName[0];
-                    ThisIconName   = StrDuplicate (OSIconName);
+                    ThisIconName = StrDuplicate (OSIconName);
                 }
                 else {
                     BREAD_CRUMB(L"%a:  3a 1b 3b 3b 1", __func__);
@@ -1410,8 +1429,7 @@ VOID SetLoaderDefaults (
                 }
 
                 BREAD_CRUMB(L"%a:  5a 1a 2", __func__);
-                Entry->OSType  = 'R';
-                ShortcutLetter = 'R';
+                Entry->OSType = 'R';
             }
             else {
                 BREAD_CRUMB(L"%a:  5a 1b 1", __func__);
@@ -1420,8 +1438,7 @@ VOID SetLoaderDefaults (
                 }
 
                 BREAD_CRUMB(L"%a:  5a 1b 2", __func__);
-                Entry->OSType  = 'M';
-                ShortcutLetter = 'M';
+                Entry->OSType = 'M';
                 Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_OSX;
             }
             BREAD_CRUMB(L"%a:  5a 2", __func__);
@@ -1438,8 +1455,7 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5b 2", __func__);
-            Entry->OSType  = 'W';
-            ShortcutLetter = 'W';
+            Entry->OSType = 'W';
             Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_WINDOWS;
         }
         else if (IsListItemSubstringIn (NameClues, GlobalConfig.LinuxPrefixes)) {
@@ -1476,12 +1492,6 @@ VOID SetLoaderDefaults (
             Entry->OSType =  'L';
 
             BREAD_CRUMB(L"%a:  5c 3", __func__);
-            if (ShortcutLetter == 0) {
-                BREAD_CRUMB(L"%a:  5c 3a 1", __func__);
-                ShortcutLetter = 'L';
-            }
-
-            BREAD_CRUMB(L"%a:  5c 4", __func__);
             Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_LINUX;
         }
         else if (FindSubStr (NameClues, L"grub")) {
@@ -1491,9 +1501,8 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5d 2", __func__);
-            GotFlag        = TRUE;
-            Entry->OSType  =  'G';
-            ShortcutLetter =  'G';
+            GotFlag       = TRUE;
+            Entry->OSType =  'G';
             Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_GRUB;
         }
         else if (MyStriCmp (NameClues, L"opencore")) {
@@ -1525,9 +1534,8 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5g 2", __func__);
-            GotFlag        = TRUE;
-            Entry->OSType  =  'R';
-            ShortcutLetter =  'R';
+            GotFlag       = TRUE;
+            Entry->OSType =  'R';
         }
         else if (FindSubStr (LoaderPath, L"refind")) {
             BREAD_CRUMB(L"%a:  5h 1 - A", __func__);
@@ -1536,9 +1544,8 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5h 2 - A", __func__);
-            GotFlag        = TRUE;
-            Entry->OSType  =  'R';
-            ShortcutLetter =  'R';
+            GotFlag       = TRUE;
+            Entry->OSType =  'R';
         }
         else if (FindSubStr (LoaderPath, L"refit")) {
             BREAD_CRUMB(L"%a:  5i 1 - B", __func__);
@@ -1547,9 +1554,8 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5i 2 - B", __func__);
-            GotFlag        = TRUE;
-            Entry->OSType  =  'R';
-            ShortcutLetter =  'R';
+            GotFlag       = TRUE;
+            Entry->OSType =  'R';
         }
         else if (MyStriCmp (NameClues, L"diags.efi")) {
             BREAD_CRUMB(L"%a:  5j 1", __func__);
@@ -1566,16 +1572,10 @@ VOID SetLoaderDefaults (
             if (GetImage) {
                 MergeUniqueItems (&TmpIconName, L"elilo,linux", L',');
             }
-            GotFlag        = TRUE;
-            Entry->OSType  =  'E';
+            GotFlag       = TRUE;
+            Entry->OSType =  'E';
 
             BREAD_CRUMB(L"%a:  5k 2", __func__);
-            if (ShortcutLetter == 0) {
-                BREAD_CRUMB(L"%a:  5f 2a 1", __func__);
-                ShortcutLetter = 'L';
-            }
-
-            BREAD_CRUMB(L"%a:  5k 3", __func__);
             Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_ELILO;
         }
         else if (MyStriCmp (NameClues, L"xom.efi")) {
@@ -1585,9 +1585,8 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5l 2", __func__);
-            GotFlag        = TRUE;
-            Entry->OSType  =  'X';
-            ShortcutLetter =  'W';
+            GotFlag       = TRUE;
+            Entry->OSType =  'X';
             Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_WINDOWS;
         }
         else if (FindSubStr (NameClues, L"ipxe")) {
@@ -1597,9 +1596,8 @@ VOID SetLoaderDefaults (
             }
 
             BREAD_CRUMB(L"%a:  5m 2", __func__);
-            GotFlag        = TRUE;
-            Entry->OSType  =  'N';
-            ShortcutLetter =  'N';
+            GotFlag       = TRUE;
+            Entry->OSType =  'N';
         }
         BREAD_CRUMB(L"%a:  5a B", __func__);
     }
@@ -1622,15 +1620,6 @@ VOID SetLoaderDefaults (
     }
 
     BREAD_CRUMB(L"%a:  7", __func__);
-    if (ShortcutLetter >= 'a' &&
-        ShortcutLetter <= 'z'
-    ) {
-        BREAD_CRUMB(L"%a:  7a 1", __func__);
-        ShortcutLetter = ShortcutLetter - 'a' + 'A'; // Convert to uppercase
-    }
-
-    BREAD_CRUMB(L"%a:  8", __func__);
-    Entry->me.ShortcutLetter = ShortcutLetter;
     if (GetImage) {
         BREAD_CRUMB(L"%a:  7a 0", __func__);
         if (GotUEFI) {
@@ -2679,8 +2668,8 @@ BOOLEAN ScanLoaderDir (
 
     ALT_LOG(
         1, LOG_LINE_NORMAL,
-        L"Scan for '%s' in '%s' on Volume '%s'",
-        Pattern, Path, Volume->VolName
+        L"Scan for '%s' on Volume '%s' in '%s'",
+        Pattern, Volume->VolName, Path
     );
     #endif
 
@@ -3520,32 +3509,32 @@ VOID ScanEfiFiles (
     } // while
 
 VentoyJump:
-    //BREAD_CRUMB(L"%a:  16", __func__);
+    //BREAD_CRUMB(L"%a:  15", __func__);
     // Create an entry for fallback loaders
     if (ScanFallbackLoader &&
         ShouldScan (Volume, L"EFI\\BOOT") &&
         FileExists (Volume->RootDir, FALLBACK_FULLNAME) &&
         !FilenameIn (Volume, L"EFI\\BOOT", FALLBACK_BASENAME, GlobalConfig.DontScanFiles)
     ) {
-        //BREAD_CRUMB(L"%a:  16a 1", __func__);
+        //BREAD_CRUMB(L"%a:  15a 1", __func__);
         if (FoundVentoy) {
-            //BREAD_CRUMB(L"%a:  16a 1a 1", __func__);
+            //BREAD_CRUMB(L"%a:  15a 1a 1", __func__);
             TmpMsg = L"Instance: Ventoy";
         }
         else {
-            //BREAD_CRUMB(L"%a:  16a 1b 1", __func__);
+            //BREAD_CRUMB(L"%a:  15a 1b 1", __func__);
             TmpMsg = L"Fallback Loader";
         }
 
-        //BREAD_CRUMB(L"%a:  16a 2", __func__);
+        //BREAD_CRUMB(L"%a:  15a 2", __func__);
         DisplayLoader = TRUE;
         Temp = StrDuplicate (FALLBACK_FULLNAME);
         AddLoaderEntry (Temp, TmpMsg, Volume, TRUE, FALSE);
         MY_FREE_POOL(Temp);
-        //BREAD_CRUMB(L"%a:  16a 2", __func__);
+        //BREAD_CRUMB(L"%a:  15a 2", __func__);
     }
 
-    //BREAD_CRUMB(L"%a:  17 - END:- VOID", __func__);
+    //BREAD_CRUMB(L"%a:  16 - END:- VOID", __func__);
     //LOG_DECREMENT();
     //LOG_SEP(L"X");
 } // static VOID ScanEfiFiles()
@@ -3819,7 +3808,7 @@ LOADER_ENTRY * AddToolEntry (
     IN CHAR16       *LoaderPath,
     IN CHAR16       *LoaderTitle,
     IN EG_IMAGE     *Image,
-    IN CHAR16        ShortcutLetter,
+    IN CHAR16        ShortcutKey,
     IN BOOLEAN       UseGraphicsMode
 ) {
     LOADER_ENTRY *Entry;
@@ -3829,14 +3818,14 @@ LOADER_ENTRY * AddToolEntry (
         return NULL;
     }
 
-    Entry->me.Title          = (LoaderTitle != NULL) ? LoaderTitle : StrDuplicate (L"Unknown Tool");
-    Entry->me.Tag            = TAG_TOOL;
-    Entry->me.Row            = 1;
-    Entry->me.ShortcutLetter = ShortcutLetter;
-    Entry->me.Image          = egCopyImage (Image);
-    Entry->LoaderPath        = (LoaderPath != NULL) ? LoaderPath : NULL;
-    Entry->Volume            = Volume;
-    Entry->UseGraphicsMode   = UseGraphicsMode;
+    Entry->me.Title        = (LoaderTitle != NULL) ? LoaderTitle : StrDuplicate (L"Unknown Tool");
+    Entry->me.Tag          = TAG_TOOL;
+    Entry->me.Row          = 1;
+    Entry->me.ShortcutKey  = ShortcutKey;
+    Entry->me.Image        = Image;
+    Entry->LoaderPath      = (LoaderPath != NULL) ? LoaderPath : NULL;
+    Entry->Volume          = Volume;
+    Entry->UseGraphicsMode = UseGraphicsMode;
 
     AddMenuEntry (MainMenu, (REFIT_MENU_ENTRY *) Entry);
 
@@ -4176,27 +4165,64 @@ BOOLEAN FindTool (
     return FoundTool;
 } // static BOOLEAN FindTool()
 
+static
+CHAR16 GetKeyVal (
+    UINTN     OurIndex
+) {
+    CHAR16 KeyVal;
+
+    switch (OurIndex) {
+        case 10:   KeyVal = 'C';   break;
+        case 11:   KeyVal = 'D';   break;
+        case 12:   KeyVal = 'E';   break;
+        case 13:   KeyVal = 'F';   break;
+        case 14:   KeyVal = 'G';   break;
+        case 15:   KeyVal = 'H';   break;
+        case 16:   KeyVal = 'J';   break;
+        case 17:   KeyVal = 'K';   break;
+        case 18:   KeyVal = 'L';   break;
+        case 19:   KeyVal = 'M';   break;
+        case 20:   KeyVal = 'N';   break;
+        case 21:   KeyVal = 'P';   break;
+        case 22:   KeyVal = 'Q';   break;
+        case 23:   KeyVal = 'R';   break;
+        case 24:   KeyVal = 'S';   break;
+        case 25:   KeyVal = 'T';   break;
+        case 26:   KeyVal = 'U';   break;
+        case 27:   KeyVal = 'V';   break;
+        case 28:   KeyVal = 'W';   break;
+        case 29:   KeyVal = 'X';   break;
+        case 30:   KeyVal = 'Y';   break;
+        default:   KeyVal =  0;
+    } // switch
+
+    return KeyVal;
+} // static CHAR16 GetKeyVal()
+
 // Locates boot loaders.
 // NOTE: This assumes that GlobalConfig.LegacyType is correctly set.
 VOID ScanForBootloaders (VOID) {
     UINTN     i;
     UINTN     SetOptions;
+    UINTN     KeyNum;
+    CHAR16    KeyTxt;                // NB: Not Pointer
     CHAR16   *HiddenTags;
     CHAR16   *HiddenLegacy;
     CHAR16   *DontScanItem;
     CHAR16   *OrigDontScanDirs;
     CHAR16   *OrigDontScanFiles;
     CHAR16   *OrigDontScanVolumes;
-    BOOLEAN   DeleteItem;
-    BOOLEAN   ScanForLegacy;
     BOOLEAN   AmendedDontScan;
+    BOOLEAN   ScanForLegacy;
+    BOOLEAN   DeleteItem;
 
     #if REFIT_DEBUG > 0
-    UINTN     KeyNum;
+    UINTN     Specials;
     CHAR16   *MsgStr;
     CHAR16   *LogSection;
     BOOLEAN   LogNewLine;
     BOOLEAN   TmpLevel;
+    BOOLEAN   GotTool;
     #endif
 
     ScanningLoaders = TRUE;
@@ -4502,21 +4528,24 @@ VOID ScanForBootloaders (VOID) {
         GlobalConfig.DontScanDirs = OrigDontScanDirs;
     }
 
-    if (MainMenu->EntryCount == 0) {
-        #if REFIT_DEBUG > 0
-        MsgStr = StrDuplicate (L"Could *NOT* Locate Valid Instance Loaders");
-        TmpLevel = (GlobalConfig.LogLevel == 0) ? TRUE : FALSE;
-        if (TmpLevel) {
-            GlobalConfig.LogLevel = 1;
+    do { // Nested Level 1
+        if (MainMenu->EntryCount == 0) {
+            #if REFIT_DEBUG > 0
+            MsgStr = StrDuplicate (L"Could *NOT* Locate Valid Instance Loaders");
+            TmpLevel = (GlobalConfig.LogLevel == 0) ? TRUE : FALSE;
+            if (TmpLevel) {
+                GlobalConfig.LogLevel = 1;
+            }
+            ALT_LOG(1, LOG_STAR_SEPARATOR, L"%s", MsgStr);
+            if (TmpLevel) {
+                GlobalConfig.LogLevel = 0;
+            }
+            MY_FREE_POOL(MsgStr);
+            #endif
+
+            break;
         }
-        ALT_LOG(1, LOG_STAR_SEPARATOR, L"%s", MsgStr);
-        if (TmpLevel) {
-            GlobalConfig.LogLevel = 0;
-        }
-        MY_FREE_POOL(MsgStr);
-        #endif
-    }
-    else {
+
         // Assign shortcut keys
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_STAR_HEAD_SEP,
@@ -4542,38 +4571,44 @@ VOID ScanForBootloaders (VOID) {
             LOG_MSG("%s:", MsgStr);
             MY_FREE_POOL(MsgStr);
         }
-
-        KeyNum = 0;
         #endif
 
-        do {
+        do { // Nested Level 2
             if (GlobalConfig.DirectBoot) {
                 break;
             }
 
-            for (i = 0; i < MainMenu->EntryCount && MainMenu->Entries[i]->Row == 0; i++) {
-                if (i > 9) {
+            KeyNum = 0;
+            for (i = 0; i < MainMenu->EntryCount; i++) {
+                if (MainMenu->Entries[i]->Row != 0) {
+                    // Only process loaders
+                    continue;
+                }
+
+                if (KeyNum > 8) {
+                    // Hit limit of 9 loaders for this block
+
+                    #if REFIT_DEBUG > 0
+                    // Tag Key 0
+                    MsgStr = StrDuplicate (
+                        L"Set Key '0'          'Reserved'"
+                    );
+                    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+                    LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+                    MY_FREE_POOL(MsgStr);
+                    #endif
+
+                    // Loaders 10 to 31 handled later if present
                     break;
                 }
 
-                if (i < 9) {
-                    #if REFIT_DEBUG > 0
-                    KeyNum = i + 1;
-                    #endif
-
-                    MainMenu->Entries[i]->ShortcutDigit = (CHAR16) ('1' + i);
-                }
-                else { // i == 9
-                    MainMenu->Entries[i]->ShortcutDigit = (CHAR16) ('9' - i);
-
-                    #if REFIT_DEBUG > 0
-                    KeyNum = 0;
-                    #endif
-                }
+                // Set shortcut key (numerical)
+                MainMenu->Entries[i]->ShortcutKey = (CHAR16) ('1' + KeyNum);
+                KeyNum += 1;
 
                 #if REFIT_DEBUG > 0
                 MsgStr = PoolPrint (
-                    L"Set Key '%d' to Run Item:- '%s'",
+                    L"Set Key '%d' to Run - '%s'",
                     KeyNum, MainMenu->Entries[i]->Title
                 );
                 ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
@@ -4583,11 +4618,107 @@ VOID ScanForBootloaders (VOID) {
             }  // for
 
             #if REFIT_DEBUG > 0
+            Specials = 0;
+            GotTool = IsToolSet (TAG_ABOUT);
+            if (GotTool) {
+                ++Specials;
+                MsgStr = PoolPrint (
+                    L"Set Key 'A' to Run * '%s'",
+                    LABEL_ABOUT
+                );
+            }
+            else {
+                // Use GotTool as proxy here
+                if (MainMenu->EntryCount > 9) {
+                    // Set 'True' if EntryCount is high enough
+                    GotTool = TRUE;
+                }
+                else {
+                    // Set 'True' if Shutdown tool is set
+                    GotTool = IsToolSet (TAG_SHUTDOWN);
+                }
+
+                if (GotTool) {
+                    MsgStr = StrDuplicate (
+                        L"Set Key 'A'          'Reserved'"
+                    );
+                }
+            }
+            ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+            LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+            MY_FREE_POOL(MsgStr);
+            #endif
+
+            do { // Nested Level 3
+                if (MainMenu->EntryCount < 10) {
+                    break;
+                }
+
+                KeyNum = 9;
+                for (i = 9; i < MainMenu->EntryCount; i++) {
+                    if (MainMenu->Entries[i]->Row != 0) {
+                        // Only process loaders
+                        continue;
+                    }
+
+                    if (KeyNum > 21) {
+                        // Hit limit for loader shortcuts
+                        break;
+                    }
+
+                    // Set shortcut key (alphabetical)
+                    KeyNum += 1;
+                    KeyTxt  = GetKeyVal (KeyNum);
+                    if (KeyTxt != 0) {
+                        MainMenu->Entries[i]->ShortcutKey = KeyTxt;
+
+                        #if REFIT_DEBUG > 0
+                        if (KeyTxt == 'C' || KeyTxt == 'J' || KeyTxt == 'P') {
+                            MsgStr = PoolPrint (
+                                L"Set Key '%s'          'Reserved'",
+                                (KeyTxt == 'C')
+                                    ? L"B"
+                                    : (KeyTxt == 'J')
+                                        ? L"I" : L"O"
+                            );
+                            ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+                            LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+                            MY_FREE_POOL(MsgStr);
+                        }
+
+                        MsgStr = PoolPrint (
+                            L"Set Key '%c' to Run - '%s'",
+                            KeyTxt, MainMenu->Entries[i]->Title
+                        );
+                        ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+                        LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+                        MY_FREE_POOL(MsgStr);
+                        #endif
+                    }
+                }  // for
+
+                #if REFIT_DEBUG > 0
+                GotTool = IsToolSet (TAG_SHUTDOWN);
+                if (GotTool) {
+                    ++Specials;
+                    MsgStr = PoolPrint (
+                        L"Set Key 'Z' to Run * '%s'",
+                        LABEL_SHUTDOWN
+                    );
+                    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+                    LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+                    MY_FREE_POOL(MsgStr);
+                }
+                #endif
+            } while (0); // This 'loop' only runs once ... Nested Level 3
+
+            #if REFIT_DEBUG > 0
             MsgStr = PoolPrint (
-                L"Assigned Shortcut Key%s to %d of %d Instance Loader%s",
-                (i == 1) ? L"" : L"s",
-                i, MainMenu->EntryCount,
-                (MainMenu->EntryCount == 1) ? L"" : L"s"
+                L"Assigned Shortcut Key%s to %d of %d Applicable Item%s",
+                ((i + Specials) == 1) ? L"" : L"s",
+                (i + Specials),
+                (MainMenu->EntryCount  + Specials),
+                ((MainMenu->EntryCount + Specials) == 1) ? L"" : L"s"
             );
             LOG_MSG("\n\n");
             LOG_MSG("INFO: %s", MsgStr);
@@ -4595,8 +4726,8 @@ VOID ScanForBootloaders (VOID) {
             LOG_MSG("\n\n");
             MY_FREE_POOL(MsgStr);
             #endif
-        } while (0); // This 'loop' only runs once
-    } // if/else MainMenu->EntryCount
+        } while (0); // This 'loop' only runs once ... Nested Level 2
+    } while (0); // This 'loop' only runs once ... Nested Level 1
 
     // Wait for user acknowledgement if there were errors
     FinishTextScreen (FALSE);
@@ -4764,12 +4895,14 @@ VOID ScanForTools (VOID) {
                 if (MenuEntryPreCleanNvram) {
                     FoundTool = TRUE;
 
-                    MenuEntryPreCleanNvram->Title          = StrDuplicate (ToolName);
-                    MenuEntryPreCleanNvram->Tag            = TAG_CLEAN_NVRAM;
-                    MenuEntryPreCleanNvram->Row            = 1;
-                    MenuEntryPreCleanNvram->ShortcutDigit  = 0;
-                    MenuEntryPreCleanNvram->ShortcutLetter = 0;
-                    MenuEntryPreCleanNvram->Image          = BuiltinIcon (BUILTIN_ICON_TOOL_NVRAMCLEAN);
+                    MenuEntryPreCleanNvram->Title       = StrDuplicate (ToolName);
+                    MenuEntryPreCleanNvram->Tag         = TAG_CLEAN_NVRAM;
+                    MenuEntryPreCleanNvram->Row         = 1;
+                    MenuEntryPreCleanNvram->ShortcutKey = 0;
+
+                    MenuEntryPreCleanNvram->Image = BuiltinIcon (
+                        BUILTIN_ICON_TOOL_NVRAMCLEAN
+                    );
 
                     AddMenuEntry (MainMenu, MenuEntryPreCleanNvram);
 
@@ -4796,12 +4929,14 @@ VOID ScanForTools (VOID) {
                 if (MenuEntryShutdown) {
                     FoundTool = TRUE;
 
-                    MenuEntryShutdown->Title          = StrDuplicate (ToolName);
-                    MenuEntryShutdown->Tag            = TAG_SHUTDOWN;
-                    MenuEntryShutdown->Row            =  1;
-                    MenuEntryShutdown->ShortcutDigit  =  0;
-                    MenuEntryShutdown->ShortcutLetter = 'U';
-                    MenuEntryShutdown->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_SHUTDOWN);
+                    MenuEntryShutdown->Title       = StrDuplicate (ToolName);
+                    MenuEntryShutdown->Tag         = TAG_SHUTDOWN;
+                    MenuEntryShutdown->Row         =  1;
+                    MenuEntryShutdown->ShortcutKey = 'Z';
+
+                    MenuEntryShutdown->Image = BuiltinIcon (
+                        BUILTIN_ICON_FUNC_SHUTDOWN
+                    );
 
                     AddMenuEntry (MainMenu, MenuEntryShutdown);
 
@@ -4828,12 +4963,14 @@ VOID ScanForTools (VOID) {
                 if (MenuEntryReset) {
                     FoundTool = TRUE;
 
-                    MenuEntryReset->Title          = StrDuplicate (ToolName);
-                    MenuEntryReset->Tag            = TAG_REBOOT;
-                    MenuEntryReset->Row            =  1;
-                    MenuEntryReset->ShortcutDigit  =  0;
-                    MenuEntryReset->ShortcutLetter = 'R';
-                    MenuEntryReset->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_RESET);
+                    MenuEntryReset->Title       = StrDuplicate (ToolName);
+                    MenuEntryReset->Tag         = TAG_REBOOT;
+                    MenuEntryReset->Row         = 1;
+                    MenuEntryReset->ShortcutKey = 0;
+
+                    MenuEntryReset->Image = BuiltinIcon (
+                        BUILTIN_ICON_FUNC_RESET
+                    );
 
                     AddMenuEntry (MainMenu, MenuEntryReset);
 
@@ -4860,12 +4997,14 @@ VOID ScanForTools (VOID) {
                 if (MenuEntryAbout) {
                     FoundTool = TRUE;
 
-                    MenuEntryAbout->Title          = StrDuplicate (ToolName);
-                    MenuEntryAbout->Tag            = TAG_ABOUT;
-                    MenuEntryAbout->Row            =  1;
-                    MenuEntryAbout->ShortcutDigit  =  0;
-                    MenuEntryAbout->ShortcutLetter = 'A';
-                    MenuEntryAbout->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_ABOUT);
+                    MenuEntryAbout->Title       = StrDuplicate (ToolName);
+                    MenuEntryAbout->Tag         = TAG_ABOUT;
+                    MenuEntryAbout->Row         =  1;
+                    MenuEntryAbout->ShortcutKey = 'A';
+
+                    MenuEntryAbout->Image = BuiltinIcon (
+                        BUILTIN_ICON_FUNC_ABOUT
+                    );
 
                     AddMenuEntry (MainMenu, MenuEntryAbout);
 
@@ -4892,12 +5031,14 @@ VOID ScanForTools (VOID) {
                 if (MenuEntryExit) {
                     FoundTool = TRUE;
 
-                    MenuEntryExit->Title          = StrDuplicate (ToolName);
-                    MenuEntryExit->Tag            = TAG_EXIT;
-                    MenuEntryExit->Row            = 1;
-                    MenuEntryExit->ShortcutDigit  = 0;
-                    MenuEntryExit->ShortcutLetter = 0;
-                    MenuEntryExit->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_EXIT);
+                    MenuEntryExit->Title       = StrDuplicate (ToolName);
+                    MenuEntryExit->Tag         = TAG_EXIT;
+                    MenuEntryExit->Row         = 1;
+                    MenuEntryExit->ShortcutKey = 0;
+
+                    MenuEntryExit->Image = BuiltinIcon (
+                        BUILTIN_ICON_FUNC_EXIT
+                    );
 
                     AddMenuEntry (MainMenu, MenuEntryExit);
 
@@ -4952,12 +5093,14 @@ VOID ScanForTools (VOID) {
                         break;
                     }
 
-                    MenuEntryHiddenTags->Title          = StrDuplicate (ToolName);
-                    MenuEntryHiddenTags->Tag            = TAG_HIDDEN;
-                    MenuEntryHiddenTags->Row            = 1;
-                    MenuEntryHiddenTags->ShortcutDigit  = 0;
-                    MenuEntryHiddenTags->ShortcutLetter = 0;
-                    MenuEntryHiddenTags->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_HIDDEN);
+                    MenuEntryHiddenTags->Title       = StrDuplicate (ToolName);
+                    MenuEntryHiddenTags->Tag         = TAG_HIDDEN;
+                    MenuEntryHiddenTags->Row         = 1;
+                    MenuEntryHiddenTags->ShortcutKey = 0;
+
+                    MenuEntryHiddenTags->Image = BuiltinIcon (
+                        BUILTIN_ICON_FUNC_HIDDEN
+                    );
 
                     AddMenuEntry (MainMenu, MenuEntryHiddenTags);
 
@@ -5002,12 +5145,14 @@ VOID ScanForTools (VOID) {
                             #endif
                         }
                         else {
-                            MenuEntryFirmware->Title          = StrDuplicate (ToolName);
-                            MenuEntryFirmware->Tag            = TAG_FIRMWARE;
-                            MenuEntryFirmware->Row            = 1;
-                            MenuEntryFirmware->ShortcutDigit  = 0;
-                            MenuEntryFirmware->ShortcutLetter = 0;
-                            MenuEntryFirmware->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_FIRMWARE);
+                            MenuEntryFirmware->Title       = StrDuplicate (ToolName);
+                            MenuEntryFirmware->Tag         = TAG_FIRMWARE;
+                            MenuEntryFirmware->Row         = 1;
+                            MenuEntryFirmware->ShortcutKey = 0;
+
+                            MenuEntryFirmware->Image = BuiltinIcon (
+                                BUILTIN_ICON_FUNC_FIRMWARE
+                            );
 
                             AddMenuEntry (MainMenu, MenuEntryFirmware);
 
@@ -5495,12 +5640,14 @@ VOID ScanForTools (VOID) {
                     return;
                 }
 
-                MenuEntryRotateCsr->Title          = StrDuplicate (ToolName);
-                MenuEntryRotateCsr->Tag            = TAG_CSR_ROTATE;
-                MenuEntryRotateCsr->Row            = 1;
-                MenuEntryRotateCsr->ShortcutDigit  = 0;
-                MenuEntryRotateCsr->ShortcutLetter = 0;
-                MenuEntryRotateCsr->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_CSR_ROTATE);
+                MenuEntryRotateCsr->Title       = StrDuplicate (ToolName);
+                MenuEntryRotateCsr->Tag         = TAG_CSR_ROTATE;
+                MenuEntryRotateCsr->Row         = 1;
+                MenuEntryRotateCsr->ShortcutKey = 0;
+
+                MenuEntryRotateCsr->Image = BuiltinIcon (
+                    BUILTIN_ICON_FUNC_CSR_ROTATE
+                );
 
                 AddMenuEntry (MainMenu, MenuEntryRotateCsr);
 
@@ -5523,12 +5670,14 @@ VOID ScanForTools (VOID) {
                     return;
                 }
 
-                MenuEntryInstall->Title          = StrDuplicate (ToolName);
-                MenuEntryInstall->Tag            = TAG_INSTALL;
-                MenuEntryInstall->Row            = 1;
-                MenuEntryInstall->ShortcutDigit  = 0;
-                MenuEntryInstall->ShortcutLetter = 0;
-                MenuEntryInstall->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_INSTALL);
+                MenuEntryInstall->Title       = StrDuplicate (ToolName);
+                MenuEntryInstall->Tag         = TAG_INSTALL;
+                MenuEntryInstall->Row         = 1;
+                MenuEntryInstall->ShortcutKey = 0;
+
+                MenuEntryInstall->Image = BuiltinIcon (
+                    BUILTIN_ICON_FUNC_INSTALL
+                );
 
                 AddMenuEntry (MainMenu, MenuEntryInstall);
 
@@ -5551,12 +5700,14 @@ VOID ScanForTools (VOID) {
                     return;
                 }
 
-                MenuEntryBootorder->Title          = StrDuplicate (ToolName);
-                MenuEntryBootorder->Tag            = TAG_BOOTORDER;
-                MenuEntryBootorder->Row            = 1;
-                MenuEntryBootorder->ShortcutDigit  = 0;
-                MenuEntryBootorder->ShortcutLetter = 0;
-                MenuEntryBootorder->Image          = BuiltinIcon (BUILTIN_ICON_FUNC_BOOTORDER);
+                MenuEntryBootorder->Title       = StrDuplicate (ToolName);
+                MenuEntryBootorder->Tag         = TAG_BOOTORDER;
+                MenuEntryBootorder->Row         = 1;
+                MenuEntryBootorder->ShortcutKey = 0;
+
+                MenuEntryBootorder->Image = BuiltinIcon (
+                    BUILTIN_ICON_FUNC_BOOTORDER
+                );
 
                 AddMenuEntry (MainMenu, MenuEntryBootorder);
 

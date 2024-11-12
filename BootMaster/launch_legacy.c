@@ -746,19 +746,14 @@ VOID AddLegacyEntry (
     REFIT_MENU_SCREEN *SubScreen;
     CHAR16            *VolDesc;
     CHAR16            *LegacyTitle;
-    CHAR16             ShortcutLetter;
 
 
-    ShortcutLetter = 0;
     if (LoaderTitle == NULL) {
         if (Volume->OSName == NULL) {
             LoaderTitle = L"Legacy Bootcode";
         }
         else {
             LoaderTitle = Volume->OSName;
-            if (LoaderTitle[0] == 'W' || LoaderTitle[0] == 'L') {
-                ShortcutLetter = LoaderTitle[0];
-            }
         }
     }
 
@@ -796,18 +791,19 @@ VOID AddLegacyEntry (
 
     SetVolumeBadgeIcon (Volume);
 
-    Entry->me.Row            = 0;
-    Entry->Enabled           = TRUE;
-    Entry->me.Tag            = TAG_LEGACY;
-    Entry->me.Title          = LegacyTitle;
-    Entry->me.SubScreen      = NULL; // Initial Setting
-    Entry->me.ShortcutLetter = ShortcutLetter;
-    Entry->me.Image          = LoadOSIcon (Volume->OSIconName, L"legacy", FALSE);
-    Entry->Volume            = CopyVolume (Volume);
-    Entry->me.BadgeImage     = egCopyImage (Volume->VolBadgeImage);
-    Entry->LoadOptions       = (Volume->DiskKind == DISK_KIND_OPTICAL)
-                               ? L"CD"
-                               : ((Volume->DiskKind == DISK_KIND_EXTERNAL) ? L"USB" : L"HD");
+    Entry->me.Row         = 0;
+    Entry->Enabled        = TRUE;
+    Entry->me.Tag         = TAG_LEGACY;
+    Entry->me.Title       = LegacyTitle;
+    Entry->me.SubScreen   = NULL; // Initial Setting
+    Entry->me.ShortcutKey = 0;
+    Entry->me.Image       = LoadOSIcon (Volume->OSIconName, L"legacy", FALSE);
+    Entry->Volume         = CopyVolume (Volume);
+    Entry->me.BadgeImage  = egCopyImage (Volume->VolBadgeImage);
+    Entry->LoadOptions    = (Volume->DiskKind == DISK_KIND_OPTICAL)
+                            ? L"CD"
+                            : (Volume->DiskKind == DISK_KIND_EXTERNAL)
+                                ? L"USB" : L"HD";
 
     #if REFIT_DEBUG > 0
     LOG_MSG(
@@ -927,10 +923,10 @@ VOID AddLegacyEntryUEFI (
     );
     #endif
 
-    Entry->me.Row            = 0;
-    Entry->me.Tag            = TAG_LEGACY_UEFI;
-    Entry->me.SubScreen      = NULL; // Initial Setting
-    Entry->me.ShortcutLetter = 0;
+    Entry->me.Row         = 0;
+    Entry->me.Tag         = TAG_LEGACY_UEFI;
+    Entry->me.SubScreen   = NULL; // Initial Setting
+    Entry->me.ShortcutKey = 0;
     if (GlobalConfig.HelpIcon) {
         Entry->me.Image = egFindIcon (
             L"os_legacy",

@@ -1,6 +1,16 @@
 0.14.2.AB (PRE-RELEASE):
 -----------------------
-- PENDING
+- Improves `Shortcut Key` Handling
+  * No longer allocates keys based on the operating system type/name
+    - There was no way of knowing what would be loaded in many cases
+  * No longer allocates keys to tools with the exceptions below
+    - Key: `A` is allocated to `About Refindplus`
+    - Key: `Z` is allocated to `System Shutdown` (Previously `U`)
+  * Keys are now basically allocated on display position
+    - Order: `1, 2 ... 9, C ... X, Y` (30 keys)
+    - Key `0` is an internally reserved key
+    - Keys `A` and `Z` are used for tools
+    - Keys `B`, `I` and `O` are not used
 
 
 0.14.2.AA (08 OCT 2024):
