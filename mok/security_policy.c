@@ -5,6 +5,12 @@
  *
  * Install and remove a platform security2 override policy
  */
+ /*
+  * Modified for RefindPlus
+  * Copyright (c) 2024 Dayo Akanji (sf.net/u/dakanji/profile)
+  *
+  * Modifications distributed under the preceding terms.
+  */
 
 #include <global.h>
 
@@ -125,7 +131,7 @@ MSABI EFI_STATUS security_policy_authentication (
 
     DevPathStr = DevicePathToStr(DevPath);
 
-    Status = simple_file_open_by_handle(h, DevPathStr, &f, EFI_FILE_MODE_READ);
+    Status = simple_file_open_by_handle(h, DevPathStr, &f, RefitReadOnly);
     MY_FREE_POOL(DevPathStr);
     if (EFI_ERROR(Status)) {
         goto out;

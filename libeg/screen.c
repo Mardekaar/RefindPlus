@@ -92,15 +92,6 @@ UINTN   SelectedGOP    =   0;
 UINTN   egScreenWidth  = 800;
 UINTN   egScreenHeight = 600;
 
-// DA-TAG: Code within 'MAKEWITH_TIANO' block below is directly from OpenCore
-//         Licensed under the BSD 3 license
-//         Added directly for control
-#ifdef __MAKEWITH_TIANO
-// DA-TAG: Limit to TianoCore - START
-typedef struct {
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
-  EFI_UGA_DRAW_PROTOCOL          Uga;
-} RP_UGA_PROTOCOL;
 
 /**
   The ForceVideoMode function below was adapted from UefiSeven
@@ -136,6 +127,17 @@ EFI_STATUS ForceVideoMode (
     HorizontalResolution = (UINT32) TargetWidth;
     VerticalResolution   = (UINT32) TargetHeight;
 
+    GOPDraw->Mode->Info->HorizontalResolution = HorizontalResolution;
+    GOPDraw->Mode->Info->VerticalResolution   = VerticalResolution;
+
+    if (AppleFirmware) {
+        GOPDraw->Mode->FrameBufferSize = 0;
+        GOPDraw->Mode->FrameBufferBase = 0;
+        GOPDraw->Mode->Info->PixelsPerScanLine = HorizontalResolution;
+
+        return EFI_SUCCESS;
+    }
+
     ScanlineScale = 1;
     while ((MinPixelsLine * ScanlineScale) < TargetWidth) {
         ScanlineScale++;
@@ -153,13 +155,98 @@ EFI_STATUS ForceVideoMode (
     }
     FrameBufferSize = PixelsPerScanLine * 4 * VerticalResolution;
 
-    GOPDraw->Mode->Info->HorizontalResolution = HorizontalResolution;
-    GOPDraw->Mode->Info->VerticalResolution   = VerticalResolution;
-    GOPDraw->Mode->Info->PixelsPerScanLine    = PixelsPerScanLine;
-    GOPDraw->Mode->FrameBufferSize            = FrameBufferSize;
+    GOPDraw->Mode->Info->PixelsPerScanLine = PixelsPerScanLine;
+    GOPDraw->Mode->FrameBufferSize         = FrameBufferSize;
 
     return EFI_SUCCESS;
-} // EFI_STATUS ForceVideoMode()
+} // static EFI_STATUS ForceVideoMode()
+
+
+
+// DA-TAG: Code within 'MAKEWITH_TIANO' block derived from OpenCore
+//         Licensed under the BSD-3 license
+//         Added directly for control
+#ifdef __MAKEWITH_TIANO
+// DA-TAG: Limit to TianoCore - START
+
+typedef struct {
+    EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
+    EFI_UGA_DRAW_PROTOCOL          Uga;
+} RP_UGA_PROTOCOL;
+
+
+// When the GOP mode is changed on some firmware,
+// "SimpleTextOut" drivers must be reconnected
+// as text will not be produced otherwise.
+static
+VOID ReconnectTextOut (VOID) {
+    EFI_STATUS  Status;
+    UINTN       Index;
+    UINTN       HandleCount;
+    EFI_HANDLE *HandleBuffer;
+
+
+    Status = REFIT_CALL_5_WRAPPER(
+        gBS->LocateHandleBuffer, ByProtocol,
+        &gEfiSimpleTextOutProtocolGuid, NULL,
+        &HandleCount, &HandleBuffer
+    );
+    if (EFI_ERROR (Status)) {
+        return;
+    }
+
+    for (Index = 0; Index < HandleCount; ++Index) {
+        Status = REFIT_CALL_3_WRAPPER(
+            gBS->DisconnectController, HandleBuffer[Index],
+            NULL, NULL
+        );
+    }
+
+    for (Index = 0; Index < HandleCount; ++Index) {
+        Status = REFIT_CALL_4_WRAPPER(
+            gBS->ConnectController, HandleBuffer[Index],
+            NULL, NULL, TRUE
+        );
+    }
+
+    MY_FREE_POOL(HandleBuffer);
+} // static VOID ReconnectTextOut()
+
+// Sets mode via GOP protocol and
+// reconnects simpletextout drivers
+static
+EFI_STATUS GopSetModeAndReconnectTextOut (
+    IN UINT32 ModeNumber
+) {
+    #if REFIT_DEBUG > 0
+    CHAR16     *MsgStr;
+    #endif
+
+    EFI_STATUS  Status;
+
+
+    if (GOPDraw == NULL) {
+        return EFI_UNSUPPORTED;
+    }
+
+    Status = REFIT_CALL_2_WRAPPER(GOPDraw->SetMode, GOPDraw, ModeNumber);
+
+    #if REFIT_DEBUG > 0
+    MsgStr = PoolPrint (L"Switch Mode to GOP Mode[%02d] ... %r", ModeNumber, Status);
+    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+    LOG_MSG("%s", MsgStr);
+    LOG_MSG("\n\n");
+    MY_FREE_POOL(MsgStr);
+    #endif
+
+    if (EFI_ERROR (Status)) {
+        return Status;
+    }
+
+    ReconnectTextOut();
+
+    return EFI_SUCCESS;
+} // static EFI_STATUS GopSetModeAndReconnectTextOut()
 
 static
 EFI_STATUS RefitSetConsoleResolutionForProtocol (
@@ -242,6 +329,8 @@ EFI_STATUS RefitSetConsoleResolutionForProtocol (
     // Set new graphics mode.
     Status = GraphicsOutput->SetMode (GraphicsOutput, (UINT32) ModeNumber);
     if (!EFI_ERROR(Status)) {
+        ReconnectTextOut();
+
         egScreenHeight = GraphicsOutput->Mode->Info->VerticalResolution;
         egScreenWidth  = GraphicsOutput->Mode->Info->HorizontalResolution;
     }
@@ -354,7 +443,7 @@ EFI_STATUS RefitPassUgaThrough (VOID) {
     EFI_UGA_DRAW_PROTOCOL          *UgaDraw;
     EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
 
-    // DA-TAG: UGAPassThru is currently only for macOS 10.4
+    // DA-TAG: UGAPassThru is currently only for Mac OS 10.4
     //         As a side note from OpenCore notes...
     //         MacPro5,1 has 2 GOP protocols:
     //           - for the GPU
@@ -424,16 +513,20 @@ EFI_STATUS RefitPassUgaThrough (VOID) {
 
     return ReturnStatus;
 } // static EFI_STATUS RefitPassUgaThrough()
+
 // DA-TAG: Limit to TianoCore - END
 #endif
 
+
+
 // DA-TAG: Investigate This
-//         Code within 'MAKEWITH_TIANO' block below is directly from OpenCore
-//         Licensed under the BSD 3 license
+//         Code within 'MAKEWITH_TIANO' block derived from OpenCore
+//         Licensed under the BSD-3 license
 //         Added directly as missing in OpenCorePkg version in RefindPlusUDK
 //         Potentially hook directly if/when OpenCorePkg is updated
 #ifdef __MAKEWITH_TIANO
 // DA-TAG: Limit to TianoCore - START
+
 typedef struct {
   EFI_UGA_DRAW_PROTOCOL           *Uga;
   EFI_GRAPHICS_OUTPUT_PROTOCOL     GraphicsOutput;
@@ -671,6 +764,7 @@ EFI_STATUS RefitProvideGopPassThrough (
 
     return Status;
 } // static EFI_STATUS RefitProvideGopPassThrough()
+
 // DA-TAG: Limit to TianoCore - END
 #endif
 
@@ -901,7 +995,7 @@ BOOLEAN SupplyConsoleGop (
 
         #if REFIT_DEBUG > 0
         LOG_MSG("%s ConOut GOP:", (FixGOP) ? L"Replace" : L"Provide");
-        LOG_MSG("%s      RefitCheckGOP:- '%r'", OffsetNext, Status);
+        LOG_MSG("%s       RefitVetGOP:- '%r'", OffsetNext, Status);
         #endif
 
         if (!EFI_ERROR(Status)) {
@@ -909,7 +1003,7 @@ BOOLEAN SupplyConsoleGop (
             Status = OcProvideConsoleGop (TRUE);
 
             #if REFIT_DEBUG > 0
-            LOG_MSG("%s   SetConsoleOutGOP:- '%r'", OffsetNext, Status);
+            LOG_MSG("%s      GetConOutGOP:- '%r'", OffsetNext, Status);
             #endif
 
             if (!EFI_ERROR(Status)) {
@@ -919,7 +1013,7 @@ BOOLEAN SupplyConsoleGop (
                 );
 
                 #if REFIT_DEBUG > 0
-                LOG_MSG("%s  HandleProtocolGOP:- '%r'", OffsetNext, Status);
+                LOG_MSG("%s     CheckStartGOP:- '%r'", OffsetNext, Status);
                 #endif
 
                 if (!EFI_ERROR(Status)) {
@@ -937,6 +1031,7 @@ BOOLEAN SupplyConsoleGop (
     return ValueValidGOP;
 } // static BOOLEAN SupplyConsoleGop()
 
+static
 EFI_STATUS egDumpGOPVideoModes (VOID) {
     #if REFIT_DEBUG > 0
     UINT32     ModeLog;
@@ -1100,37 +1195,7 @@ EFI_STATUS egDumpGOPVideoModes (VOID) {
     }
 
     return Status;
-} // EFI_STATUS egDumpGOPVideoModes()
-
-//
-// Sets mode via GOP protocol, and reconnects simple text out drivers
-//
-static
-EFI_STATUS GopSetModeAndReconnectTextOut (
-    IN UINT32 ModeNumber
-) {
-    #if REFIT_DEBUG > 0
-    CHAR16     *MsgStr;
-    #endif
-
-    EFI_STATUS  Status;
-
-
-    if (GOPDraw == NULL) {
-        return EFI_UNSUPPORTED;
-    }
-
-    Status = REFIT_CALL_2_WRAPPER(GOPDraw->SetMode, GOPDraw, ModeNumber);
-    #if REFIT_DEBUG > 0
-    MsgStr = PoolPrint (L"Switch Mode to GOP Mode[%02d] ... %r", ModeNumber, Status);
-    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
-    LOG_MSG("%s", MsgStr);
-    LOG_MSG("\n\n");
-    MY_FREE_POOL(MsgStr);
-    #endif
-
-    return Status;
-} // static EFI_STATUS GopSetModeAndReconnectTextOut()
+} // static EFI_STATUS egDumpGOPVideoModes()
 
 static
 EFI_STATUS egSetGopMode (
@@ -1369,11 +1434,6 @@ EFI_STATUS egSetMaxResolution (VOID) {
     return Status;
 } // static EFI_STATUS egSetMaxResolution()
 
-
-//
-// Screen handling
-//
-
 // Make the necessary system calls to identify the current graphics mode.
 // Stores the results in the file-global variables egScreenWidth,
 // egScreenHeight, and egHasGraphics. The first two of these will be
@@ -1411,52 +1471,6 @@ VOID egDetermineScreenSize (VOID) {
         }
     }
 } // static VOID egDetermineScreenSize()
-
-UINTN egCountAppleFramebuffers (VOID) {
-    EFI_STATUS                       Status;
-    UINTN                            HandleCount;
-    EFI_GUID                         AppleFramebufferInfoProtocolGuid = APPLE_FRAMEBUFFER_INFO_PROTOCOL_GUID;
-    EFI_HANDLE                      *HandleBuffer;
-    APPLE_FRAMEBUFFER_INFO_PROTOCOL *FramebufferInfo;
-
-
-    if (!AppleFirmware) {
-        return 0;
-    }
-
-    Status = LibLocateProtocol (&AppleFramebufferInfoProtocolGuid, (VOID *) &FramebufferInfo);
-    if (EFI_ERROR(Status)) {
-        return 0;
-    }
-
-    HandleBuffer = NULL;
-    Status = REFIT_CALL_5_WRAPPER(
-        gBS->LocateHandleBuffer, ByProtocol,
-        &AppleFramebufferInfoProtocolGuid, NULL,
-        &HandleCount, &HandleBuffer
-    );
-    if (EFI_ERROR(Status)) {
-        HandleCount = 0;
-    }
-
-    MY_FREE_POOL(HandleBuffer);
-
-    return HandleCount;
-} // UINTN egCountAppleFramebuffers()
-
-VOID egGetScreenSize (
-    OUT UINTN *ScreenWidth,
-    OUT UINTN *ScreenHeight
-) {
-    egDetermineScreenSize();
-
-    if (ScreenWidth != NULL) {
-        *ScreenWidth = egScreenWidth;
-    }
-    if (ScreenHeight != NULL) {
-        *ScreenHeight = egScreenHeight;
-    }
-} // VOID egGetScreenSize()
 
 static
 VOID egInitConsoleControl (VOID) {
@@ -1558,6 +1572,52 @@ VOID LogUGADrawExit (
     LOG_MSG("%s  - %s", OffsetNext, MsgStr);
     #endif
 } // static VOID LogUGADrawExit()
+
+UINTN egCountAppleFramebuffers (VOID) {
+    EFI_STATUS                       Status;
+    UINTN                            HandleCount;
+    EFI_GUID                         AppleFramebufferInfoProtocolGuid = APPLE_FRAMEBUFFER_INFO_PROTOCOL_GUID;
+    EFI_HANDLE                      *HandleBuffer;
+    APPLE_FRAMEBUFFER_INFO_PROTOCOL *FramebufferInfo;
+
+
+    if (!AppleFirmware) {
+        return 0;
+    }
+
+    Status = LibLocateProtocol (&AppleFramebufferInfoProtocolGuid, (VOID *) &FramebufferInfo);
+    if (EFI_ERROR(Status)) {
+        return 0;
+    }
+
+    HandleBuffer = NULL;
+    Status = REFIT_CALL_5_WRAPPER(
+        gBS->LocateHandleBuffer, ByProtocol,
+        &AppleFramebufferInfoProtocolGuid, NULL,
+        &HandleCount, &HandleBuffer
+    );
+    if (EFI_ERROR(Status)) {
+        HandleCount = 0;
+    }
+
+    MY_FREE_POOL(HandleBuffer);
+
+    return HandleCount;
+} // UINTN egCountAppleFramebuffers()
+
+VOID egGetScreenSize (
+    OUT UINTN *ScreenWidth,
+    OUT UINTN *ScreenHeight
+) {
+    egDetermineScreenSize();
+
+    if (ScreenWidth != NULL) {
+        *ScreenWidth = egScreenWidth;
+    }
+    if (ScreenHeight != NULL) {
+        *ScreenHeight = egScreenHeight;
+    }
+} // VOID egGetScreenSize()
 
 BOOLEAN egInitUGADraw (
     BOOLEAN LogOutput
@@ -2527,7 +2587,6 @@ BOOLEAN egSetScreenSize (
                 ModeNum
             );
             #endif
-
         }
         else {
             #if REFIT_DEBUG > 0
@@ -2596,6 +2655,8 @@ BOOLEAN egSetScreenSize (
     } // if/else *ScreenHeight == 0
 
     if (ModeSet) {
+        ReconnectTextOut();
+
         egScreenWidth  = *ScreenWidth;
         egScreenHeight = *ScreenHeight;
 
@@ -2750,6 +2811,8 @@ BOOLEAN egSetTextMode (
         #if REFIT_DEBUG > 0
         LOG_MSG("\n");
         #endif
+
+        ReconnectTextOut();
 
         return TRUE;
     }

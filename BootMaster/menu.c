@@ -163,7 +163,7 @@ VOID InitSelection (VOID) {
 
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_BLANK_LINE_SEP, L"X");
-    ALT_LOG(1, LOG_LINE_NORMAL, L"Handle Default Selection Image:- 'Small'");
+    ALT_LOG(1, LOG_LINE_NORMAL, L"Handle Selection Background File:- 'Small'");
     #endif
 
     // Load small selection image
@@ -187,7 +187,7 @@ VOID InitSelection (VOID) {
         ) {
             #if REFIT_DEBUG > 0
             MsgStr = PoolPrint (
-                L"Dropped Custom Small Selection Image ... %d x %d Exceeds %d x %d",
+                L"Discarded Custom Selection Image:- 'Small ... %d x %d Exceeds %d x %d'",
                 TempSmallImage->Height, TempSmallImage->Width,
                 MaxAllowedSize, MaxAllowedSize
             );
@@ -207,19 +207,26 @@ VOID InitSelection (VOID) {
         );
     }
 
-    if (TempSmallImage->Width  == TileSizes[1] &&
-        TempSmallImage->Height == TileSizes[1]
+    if (TempSmallImage->Width  != TileSizes[1] ||
+        TempSmallImage->Height != TileSizes[1]
     ) {
-        SelectionImages[1] = egCopyImage (TempSmallImage);
-    }
-    else {
         SelectionImages[1] = egScaleImage (
             TempSmallImage, TileSizes[1], TileSizes[1]
         );
     }
+    else {
+        SelectionImages[1] = egCopyImage (TempSmallImage);
+    }
 
     #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_LINE_NORMAL, L"Handle Default Selection Image:- 'Big'");
+    ALT_LOG(
+        1, LOG_THREE_STAR_MID,
+        L"Item Selection Background Size: %dpx x %dpx",
+        SelectionImages[1]->Width, SelectionImages[1]->Height
+    );
+
+    ALT_LOG(1, LOG_BLANK_LINE_SEP, L"X");
+    ALT_LOG(1, LOG_LINE_NORMAL, L"Handle Selection Background File:- 'Large'");
     #endif
 
     // Load big selection image
@@ -244,7 +251,7 @@ VOID InitSelection (VOID) {
         ) {
             #if REFIT_DEBUG > 0
             MsgStr = PoolPrint (
-                L"Dropped Custom Big Selection Image ... %d x %d Exceeds %d x %d",
+                L"Discarded Custom Selection Image:- 'Large ... %d x %d Exceeds %d x %d'",
                 TempBigImage->Height, TempBigImage->Width,
                 MaxAllowedSize, MaxAllowedSize
             );
@@ -264,16 +271,24 @@ VOID InitSelection (VOID) {
        );
     }
 
-    if (TempBigImage->Width  == TileSizes[0] &&
-        TempBigImage->Height == TileSizes[0]
+    if (TempBigImage->Width  != TileSizes[0] ||
+        TempBigImage->Height != TileSizes[0]
     ) {
-        SelectionImages[0] = egCopyImage (TempBigImage);
-    }
-    else {
         SelectionImages[0] = egScaleImage (
             TempBigImage, TileSizes[0], TileSizes[0]
         );
     }
+    else {
+        SelectionImages[0] = egCopyImage (TempBigImage);
+    }
+
+    #if REFIT_DEBUG > 0
+    ALT_LOG(
+        1, LOG_THREE_STAR_MID,
+        L"Item Selection Background Size: %dpx x %dpx",
+        SelectionImages[0]->Width, SelectionImages[0]->Height
+    );
+    #endif
 
     MY_FREE_IMAGE(TempSmallImage);
     MY_FREE_IMAGE(TempBigImage);
@@ -462,168 +477,6 @@ VOID UpdateScroll (
     }
     State->LastVisible = State->FirstVisible + State->MaxVisible - 1;
 } // static VOID UpdateScroll()
-
-
-//
-// menu helper functions
-//
-
-// Returns a constant ... do not free
-CHAR16 * MenuExitInfo (
-    IN UINTN MenuExit
-) {
-    CHAR16 *MenuExitData;
-
-    switch (MenuExit) {
-        case  1:  MenuExitData = L"ENTER"  ; break;
-        case  2:  MenuExitData = L"ESCAPE" ; break;
-        case  3:  MenuExitData = L"DETAILS"; break;
-        case  4:  MenuExitData = L"TIMEOUT"; break;
-        case  5:  MenuExitData = L"EJECT"  ; break;
-        case  6:  MenuExitData = L"REMOVE" ; break;
-        default:  MenuExitData = L"RETURN" ;  // Actually '99'
-    } // switch
-
-    return MenuExitData;
-} // CHAR16 * MenuExitInfo()
-
-VOID AddMenuInfoLine (
-    IN REFIT_MENU_SCREEN *Screen,
-    IN CHAR16            *InfoLine,
-    IN BOOLEAN            CanFree
-) {
-    #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_LINE_NORMAL, L"Screen Menu Info Line:- '%s'", InfoLine);
-    #endif
-
-    // DA-TAG: The 'NewElement' item may be freed later
-    //         So pass a duplicate if 'CanFree' is false
-    AddListElement (
-        (VOID ***) &(Screen->InfoLines),
-        &(Screen->InfoLineCount),
-        (CanFree) ? InfoLine : StrDuplicate (InfoLine)
-    );
-} // VOID AddMenuInfoLine()
-
-VOID AddSubMenuEntry (
-    IN REFIT_MENU_SCREEN *SubScreen,
-    IN REFIT_MENU_ENTRY  *SubEntry
-) {
-    if (SubScreen == NULL || SubEntry == NULL) {
-        // Early Return
-        return;
-    }
-
-    #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Set SubMenu Entry in %s - %s%s",
-        SubScreen->Title,
-        SubEntry->Title,
-        SetVolType (NULL, SubEntry->Title, 0)
-    );
-    #endif
-
-    AddListElement (
-        (VOID ***) &(SubScreen->Entries),
-        &(SubScreen->EntryCount),
-        SubEntry
-    );
-} // VOID AddSubMenuEntry()
-
-VOID AddMenuEntry (
-    IN REFIT_MENU_SCREEN *Screen,
-    IN REFIT_MENU_ENTRY  *Entry
-) {
-    if (Screen == NULL || Entry == NULL) {
-        // Early Return
-        return;
-    }
-
-    #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Append Menu Entry to %s %s %s",
-        Screen->Title,
-        (MyStriCmp (Screen->Title, MAIN_MENU_NAME)) ? L"-" : L" - ",
-        Entry->Title,
-        SetVolType (NULL, Entry->Title, 0)
-    );
-    // DA-TAG: Doubled Delibrately in SetVolType
-    //         Find a better way
-    #endif
-
-    AddListElement (
-        (VOID ***) &(Screen->Entries),
-        &(Screen->EntryCount),
-        Entry
-    );
-} // VOID AddMenuEntry()
-
-VOID AddMenuEntryCopy (
-    IN REFIT_MENU_SCREEN *Screen,
-    IN REFIT_MENU_ENTRY  *Entry
-) {
-    if (Screen == NULL || Entry == NULL) {
-        // Early Return
-        return;
-    }
-
-    AddMenuEntry (Screen, CopyMenuEntry (Entry));
-} // VOID AddMenuEntryCopy()
-
-INTN FindMenuShortcutEntry (
-    IN REFIT_MENU_SCREEN *Screen,
-    IN CHAR16            *Defaults
-) {
-    UINTN    i, j;
-    CHAR16  *Shortcut;
-    BOOLEAN  FoundMatch;
-
-    i = j = 0;
-    FoundMatch = FALSE;
-    while ((Shortcut = FindCommaDelimited (Defaults, j++)) != NULL) {
-        if (StrLen (Shortcut) > 1) {
-            for (i = 0; i < Screen->EntryCount; i++) {
-                if (MyStriCmp (Shortcut, Screen->Entries[i]->Title)) {
-                    FoundMatch = TRUE;
-                    break;
-                }
-            } // for
-
-            if (!FoundMatch) {
-                for (i = 0; i < Screen->EntryCount; i++) {
-                    if (StriSubCmp (Shortcut, Screen->Entries[i]->Title)) {
-                        FoundMatch = TRUE;
-                        break;
-                    }
-                } // for
-            }
-        }
-        else {
-            if (Shortcut[0] >= 'a' && Shortcut[0] <= 'z') {
-                Shortcut[0] -= ('a' - 'A');
-            }
-
-            if (Shortcut[0]) {
-                if (Shortcut[0] != 0 && Shortcut[0] != 'O') {
-                    for (i = 0; i < Screen->EntryCount; i++) {
-                        if (Screen->Entries[i]->ShortcutKey == Shortcut[0]) {
-                            FoundMatch = TRUE;
-                            break;
-                        }
-                    } // for
-                }
-            }
-        } // if/else StrLen (Shortcut) > 1
-
-        MY_FREE_POOL(Shortcut);
-
-        if (FoundMatch) {
-            return i;
-        }
-    } // while
-
-    return -1;
-} // INTN FindMenuShortcutEntry()
 
 // Identify the end of row 0 and the beginning of row 1; store the results in the
 // appropriate fields in State. Also reduce MaxVisible if that value is greater
@@ -852,12 +705,1402 @@ CHAR16 * GetScanCodeText (
 } // static CHAR16 * GetScanCodeText()
 #endif
 
+// Show information lines in text mode.
+static
+VOID ShowTextInfoLines (
+    IN REFIT_MENU_SCREEN *Screen
+) {
+    INTN i;
+
+
+    if (Screen->InfoLineCount == 0) {
+        // Early Return
+        return;
+    }
+
+    BeginTextScreen (Screen->Title);
+
+    REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
+
+    for (i = 0; i < (INTN)Screen->InfoLineCount; i++) {
+        REFIT_CALL_3_WRAPPER(
+            gST->ConOut->SetCursorPosition, gST->ConOut,
+            3, 4 + i
+        );
+        REFIT_CALL_2_WRAPPER(gST->ConOut->OutputString, gST->ConOut, Screen->InfoLines[i]);
+    }
+} // static VOID ShowTextInfoLines()
+
+static
+UINTN TextLineHeight (VOID) {
+    return egGetFontHeight() + TEXT_YMARGIN * 2;
+} // static UINTN TextLineHeight()
+
+// Display text with a solid background (MenuBackgroundPixel or SelectionBackgroundPixel).
+// Indents text by one character and placed TEXT_YMARGIN pixels down from the
+// specified XPos and YPos locations.
+static
+VOID DrawText (
+    IN CHAR16  *Text,
+    IN BOOLEAN  Selected,
+    IN UINTN    FieldWidth,
+    IN UINTN    XPos,
+    IN UINTN    YPos
+) {
+    EG_IMAGE *TextBuffer;
+    EG_PIXEL  Bg;
+
+
+    TextBuffer = egCreateFilledImage (
+        FieldWidth,
+        TextLineHeight(),
+        FALSE,
+        &MenuBackgroundPixel
+    );
+
+    if (TextBuffer == NULL) {
+        // Early Return
+        return;
+    }
+
+    Bg = MenuBackgroundPixel;
+    if (Selected) {
+        EG_PIXEL SelectionBackgroundPixel = { 0xFF, 0xFF, 0xFF, 0 };
+
+        // Draw selection bar background
+        egFillImageArea (
+            TextBuffer,
+            0, 0,
+            FieldWidth,
+            TextBuffer->Height,
+            &SelectionBackgroundPixel
+        );
+        Bg = SelectionBackgroundPixel;
+    }
+
+    // Get Luminance Index
+    UINTN LumIndex = GetLumIndex (
+        (UINTN) Bg.r,
+        (UINTN) Bg.g,
+        (UINTN) Bg.b
+    );
+
+    // Render the text
+    egRenderText (
+        Text,
+        TextBuffer,
+        egGetFontCellWidth(),
+        TEXT_YMARGIN,
+        (UINT8) LumIndex
+    );
+
+    egDrawImageWithTransparency (
+        TextBuffer, NULL,
+        XPos, YPos,
+        TextBuffer->Width,
+        TextBuffer->Height
+    );
+
+    MY_FREE_IMAGE(TextBuffer);
+} // static VOID DrawText()
+
+// Finds the average brightness of the input Image.
+// NOTE: Passing an Image that covers the whole screen can strain the
+// capacity of a UINTN on a 32-bit system with a very large display.
+// Using UINT64 instead is unworkable, as the code will not compile
+// on a 32-bit system. As the intended use for this function is to
+// handle a single text string's background, this should not be a
+// problem, but may need addressing if applied more broadly.
+static
+UINT8 AverageBrightness (
+    EG_IMAGE *Image
+) {
+    UINTN i;
+    UINTN Sum;
+
+
+    if (Image == NULL || ((Image->Width * Image->Height) == 0)) {
+        // Early Return
+        return 0;
+    }
+
+    Sum = 0;
+    for (i = 0; i < (Image->Width * Image->Height); i++) {
+        Sum += (Image->PixelData[i].r + Image->PixelData[i].g + Image->PixelData[i].b);
+    }
+    Sum /= (Image->Width * Image->Height * 3);
+
+    return (UINT8) Sum;
+} // static UINT8 AverageBrightness()
+
+// Display text against the screen's background image.
+// Special case: clear the line if Text is NULL or 0-length.
+// Does NOT indent the text or reposition it relative
+// to the specified XPos and YPos values.
+static
+VOID DrawTextWithTransparency (
+    IN CHAR16 *Text,
+    IN UINTN   XPos,
+    IN UINTN   YPos
+) {
+    UINTN     TextWidth;
+    EG_IMAGE *TextBuffer;
+
+
+    if (Text == NULL) {
+        Text = L"";
+    }
+
+    egMeasureText (Text, &TextWidth, NULL);
+
+    if (TextWidth == 0) {
+       TextWidth = ScreenW;
+       XPos      = 0;
+    }
+
+    TextBuffer = egCropImage (
+        GlobalConfig.ScreenBackground,
+        XPos, YPos,
+        TextWidth,
+        TextLineHeight()
+    );
+
+    if (TextBuffer == NULL) {
+        return;
+    }
+
+    // Render the text
+    egRenderText (
+        Text,
+        TextBuffer,
+        0, 0,
+        AverageBrightness (TextBuffer)
+    );
+
+    egDrawImageWithTransparency (
+        TextBuffer, NULL,
+        XPos, YPos,
+        TextBuffer->Width,
+        TextBuffer->Height
+    );
+
+    MY_FREE_IMAGE(TextBuffer);
+} // static VOID DrawTextWithTransparency()
+
+// Compute the size and position of the window
+// that will hold a subscreen's information.
+static
+VOID ComputeSubScreenWindowSize (
+    REFIT_MENU_SCREEN *Screen,
+    SCROLL_STATE      *State,
+    UINTN             *XPos,
+    UINTN             *YPos,
+    UINTN             *Width,
+    UINTN             *Height,
+    UINTN             *LineWidth
+) {
+    UINTN i;
+    UINTN HintTop;
+    UINTN ItemWidth;
+    UINTN TitleWidth;
+    UINTN FontCellWidth;
+    UINTN FontCellHeight;
+    UINTN BannerBottomEdge;
+
+
+    *Width     = 20;
+    *Height    = 5;
+    TitleWidth = egComputeTextWidth (Screen->Title);
+
+    for (i = 0; i < Screen->InfoLineCount; i++) {
+        ItemWidth = StrLen (Screen->InfoLines[i]);
+
+        if (*Width < ItemWidth) {
+            *Width = ItemWidth;
+        }
+
+        (*Height)++;
+    }
+
+    for (i = 0; i <= State->MaxIndex; i++) {
+        ItemWidth = StrLen (Screen->Entries[i]->Title);
+
+        if (*Width < ItemWidth) {
+            *Width = ItemWidth;
+        }
+
+        (*Height)++;
+    }
+
+    FontCellWidth  = egGetFontCellWidth();
+    *Width = (*Width + 2) * FontCellWidth;
+    *LineWidth = *Width;
+
+    if (Screen->TitleImage) {
+        *Width += (Screen->TitleImage->Width + (TITLEICON_SPACING * 2) + FontCellWidth);
+    }
+    else {
+        *Width += FontCellWidth;
+    }
+
+    if (*Width < TitleWidth) {
+        *Width = TitleWidth + 2 * FontCellWidth;
+    }
+
+    // Keep it within the bounds of the screen, or 2/3 of the screen's width
+    // for screens over 800 pixels wide
+    if (*Width > ScreenW) {
+        *Width = ScreenW;
+    }
+
+    *XPos = (ScreenW - *Width) / 2;
+
+    // Top of hint text
+    FontCellHeight = egGetFontHeight();
+    HintTop  = ScreenH - (FontCellHeight * 3);
+    *Height *= TextLineHeight();
+
+    if (Screen->TitleImage &&
+        (*Height < (Screen->TitleImage->Height + TextLineHeight() * 4))
+    ) {
+        *Height = Screen->TitleImage->Height + TextLineHeight() * 4;
+    }
+
+    if (GlobalConfig.BannerBottomEdge >= HintTop) {
+        // Probably a full-screen image; treat it as an empty banner
+        BannerBottomEdge = 0;
+    }
+    else {
+        BannerBottomEdge = GlobalConfig.BannerBottomEdge;
+    }
+
+    if (*Height > (HintTop - BannerBottomEdge - FontCellHeight * 2)) {
+        BannerBottomEdge = 0;
+    }
+
+    if (*Height > (HintTop - BannerBottomEdge - FontCellHeight * 2)) {
+        *Height = (HintTop - BannerBottomEdge - FontCellHeight * 2);
+    }
+
+    *YPos = ((ScreenH - *Height) / 2);
+    if (*YPos < BannerBottomEdge) {
+        *YPos = BannerBottomEdge +
+            FontCellHeight +
+            (HintTop - BannerBottomEdge - *Height) / 2;
+    }
+} // static VOID ComputeSubScreenWindowSize()
+
+static
+VOID DrawMainMenuEntry (
+    REFIT_MENU_ENTRY *Entry,
+    BOOLEAN           selected,
+    UINTN             XPos,
+    UINTN             YPos
+) {
+    EG_IMAGE *Background;
+
+
+    // Do not draw selection image when not hoverin if using pointer
+    if (!selected || !DrawSelection) {
+        // Image not selected ... copy background
+        egDrawImageWithTransparency (
+            Entry->Image,
+            Entry->BadgeImage,
+            XPos, YPos,
+            SelectionImages[Entry->Row]->Width,
+            SelectionImages[Entry->Row]->Height
+        );
+
+        // Early Return
+        return;
+    }
+
+    Background = egCropImage (
+        GlobalConfig.ScreenBackground,
+        XPos, YPos,
+        SelectionImages[Entry->Row]->Width,
+        SelectionImages[Entry->Row]->Height
+    );
+
+    if (Background) {
+        egComposeImage (
+            Background,
+            SelectionImages[Entry->Row],
+            0, 0
+        );
+
+        BltImageCompositeAny (
+            Background,
+            Entry->Image,
+            Entry->BadgeImage,
+            XPos, YPos
+        );
+
+        MY_FREE_IMAGE(Background);
+    }
+} // static VOID DrawMainMenuEntry()
+
+static
+VOID PaintAll (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN SCROLL_STATE      *State,
+    UINTN                *itemPosX,
+    UINTN                 row0PosY,
+    UINTN                 row1PosY,
+    UINTN                 textPosY
+) {
+    INTN i;
+
+
+    if (Screen->Entries[State->CurrentSelection]->Row == 0) {
+        AdjustScrollState (State);
+    }
+
+    for (i = State->FirstVisible; i <= State->MaxIndex; i++) {
+        if (Screen->Entries[i]->Row == 0) {
+            if (i <= State->LastVisible) {
+                DrawMainMenuEntry (
+                    Screen->Entries[i],
+                    (i == State->CurrentSelection) ? TRUE : FALSE,
+                    itemPosX[i - State->FirstVisible],
+                    row0PosY
+                );
+            }
+        }
+        else {
+            DrawMainMenuEntry (
+                Screen->Entries[i],
+                (i == State->CurrentSelection) ? TRUE : FALSE,
+                itemPosX[i],
+                row1PosY
+            );
+        }
+    }
+
+    if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_LABEL) &&
+        (!PointerActive || DrawSelection)
+    ) {
+        DrawTextWithTransparency (L"", 0, textPosY);
+        DrawTextWithTransparency (
+            Screen->Entries[State->CurrentSelection]->Title,
+            (ScreenW - egComputeTextWidth (Screen->Entries[State->CurrentSelection]->Title)) >> 1,
+            textPosY
+        );
+    }
+    else {
+        DrawTextWithTransparency (L"", 0, textPosY);
+    }
+
+    if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_HINTS)) {
+        DrawTextWithTransparency (
+            Screen->Hint1,
+            (ScreenW - egComputeTextWidth (Screen->Hint1)) / 2,
+            ScreenH - (egGetFontHeight() * 3)
+        );
+
+        DrawTextWithTransparency (
+            Screen->Hint2,
+            (ScreenW - egComputeTextWidth (Screen->Hint2)) / 2,
+            ScreenH - (egGetFontHeight() * 2)
+        );
+    }
+} // static VOID PaintAll()
+
+// Move the selection to State->CurrentSelection
+// Adjust icon row if necessary
+static
+VOID PaintSelection (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN SCROLL_STATE      *State,
+    UINTN                *itemPosX,
+    UINTN                 row0PosY,
+    UINTN                 row1PosY,
+    UINTN                 textPosY
+) {
+    UINTN XSelectPrev;
+    UINTN XSelectCur;
+    UINTN YPosPrev;
+    UINTN YPosCur;
+
+
+    if (
+        (State->CurrentSelection < State->InitialRow1) &&
+        (
+            (State->CurrentSelection > State->LastVisible) ||
+            (State->CurrentSelection < State->FirstVisible)
+        )
+    ) {
+        // Current selection is not visible ... Redraw the menu
+        MainMenuStyle (Screen, State, MENU_FUNCTION_PAINT_ALL, NULL);
+
+        // Early Return
+        return;
+    }
+
+    if (Screen->Entries[State->PreviousSelection]->Row == 0) {
+        XSelectPrev = State->PreviousSelection - State->FirstVisible;
+        YPosPrev = row0PosY;
+    }
+    else {
+        XSelectPrev = State->PreviousSelection;
+        YPosPrev = row1PosY;
+    }
+
+    if (Screen->Entries[State->CurrentSelection]->Row == 0) {
+        XSelectCur = State->CurrentSelection - State->FirstVisible;
+        YPosCur = row0PosY;
+    }
+    else {
+        XSelectCur = State->CurrentSelection;
+        YPosCur = row1PosY;
+    }
+
+    DrawMainMenuEntry (
+        Screen->Entries[State->PreviousSelection],
+        FALSE,
+        itemPosX[XSelectPrev],
+        YPosPrev
+    );
+
+    DrawMainMenuEntry (
+        Screen->Entries[State->CurrentSelection],
+        TRUE,
+        itemPosX[XSelectCur],
+        YPosCur
+    );
+
+    if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_LABEL) &&
+        (!PointerActive || DrawSelection)
+    ) {
+        DrawTextWithTransparency (L"", 0, textPosY);
+        DrawTextWithTransparency (
+            Screen->Entries[State->CurrentSelection]->Title,
+            (ScreenW - egComputeTextWidth (Screen->Entries[State->CurrentSelection]->Title)) >> 1,
+            textPosY
+        );
+    }
+    else {
+        DrawTextWithTransparency (L"", 0, textPosY);
+    }
+} // static VOID MoveSelection (VOID)
+
+// Fetch the icon specified by ExternalFilename if available,
+// or by BuiltInIcon if not.
+static
+EG_IMAGE * GetIcon (
+    IN EG_EMBEDDED_IMAGE *BuiltInIcon,
+    IN CHAR16            *ExternalFilename
+) {
+    EG_IMAGE             *Icon;
+
+
+    Icon = egFindIcon (
+        ExternalFilename,
+        GlobalConfig.IconSizes[ICON_SIZE_SMALL]
+    );
+
+    if (Icon == NULL) {
+        Icon = egPrepareEmbeddedImage (
+            BuiltInIcon, TRUE, NULL
+        );
+    }
+
+    return Icon;
+} // static EG_IMAGE * GetIcon()
+
+// Display an icon at the specified location. The Y position is
+// specified as the center value, and so is adjusted by half
+// the icon's height. The X position is set along the icon's left
+// edge if Alignment == ALIGN_LEFT, and along the right edge if
+// Alignment == ALIGN_RIGHT
+static
+VOID PaintIcon (
+    IN EG_IMAGE *Icon,
+    UINTN        PosX,
+    UINTN        PosY,
+    UINTN        Alignment
+) {
+    if (Icon == NULL) {
+        // Early Return
+        return;
+    }
+
+    if (Alignment == ALIGN_RIGHT) {
+        PosX -= Icon->Width;
+    }
+
+    egDrawImageWithTransparency (
+        Icon,
+        NULL,
+        PosX,
+        PosY - (Icon->Height / 2),
+        Icon->Width,
+        Icon->Height
+    );
+} // static VOID PaintIcon()
+
+// Display (or erase) the arrow icons to the left
+// and right of an icon's row ... as appropriate.
+static
+VOID PaintArrows (
+    SCROLL_STATE *State,
+    UINTN         PosX,
+    UINTN         PosY,
+    UINTN         row0Loaders
+) {
+    #if REFIT_DEBUG > 0
+    BOOLEAN CheckMute = FALSE;
+    #endif
+
+    UINTN            RightX;
+    static EG_IMAGE *LeftArrow       =  NULL;
+    static EG_IMAGE *RightArrow      =  NULL;
+    static EG_IMAGE *LeftBackground  =  NULL;
+    static EG_IMAGE *RightBackground =  NULL;
+    static BOOLEAN   LoadedArrows    = FALSE;
+
+
+    RightX = (ScreenW + (TileSizes[0] + TILE_XSPACING) * State->MaxVisible) / 2 + TILE_XSPACING;
+
+    if (!LoadedArrows && !(GlobalConfig.HideUIFlags & HIDEUI_FLAG_ARROWS)) {
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_SET;
+        #endif
+        LeftArrow  = GetIcon (&egemb_arrow_left,  L"arrow_left" );
+        RightArrow = GetIcon (&egemb_arrow_right, L"arrow_right");
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_OFF;
+        #endif
+
+        if (LeftArrow) {
+            LeftBackground = egCropImage (
+                GlobalConfig.ScreenBackground,
+                PosX - LeftArrow->Width,
+                PosY - (LeftArrow->Height / 2),
+                LeftArrow->Width,
+                LeftArrow->Height
+            );
+        }
+        if (RightArrow) {
+            RightBackground = egCropImage (
+                GlobalConfig.ScreenBackground,
+                RightX,
+                PosY - (RightArrow->Height / 2),
+                RightArrow->Width,
+                RightArrow->Height
+            );
+        }
+        LoadedArrows = TRUE;
+    }
+
+    // For PaintIcon() calls, the starting Y position is moved to the midpoint
+    // of the surrounding row; PaintIcon() adjusts this back up by half the
+    // icon's height to properly center it.
+    if (LeftArrow && LeftBackground) {
+        (State->FirstVisible > 0)
+            ? PaintIcon (LeftArrow, PosX, PosY, ALIGN_RIGHT)
+            : BltImage (LeftBackground, PosX - LeftArrow->Width, PosY - (LeftArrow->Height / 2));
+    }
+
+    if (RightArrow && RightBackground) {
+        (State->LastVisible < (row0Loaders - 1))
+            ? PaintIcon (RightArrow, RightX, PosY, ALIGN_LEFT)
+            : BltImage (RightBackground, RightX, PosY - (RightArrow->Height / 2));
+    }
+} // static VOID PaintArrows()
+
+// Enable the user to edit boot loader options.
+// Returns TRUE if the user exited with edited options; FALSE if the user
+// pressed Esc to terminate the edit.
+static
+BOOLEAN EditOptions (
+    LOADER_ENTRY *MenuEntry
+) {
+    UINTN    x_max, y_max;
+    CHAR16  *EditedOptions;
+    BOOLEAN  Retval;
+
+
+    if (GlobalConfig.HideUIFlags & HIDEUI_FLAG_EDITOR) {
+        // Early Return
+        return FALSE;
+    }
+
+    REFIT_CALL_4_WRAPPER(
+        gST->ConOut->QueryMode, gST->ConOut,
+        gST->ConOut->Mode->Mode, &x_max, &y_max
+    );
+
+    if (!GlobalConfig.TextOnly) {
+        SwitchToText (TRUE);
+    }
+
+    if (line_edit (MenuEntry->LoadOptions, &EditedOptions, x_max)) {
+        MY_FREE_POOL(MenuEntry->LoadOptions);
+        MenuEntry->LoadOptions = EditedOptions;
+
+        Retval = TRUE;
+    }
+    else {
+        Retval = FALSE;
+    }
+
+    if (!GlobalConfig.TextOnly) {
+        SwitchToGraphics();
+    }
+
+    return Retval;
+} // static VOID EditOptions()
+
+// Save a list of items to be hidden to NVRAM or disk,
+// as determined by GlobalConfig.UseNvram.
+static
+VOID SaveHiddenList (
+    IN CHAR16 *HiddenList,
+    IN CHAR16 *VarName
+) {
+    EFI_STATUS Status;
+    UINTN      ListLen;
+
+
+    if (VarName == NULL) {
+        CheckError (EFI_INVALID_PARAMETER, L"in SaveHiddenList!!");
+
+        // Early Return ... Prevent NULL dererencing
+        return;
+    }
+
+    if (HiddenList == NULL) {
+        ListLen = 0;
+    }
+    else {
+        ListLen = StrLen (HiddenList) * 2 + 2;
+    }
+
+    Status = EfivarSetRaw (
+        &RefindPlusGuid, VarName,
+        HiddenList, ListLen, TRUE
+    );
+    if (EFI_ERROR(Status)) {
+        CheckError (Status, L"in SaveHiddenList!!");
+    }
+} // static VOID SaveHiddenList()
+
+// Add PathName to the hidden tags variable specified by *VarName.
+static
+VOID AddToHiddenTags (
+    CHAR16 *VarName,
+    CHAR16 *Pathname
+) {
+    EFI_STATUS  Status;
+    CHAR16     *HiddenTags;
+
+
+    if (Pathname == NULL || StrLen (Pathname) == 0) {
+        // Early Return
+        return;
+    }
+
+    HiddenTags = ReadHiddenTags (VarName);
+    if (FindSubStr (HiddenTags, Pathname)) {
+        CheckError (EFI_ALREADY_STARTED, L"in 'AddToHiddenTags'");
+
+        // Early Return
+        return;
+    }
+
+    MergeUniqueStrings (&HiddenTags, Pathname, L',');
+    Status = EfivarSetRaw (
+        &RefindPlusGuid, VarName,
+        HiddenTags, StrLen (HiddenTags) * 2 + 2, TRUE
+    );
+    if (EFI_ERROR(Status)) {
+        CheckError (Status, L"in 'AddToHiddenTags'!!");
+    }
+
+    MY_FREE_POOL(HiddenTags);
+} // static VOID AddToHiddenTags()
+
+// Adds a filename, specified by the *Loader variable, to the *VarName UEFI variable,
+// using the mostly-prepared *HideEfiMenu structure to prompt the user to confirm
+// hiding that item.
+// Returns TRUE if item was hidden, FALSE otherwise.
+static
+BOOLEAN HideEfiTag (
+    LOADER_ENTRY      *Loader,
+    REFIT_MENU_SCREEN *HideEfiMenu,
+    CHAR16            *VarName
+) {
+    INTN               DefaultEntry;
+    UINTN              MenuExit;
+    CHAR16            *GuidStr;
+    CHAR16            *FullPath;
+    CHAR16            *TempPath;
+    BOOLEAN            TagHidden;
+    BOOLEAN            MyLoadPath;
+    BOOLEAN            GotVolName;
+    REFIT_VOLUME      *TestVolume;
+    MENU_STYLE_FUNC    Style;
+    REFIT_MENU_ENTRY  *ChosenOption;
+
+
+    if (Loader             == NULL ||
+        VarName            == NULL ||
+        HideEfiMenu        == NULL ||
+        Loader->Volume     == NULL ||
+        Loader->LoaderPath == NULL
+    ) {
+        // Early Return
+        return FALSE;
+    }
+
+    GotVolName = (
+        Loader->Volume->VolName           &&
+        StrLen (Loader->Volume->VolName) > 0
+    );
+
+    MyLoadPath = (
+        Loader->LoaderPath           &&
+        StrLen (Loader->LoaderPath) > 0
+    );
+
+    if (GotVolName) {
+        if (!MyLoadPath) {
+            TempPath = StrDuplicate (Loader->Volume->VolName);
+        }
+        else {
+            TempPath = PoolPrint (
+                L"%s:%s", Loader->Volume->VolName, Loader->LoaderPath
+            );
+        }
+    }
+    else if (MyLoadPath) {
+        TempPath = StrDuplicate (Loader->LoaderPath);
+    }
+    else {
+        TempPath = StrDuplicate (L"Item Selected on Main Screen");
+    }
+
+    AddMenuInfoLine (HideEfiMenu, L"Hide EFI Entry Below?",    FALSE);
+    AddMenuInfoLine (HideEfiMenu, PoolPrint (L"%s", TempPath),  TRUE);
+    MY_FREE_POOL(TempPath);
+
+    do {
+        TagHidden = GetMenuEntryYesNo (&HideEfiMenu);
+        if (!TagHidden) {
+            FreeMenuScreen (&HideEfiMenu);
+
+            break;
+        }
+
+        HideEfiMenu->TitleImage = BuiltinIcon (BUILTIN_ICON_FUNC_HIDDEN);
+
+        DefaultEntry = 9999; // Use the Max Index
+        Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
+        MenuExit = DrawMenuScreen (
+            HideEfiMenu, Style,
+            &DefaultEntry, &ChosenOption
+        );
+
+        #if REFIT_DEBUG > 0
+        LogExit (MenuExit, __func__, ChosenOption->Title);
+        #endif
+
+        if (MenuExit != MENU_EXIT_ENTER        ||
+            MyStriCmp (ChosenOption->Title, L"No")
+        ) {
+            TagHidden = FALSE;
+        }
+        else {
+            TagHidden  = TRUE;
+
+            TestVolume = NULL;
+            GuidStr    = GuidAsString (&Loader->Volume->PartGuid);
+            FindVolume (&TestVolume, GuidStr);
+
+            if (TestVolume != NULL && TestVolume->RootDir != NULL) {
+                if (!GotVolName) {
+                    FullPath = PoolPrint (L"%s:", GuidStr);
+                }
+                else {
+                    TempPath = StrDuplicate (
+                        Loader->Volume->VolName
+                    );
+                    LimitStringLength (TempPath, 20);
+
+                    FullPath = PoolPrint (
+                        L"%-20s%s%s:",
+                        TempPath, DEFAULT_STRING_DELIM, GuidStr
+                    );
+
+                    MY_FREE_POOL(TempPath);
+                }
+
+                if (MyLoadPath) {
+                    MergeStrings (
+                        &FullPath,
+                        Loader->LoaderPath,
+                        (Loader->LoaderPath[0] == L'\\' ? L'\0' : L'\\')
+                    );
+                }
+            }
+            else if (GotVolName) {
+                FullPath = PoolPrint (L"%s:", Loader->Volume->VolName);
+            }
+            else {
+                FullPath = NULL;
+            }
+
+            MY_FREE_POOL(GuidStr);
+
+            if (FullPath != NULL) {
+                AddToHiddenTags (VarName, FullPath);
+            }
+            MY_FREE_POOL(FullPath);
+        }
+    } while (0); // This 'loop' only runs once
+
+    return TagHidden;
+} // static BOOLEAN HideEfiTag()
+
+static
+BOOLEAN HideFirmwareTag (
+    LOADER_ENTRY      *Loader,
+    REFIT_MENU_SCREEN *HideFirmwareMenu
+) {
+    INTN               DefaultEntry;
+    UINTN              MenuExit;
+    BOOLEAN            TagHidden;
+    MENU_STYLE_FUNC    Style;
+    REFIT_MENU_ENTRY  *ChosenOption;
+
+
+    AddMenuInfoLine (HideFirmwareMenu, L"Hide Firmware Entry Below?",    FALSE);
+    AddMenuInfoLine (HideFirmwareMenu, PoolPrint (L"%s", Loader->Title),  TRUE);
+
+    TagHidden = GetMenuEntryYesNo (&HideFirmwareMenu);
+    if (!TagHidden) {
+        FreeMenuScreen (&HideFirmwareMenu);
+
+        // Early Return
+        return FALSE;
+    }
+
+    DefaultEntry = 9999; // Use the Max Index
+    Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
+    MenuExit = DrawMenuScreen (
+        HideFirmwareMenu, Style,
+        &DefaultEntry, &ChosenOption
+    );
+
+    #if REFIT_DEBUG > 0
+    LogExit (MenuExit, __func__, ChosenOption->Title);
+    #endif
+
+    if (MenuExit != MENU_EXIT_ENTER        ||
+        MyStriCmp (ChosenOption->Title, L"No")
+    ) {
+        TagHidden = FALSE;
+    }
+    else {
+        TagHidden = TRUE;
+        AddToHiddenTags(L"HiddenFirmware", Loader->Title);
+    }
+
+    return TagHidden;
+} // BOOLEAN HideFirmwareTag()
+
+static
+BOOLEAN HideLegacyTag (
+    LEGACY_ENTRY      *LegacyLoader,
+    REFIT_MENU_SCREEN *HideLegacyMenu
+) {
+    INTN               DefaultEntry;
+    UINTN              MenuExit;
+    CHAR16            *Name;
+    BOOLEAN            TagHidden;
+    BOOLEAN            BaseCheck;
+    MENU_STYLE_FUNC    Style;
+    REFIT_MENU_ENTRY  *ChosenOption;
+
+
+    BaseCheck = (
+        LegacyLoader->me.Title  != NULL &&
+        GlobalConfig.LegacyType != LEGACY_TYPE_MAC1
+    );
+
+    if (!BaseCheck &&
+        (
+            LegacyLoader->BdsOption              == NULL ||
+            LegacyLoader->BdsOption->Description == NULL ||
+            (
+                GlobalConfig.LegacyType != LEGACY_TYPE_UEFI &&
+                GlobalConfig.LegacyType != LEGACY_TYPE_MAC2
+            )
+        )
+    ) {
+        #if REFIT_DEBUG > 0
+        ALT_LOG(1, LOG_STAR_SEPARATOR,
+            L"Could *NOT* Load Menu in 'HideLegacyTag' Function ... 1"
+        );
+        #endif
+
+        FreeMenuScreen (&HideLegacyMenu);
+
+        // Early Return
+        return FALSE;
+    }
+
+    Name = PoolPrint (
+        L"%-20s%s%s"
+        L"Legacy BIOS Item",
+        DEFAULT_STRING_DELIM,
+        (BaseCheck)
+            ? LegacyLoader->me.Title
+            : LegacyLoader->BdsOption->Description
+    );
+
+    AddMenuInfoLine (HideLegacyMenu, L"Hide Legacy Entry Below?", FALSE);
+    AddMenuInfoLine (HideLegacyMenu, PoolPrint (L"%s", Name),      TRUE);
+
+    if (!GetMenuEntryYesNo (&HideLegacyMenu)) {
+        #if REFIT_DEBUG > 0
+        ALT_LOG(1, LOG_STAR_SEPARATOR,
+            L"Could *NOT* Load Menu in 'HideLegacyTag' Function ... 2"
+        );
+        #endif
+
+        FreeMenuScreen (&HideLegacyMenu);
+
+        // Early Return
+        return FALSE;
+    }
+
+    DefaultEntry = 9999; // Use the Max Index
+    Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
+    MenuExit = DrawMenuScreen (
+        HideLegacyMenu, Style,
+        &DefaultEntry, &ChosenOption
+    );
+
+    #if REFIT_DEBUG > 0
+    LogExit (MenuExit, __func__, ChosenOption->Title);
+    #endif
+
+    if (MenuExit != MENU_EXIT_ENTER        ||
+        MyStriCmp (ChosenOption->Title, L"No")
+    ) {
+        TagHidden = FALSE;
+    }
+    else {
+        TagHidden = TRUE;
+        AddToHiddenTags (L"HiddenLegacy", Name);
+    }
+    MY_FREE_POOL(Name);
+
+    return TagHidden;
+} // static BOOLEAN HideLegacyTag()
+
+static
+VOID HideTag (
+    REFIT_MENU_ENTRY *ChosenOption
+) {
+    CHAR16            *NoChanges;
+    UINTN              TagFlag;
+    LOADER_ENTRY      *Loader;
+    LEGACY_ENTRY      *LegacyLoader;
+    REFIT_MENU_SCREEN *HideTagMenu;
+
+
+    if (ChosenOption == NULL) {
+        // Early Return
+        return;
+    }
+
+    HideTagMenu = AllocateZeroPool (sizeof (REFIT_MENU_SCREEN));
+    if (HideTagMenu == NULL) {
+        // Early Return
+        return;
+    }
+
+    // DA-TAG: Set 'Hidden' icon in 'HideEfiTag' function later
+    HideTagMenu->Hint1 = StrDuplicate (SELECT_OPTION_HINT     );
+    HideTagMenu->Hint2 = StrDuplicate (RETURN_MAIN_SCREEN_HINT);
+
+    TagFlag      = 0;
+    NoChanges    = L"No Changes Made on Hide Entry Call";
+    LegacyLoader = (LEGACY_ENTRY *) ChosenOption;
+    Loader       = (LOADER_ENTRY *) ChosenOption;
+
+    // DA-TAG: Investigate This ... Probably related to 'El Gordo'.
+    // Original: (BUG) RescanAll calls should be conditional on successful calls
+    //         to HideEfiTag or HideLegacyTag. For the former however, this
+    //         causes crashes on a second hide a tag call if the user chose "No"
+    //         to the first call. This seems to be related to memory management
+    //         of Volumes; the crash occurs in FindVolumeAndFilename() and lib.c
+    //         when calling DevicePathToStr. Calling RescanAll() on all returns
+    //         from HideEfiTag seems to be an effective workaround, but there is
+    //         likely a memory management bug somewhere that is the root cause.
+    // Update: One or more unknown memory conflicts, 'El Gordo' (The Big One),
+    //         is likely what has been noted upstream above.
+    //         Other apparent manifestations of El Gordo:
+    //           - https://sf.net/p/refind/discussion/general/thread/ed3185fb40
+    //           - https://sf.net/p/refind/discussion/general/thread/4dfcdfdd16
+    //           - https://github.com/joevt/RefindPlus/commit/8c303d504d58bb235e9d2218df8bdb939de9ed77
+    //           - https://github.com/dakanji/RefindPlus/issues/163
+    //         El Gordo is most likely a buffer overflow of some sort.
+    //         El Gordo might be in one or more filesystem drivers.
+    //         El Gordo might be spread across a number of files.
+    switch (ChosenOption->Tag) {
+        case TAG_LOADER:
+            if (GlobalConfig.SyncAPFS &&
+                Loader->Volume->FSType == FS_TYPE_APFS
+            ) {
+                DisplaySimpleMessage (
+                    L"Amend Config File Instead ... Update \"dont_scan_volumes\" Token",
+                    L"Hide Entry *IS NOT* Available on Synced APFS Loaders"
+                );
+            }
+            else if (Loader->DiscoveryType != DISCOVERY_TYPE_AUTO) {
+                DisplaySimpleMessage (
+                    L"Amend Config File Instead ... Disable Stanza",
+                    L"Hide Entry *IS NOT* Available on Manual Stanzas"
+                );
+            }
+            else {
+                HideTagMenu->Title = L"Hide UEFI Entry";
+                if (HideEfiTag (Loader, HideTagMenu, L"HiddenTags")) {
+                    // Changes Triggered
+                    TagFlag = 1;
+                }
+                else {
+                    // No Changes Triggered
+                    TagFlag = 2;
+                }
+            }
+
+            break;
+        case TAG_LEGACY:
+        case TAG_LEGACY_UEFI:
+            HideTagMenu->Title = L"Hide Legacy BIOS Entry";
+            if (HideLegacyTag (LegacyLoader, HideTagMenu)) {
+                // Changes Triggered
+                TagFlag = 1;
+            }
+            else {
+                // No Changes Triggered
+                TagFlag = 2;
+            }
+
+            break;
+        case TAG_FIRMWARE_LOADER:
+            HideTagMenu->Title = L"Hide Firmware BootOption Entry";
+            if (HideFirmwareTag(Loader, HideTagMenu)) {
+                // Changes Triggered
+                TagFlag = 1;
+            }
+            else {
+                // No Changes Triggered
+                TagFlag = 2;
+            }
+
+            break;
+        case TAG_MOK:
+        case TAG_SHELL:
+        case TAG_GDISK:
+        case TAG_GPTSYNC:
+        case TAG_MEMTEST:
+        case TAG_NETBOOT:
+        case TAG_FWUPDATE:
+        case TAG_RECOVERY_MAC:
+        case TAG_RECOVERY_WIN:
+            DisplaySimpleMessage (
+                L"Amend Config File Instead ... Update \"showtools\" Token",
+                L"Hide Entry *IS NOT* Available on This External Tool"
+            );
+
+            break;
+        case TAG_EXIT:
+        case TAG_ABOUT:
+        case TAG_REBOOT:
+        case TAG_HIDDEN:
+        case TAG_INSTALL:
+        case TAG_SHUTDOWN:
+        case TAG_FIRMWARE:
+        case TAG_BOOTORDER:
+        case TAG_CSR_ROTATE:
+        case TAG_CLEAN_NVRAM:
+            DisplaySimpleMessage (
+                L"Amend Config File Instead ... Update \"showtools\" Token",
+                L"Hide Entry *IS NOT* Available on Any Internal Tool"
+            );
+
+            break;
+        case TAG_TOOL:
+            HideTagMenu->Title = L"Hide Tool Entry";
+            if (HideEfiTag (Loader, HideTagMenu, L"HiddenTools")) {
+                // Changes Triggered
+                TagFlag = 1;
+            }
+            else {
+                // No Changes Triggered
+                TagFlag = 2;
+            }
+    } // switch
+
+    if (TagFlag == 1) {
+        #if REFIT_DEBUG > 0
+        LOG_MSG("Received User Input:");
+        LOG_MSG("%s  - %s", OffsetNext, HideTagMenu->Title);
+        LOG_MSG("\n\n");
+        #endif
+
+        RescanAll (FALSE);
+    }
+    else if (TagFlag == 2) {
+        #if REFIT_DEBUG > 0
+        LOG_MSG("INFO: %s:- '%s'", NoChanges, HideTagMenu->Title);
+        LOG_MSG("\n\n");
+        ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", NoChanges);
+        #endif
+    }
+
+    FreeMenuScreen (&HideTagMenu);
+} // static VOID HideTag()
+
+static
+VOID FreeLegacyEntry (
+    IN LEGACY_ENTRY **Entry
+) {
+    if (*Entry == NULL) {
+        // Early Return
+        return;
+    }
+
+    MY_FREE_POOL((*Entry)->me.Title);
+    MY_FREE_IMAGE((*Entry)->me.Image);
+    MY_FREE_IMAGE((*Entry)->me.BadgeImage);
+    FreeMenuScreen (&(*Entry)->me.SubScreen);
+
+    FreeBdsOption (&(*Entry)->BdsOption);
+    MY_FREE_POOL((*Entry)->LoadOptions);
+    MY_FREE_POOL(*Entry);
+} // static VOID FreeLegacyEntry()
+
+static
+VOID FreeLoaderEntry (
+    IN LOADER_ENTRY **Entry
+) {
+    LOG_SEP(L"X");
+    LOG_INCREMENT();
+    BREAD_CRUMB(L"%a:  1 - START", __func__);
+
+    if (*Entry == NULL) {
+        BREAD_CRUMB(L"%a:  1a 1 - END:- VOID", __func__);
+        LOG_DECREMENT();
+        LOG_SEP(L"X");
+
+        // Early Return
+        return;
+    }
+
+    BREAD_CRUMB(L"%a:  2", __func__);
+    FreeMenuScreen (&(*Entry)->me.SubScreen);
+
+    BREAD_CRUMB(L"%a:  3", __func__);
+    MY_FREE_POOL((*Entry)->me.Title);
+    MY_FREE_IMAGE((*Entry)->me.Image);
+    MY_FREE_IMAGE((*Entry)->me.BadgeImage);
+
+    BREAD_CRUMB(L"%a:  4", __func__);
+    MY_FREE_POOL((*Entry)->Title);
+    MY_FREE_POOL((*Entry)->LoaderPath);
+    MY_FREE_POOL((*Entry)->InitrdPath);
+    MY_FREE_POOL((*Entry)->LoadOptions);
+    MY_FREE_POOL((*Entry)->EfiLoaderPath);
+
+    BREAD_CRUMB(L"%a:  5", __func__);
+    MY_FREE_POOL(*Entry);
+
+    BREAD_CRUMB(L"%a:  6 - END:- VOID", __func__);
+    LOG_DECREMENT();
+    LOG_SEP(L"X");
+} // static VOID FreeLoaderEntry()
+
+// Returns a constant ... do not free
+CHAR16 * MenuExitInfo (
+    IN UINTN MenuExit
+) {
+    CHAR16 *MenuExitData;
+
+
+    switch (MenuExit) {
+        case  1:  MenuExitData = L"ENTER"  ; break;
+        case  2:  MenuExitData = L"ESCAPE" ; break;
+        case  3:  MenuExitData = L"DETAILS"; break;
+        case  4:  MenuExitData = L"TIMEOUT"; break;
+        case  5:  MenuExitData = L"EJECT"  ; break;
+        case  6:  MenuExitData = L"REMOVE" ; break;
+        default:  MenuExitData = L"RETURN" ;  // Actually '99'
+    } // switch
+
+    return MenuExitData;
+} // CHAR16 * MenuExitInfo()
+
+VOID AddMenuInfoLine (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN CHAR16            *InfoLine,
+    IN BOOLEAN            CanFree
+) {
+    #if REFIT_DEBUG > 0
+    ALT_LOG(1, LOG_LINE_NORMAL, L"Screen Menu Info Line:- '%s'", InfoLine);
+    #endif
+
+    // DA-TAG: The 'NewElement' item may be freed later
+    //         So pass a duplicate if 'CanFree' is false
+    AddListElement (
+        (VOID ***) &(Screen->InfoLines),
+        &(Screen->InfoLineCount),
+        (CanFree) ? InfoLine : StrDuplicate (InfoLine)
+    );
+} // VOID AddMenuInfoLine()
+
+VOID AddSubMenuEntry (
+    IN REFIT_MENU_SCREEN *SubScreen,
+    IN REFIT_MENU_ENTRY  *SubEntry
+) {
+    if (SubScreen == NULL || SubEntry == NULL) {
+        // Early Return
+        return;
+    }
+
+    #if REFIT_DEBUG > 0
+    ALT_LOG(1, LOG_LINE_NORMAL,
+        L"Set SubMenu Entry in %s - %s%s",
+        SubScreen->Title,
+        SubEntry->Title,
+        SetVolType (NULL, SubEntry->Title, 0)
+    );
+    #endif
+
+    AddListElement (
+        (VOID ***) &(SubScreen->Entries),
+        &(SubScreen->EntryCount),
+        SubEntry
+    );
+} // VOID AddSubMenuEntry()
+
+VOID AddMenuEntry (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN REFIT_MENU_ENTRY  *Entry
+) {
+    if (Screen == NULL || Entry == NULL) {
+        // Early Return
+        return;
+    }
+
+    #if REFIT_DEBUG > 0
+    ALT_LOG(1, LOG_LINE_NORMAL,
+        L"Append Menu Entry to %s %s %s",
+        Screen->Title,
+        (MyStriCmp (Screen->Title, MAIN_MENU_NAME)) ? L"-" : L" - ",
+        Entry->Title,
+        SetVolType (NULL, Entry->Title, 0)
+    );
+    // DA-TAG: Doubled Delibrately in SetVolType
+    //         Find a better way
+    #endif
+
+    AddListElement (
+        (VOID ***) &(Screen->Entries),
+        &(Screen->EntryCount),
+        Entry
+    );
+} // VOID AddMenuEntry()
+
+VOID AddMenuEntryCopy (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN REFIT_MENU_ENTRY  *Entry
+) {
+    if (Screen == NULL || Entry == NULL) {
+        // Early Return
+        return;
+    }
+
+    AddMenuEntry (Screen, CopyMenuEntry (Entry));
+} // VOID AddMenuEntryCopy()
+
+INTN FindMenuShortcutEntry (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN CHAR16            *Defaults
+) {
+    UINTN    i, j;
+    CHAR16  *Shortcut;
+    BOOLEAN  FoundMatch;
+
+
+    i = j = 0;
+    FoundMatch = FALSE;
+    while ((Shortcut = FindCommaDelimited (Defaults, j++)) != NULL) {
+        if (StrLen (Shortcut) > 1) {
+            for (i = 0; i < Screen->EntryCount; i++) {
+                if (MyStriCmp (Shortcut, Screen->Entries[i]->Title)) {
+                    FoundMatch = TRUE;
+                    break;
+                }
+            } // for
+
+            if (!FoundMatch) {
+                for (i = 0; i < Screen->EntryCount; i++) {
+                    if (StriSubCmp (Shortcut, Screen->Entries[i]->Title)) {
+                        FoundMatch = TRUE;
+                        break;
+                    }
+                } // for
+            }
+        }
+        else {
+            if (Shortcut[0] >= 'a' && Shortcut[0] <= 'z') {
+                Shortcut[0] -= ('a' - 'A');
+            }
+
+            if (Shortcut[0]) {
+                if (Shortcut[0] != 0 && Shortcut[0] != 'O') {
+                    for (i = 0; i < Screen->EntryCount; i++) {
+                        if (Screen->Entries[i]->ShortcutKey == Shortcut[0]) {
+                            FoundMatch = TRUE;
+                            break;
+                        }
+                    } // for
+                }
+            }
+        } // if/else StrLen (Shortcut) > 1
+
+        MY_FREE_POOL(Shortcut);
+
+        if (FoundMatch) {
+            return i;
+        }
+    } // while
+
+    return -1;
+} // INTN FindMenuShortcutEntry()
+
 UINTN DrawMenuScreen (
     IN     REFIT_MENU_SCREEN   *Screen,
     IN     MENU_STYLE_FUNC      StyleFunc,
     IN OUT INTN                *DefaultEntryIndex,
     OUT    REFIT_MENU_ENTRY  **ChosenOption
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16                     *MsgStr;
+    CHAR16                     *KeyTxt;
+    BOOLEAN                     TmpLevel;
+    BOOLEAN                     CheckMute = FALSE;
+
+    static BOOLEAN              OnceWait = FALSE;
+    #endif
+
     EFI_STATUS                  Status;
     EFI_STATUS                  PointerStatus;
     BOOLEAN                     Rotated;
@@ -883,15 +2126,6 @@ UINTN DrawMenuScreen (
     CHAR16                      KeyAsString[2];
     SCROLL_STATE                State;
     EFI_INPUT_KEY               key;
-
-    #if REFIT_DEBUG > 0
-    CHAR16                     *MsgStr;
-    CHAR16                     *KeyTxt;
-    BOOLEAN                     TmpLevel;
-    BOOLEAN                     CheckMute = FALSE;
-
-    static BOOLEAN              OnceWait = FALSE;
-    #endif
 
 
     IsMainMenu = MyStriCmp (Screen->Title, MAIN_MENU_NAME);
@@ -1302,7 +2536,7 @@ UINTN DrawMenuScreen (
                 } // switch
             }
             ALT_LOG(1, LOG_LINE_NORMAL,
-                L"Got Keystroke: UnicodeChar = 0x%02X ... ScanCode = 0x%02X - %s",
+                L"Keystroke : UnicodeChar = 0x%02X ... ScanCode = 0x%02X - %s",
                 key.UnicodeChar, key.ScanCode, KeyTxt
             );
             #endif
@@ -1518,35 +2752,6 @@ UINTN DrawMenuScreen (
     return MenuExit;
 } // UINTN DrawMenuScreen()
 
-//
-// Generic text-mode style
-//
-
-// Show information lines in text mode.
-static
-VOID ShowTextInfoLines (
-    IN REFIT_MENU_SCREEN *Screen
-) {
-    INTN i;
-
-    if (Screen->InfoLineCount == 0) {
-        // Early Return
-        return;
-    }
-
-    BeginTextScreen (Screen->Title);
-
-    REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
-
-    for (i = 0; i < (INTN)Screen->InfoLineCount; i++) {
-        REFIT_CALL_3_WRAPPER(
-            gST->ConOut->SetCursorPosition, gST->ConOut,
-            3, 4 + i
-        );
-        REFIT_CALL_2_WRAPPER(gST->ConOut->OutputString, gST->ConOut, Screen->InfoLines[i]);
-    }
-} // VOID ShowTextInfoLines()
-
 // Do most of the work for text-based menus.
 VOID TextMenuStyle (
     IN REFIT_MENU_SCREEN *Screen,
@@ -1554,17 +2759,18 @@ VOID TextMenuStyle (
     IN UINTN              Function,
     IN CHAR16            *ParamText
 ) {
-    INTN    i;
-    UINTN   MenuWidth;
-    UINTN   ItemWidth;
-    UINTN   MenuHeight;
-
     #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
+    BOOLEAN         CheckMute = FALSE;
     #endif
+
+    INTN            i;
+    UINTN           MenuWidth;
+    UINTN           ItemWidth;
+    UINTN           MenuHeight;
 
     static UINTN    MenuPosY;
     static CHAR16 **DisplayStrings;
+
 
     State->ScrollMode = SCROLL_MODE_TEXT;
 
@@ -1743,269 +2949,6 @@ VOID TextMenuStyle (
     } // switch
 } // VOID TextMenuStyle()
 
-//
-// Graphical generic style
-//
-
-static
-UINTN TextLineHeight (VOID) {
-    return egGetFontHeight() + TEXT_YMARGIN * 2;
-} // static UINTN TextLineHeight()
-
-//
-// Display a submenu
-//
-
-// Display text with a solid background (MenuBackgroundPixel or SelectionBackgroundPixel).
-// Indents text by one character and placed TEXT_YMARGIN pixels down from the
-// specified XPos and YPos locations.
-static
-VOID DrawText (
-    IN CHAR16  *Text,
-    IN BOOLEAN  Selected,
-    IN UINTN    FieldWidth,
-    IN UINTN    XPos,
-    IN UINTN    YPos
-) {
-    EG_IMAGE *TextBuffer;
-    EG_PIXEL  Bg;
-
-    TextBuffer = egCreateFilledImage (
-        FieldWidth,
-        TextLineHeight(),
-        FALSE,
-        &MenuBackgroundPixel
-    );
-
-    if (TextBuffer == NULL) {
-        // Early Return
-        return;
-    }
-
-    Bg = MenuBackgroundPixel;
-    if (Selected) {
-        EG_PIXEL SelectionBackgroundPixel = { 0xFF, 0xFF, 0xFF, 0 };
-
-        // Draw selection bar background
-        egFillImageArea (
-            TextBuffer,
-            0, 0,
-            FieldWidth,
-            TextBuffer->Height,
-            &SelectionBackgroundPixel
-        );
-        Bg = SelectionBackgroundPixel;
-    }
-
-    // Get Luminance Index
-    UINTN LumIndex = GetLumIndex (
-        (UINTN) Bg.r,
-        (UINTN) Bg.g,
-        (UINTN) Bg.b
-    );
-
-    // Render the text
-    egRenderText (
-        Text,
-        TextBuffer,
-        egGetFontCellWidth(),
-        TEXT_YMARGIN,
-        (UINT8) LumIndex
-    );
-
-    egDrawImageWithTransparency (
-        TextBuffer, NULL,
-        XPos, YPos,
-        TextBuffer->Width,
-        TextBuffer->Height
-    );
-
-    MY_FREE_IMAGE(TextBuffer);
-} // VOID DrawText()
-
-// Finds the average brightness of the input Image.
-// NOTE: Passing an Image that covers the whole screen can strain the
-// capacity of a UINTN on a 32-bit system with a very large display.
-// Using UINT64 instead is unworkable, as the code will not compile
-// on a 32-bit system. As the intended use for this function is to
-// handle a single text string's background, this should not be a
-// problem, but may need addressing if applied more broadly.
-static
-UINT8 AverageBrightness (
-    EG_IMAGE *Image
-) {
-    UINTN i;
-    UINTN Sum;
-
-    if (Image == NULL || ((Image->Width * Image->Height) == 0)) {
-        // Early Return
-        return 0;
-    }
-
-    Sum = 0;
-    for (i = 0; i < (Image->Width * Image->Height); i++) {
-        Sum += (Image->PixelData[i].r + Image->PixelData[i].g + Image->PixelData[i].b);
-    }
-    Sum /= (Image->Width * Image->Height * 3);
-
-    return (UINT8) Sum;
-} // UINT8 AverageBrightness()
-
-// Display text against the screen's background image.
-// Special case: clear the line if Text is NULL or 0-length.
-// Does NOT indent the text or reposition it relative
-// to the specified XPos and YPos values.
-static
-VOID DrawTextWithTransparency (
-    IN CHAR16 *Text,
-    IN UINTN   XPos,
-    IN UINTN   YPos
-) {
-    UINTN     TextWidth;
-    EG_IMAGE *TextBuffer;
-
-    if (Text == NULL) {
-        Text = L"";
-    }
-
-    egMeasureText (Text, &TextWidth, NULL);
-
-    if (TextWidth == 0) {
-       TextWidth = ScreenW;
-       XPos      = 0;
-    }
-
-    TextBuffer = egCropImage (
-        GlobalConfig.ScreenBackground,
-        XPos, YPos,
-        TextWidth,
-        TextLineHeight()
-    );
-
-    if (TextBuffer == NULL) {
-        return;
-    }
-
-    // Render the text
-    egRenderText (
-        Text,
-        TextBuffer,
-        0, 0,
-        AverageBrightness (TextBuffer)
-    );
-
-    egDrawImageWithTransparency (
-        TextBuffer, NULL,
-        XPos, YPos,
-        TextBuffer->Width,
-        TextBuffer->Height
-    );
-
-    MY_FREE_IMAGE(TextBuffer);
-}
-
-// Compute the size and position of the window
-// that will hold a subscreen's information.
-static
-VOID ComputeSubScreenWindowSize (
-    REFIT_MENU_SCREEN *Screen,
-    SCROLL_STATE      *State,
-    UINTN             *XPos,
-    UINTN             *YPos,
-    UINTN             *Width,
-    UINTN             *Height,
-    UINTN             *LineWidth
-) {
-    UINTN i;
-    UINTN HintTop;
-    UINTN ItemWidth;
-    UINTN TitleWidth;
-    UINTN FontCellWidth;
-    UINTN FontCellHeight;
-    UINTN BannerBottomEdge;
-
-    *Width     = 20;
-    *Height    = 5;
-    TitleWidth = egComputeTextWidth (Screen->Title);
-
-    for (i = 0; i < Screen->InfoLineCount; i++) {
-        ItemWidth = StrLen (Screen->InfoLines[i]);
-
-        if (*Width < ItemWidth) {
-            *Width = ItemWidth;
-        }
-
-        (*Height)++;
-    }
-
-    for (i = 0; i <= State->MaxIndex; i++) {
-        ItemWidth = StrLen (Screen->Entries[i]->Title);
-
-        if (*Width < ItemWidth) {
-            *Width = ItemWidth;
-        }
-
-        (*Height)++;
-    }
-
-    FontCellWidth  = egGetFontCellWidth();
-    *Width = (*Width + 2) * FontCellWidth;
-    *LineWidth = *Width;
-
-    if (Screen->TitleImage) {
-        *Width += (Screen->TitleImage->Width + (TITLEICON_SPACING * 2) + FontCellWidth);
-    }
-    else {
-        *Width += FontCellWidth;
-    }
-
-    if (*Width < TitleWidth) {
-        *Width = TitleWidth + 2 * FontCellWidth;
-    }
-
-    // Keep it within the bounds of the screen, or 2/3 of the screen's width
-    // for screens over 800 pixels wide
-    if (*Width > ScreenW) {
-        *Width = ScreenW;
-    }
-
-    *XPos = (ScreenW - *Width) / 2;
-
-    // Top of hint text
-    FontCellHeight = egGetFontHeight();
-    HintTop  = ScreenH - (FontCellHeight * 3);
-    *Height *= TextLineHeight();
-
-    if (Screen->TitleImage &&
-        (*Height < (Screen->TitleImage->Height + TextLineHeight() * 4))
-    ) {
-        *Height = Screen->TitleImage->Height + TextLineHeight() * 4;
-    }
-
-    if (GlobalConfig.BannerBottomEdge >= HintTop) {
-        // Probably a full-screen image; treat it as an empty banner
-        BannerBottomEdge = 0;
-    }
-    else {
-        BannerBottomEdge = GlobalConfig.BannerBottomEdge;
-    }
-
-    if (*Height > (HintTop - BannerBottomEdge - FontCellHeight * 2)) {
-        BannerBottomEdge = 0;
-    }
-
-    if (*Height > (HintTop - BannerBottomEdge - FontCellHeight * 2)) {
-        *Height = (HintTop - BannerBottomEdge - FontCellHeight * 2);
-    }
-
-    *YPos = ((ScreenH - *Height) / 2);
-    if (*YPos < BannerBottomEdge) {
-        *YPos = BannerBottomEdge +
-            FontCellHeight +
-            (HintTop - BannerBottomEdge - *Height) / 2;
-    }
-} // VOID ComputeSubScreenWindowSize()
-
 // Displays sub-menus
 VOID GraphicsMenuStyle (
     IN REFIT_MENU_SCREEN  *Screen,
@@ -2013,6 +2956,10 @@ VOID GraphicsMenuStyle (
     IN UINTN               Function,
     IN CHAR16             *ParamText
 ) {
+    #if REFIT_DEBUG > 0
+    BOOLEAN CheckMute = FALSE;
+    #endif
+
     INTN      i;
     UINTN     ItemWidth;
     EG_IMAGE *Window;
@@ -2022,9 +2969,6 @@ VOID GraphicsMenuStyle (
     static UINTN LineWidth, MenuWidth, MenuHeight;
     static UINTN TitlePosX, TimeoutPosY, CharWidth;
 
-    #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
-    #endif
 
     CharWidth = egGetFontCellWidth();
     State->ScrollMode = SCROLL_MODE_TEXT;
@@ -2173,257 +3117,14 @@ VOID GraphicsMenuStyle (
 
         break;
     } // switch
-} // static VOID GraphicsMenuStyle()
-
-//
-// Graphical main menu style
-//
-
-static
-VOID DrawMainMenuEntry (
-    REFIT_MENU_ENTRY *Entry,
-    BOOLEAN           selected,
-    UINTN             XPos,
-    UINTN             YPos
-) {
-    EG_IMAGE *Background;
-
-    // Do not draw selection image when not hoverin if using pointer
-    if (!selected || !DrawSelection) {
-        // Image not selected ... copy background
-        egDrawImageWithTransparency (
-            Entry->Image,
-            Entry->BadgeImage,
-            XPos, YPos,
-            SelectionImages[Entry->Row]->Width,
-            SelectionImages[Entry->Row]->Height
-        );
-
-        // Early Return
-        return;
-    }
-
-    Background = egCropImage (
-        GlobalConfig.ScreenBackground,
-        XPos, YPos,
-        SelectionImages[Entry->Row]->Width,
-        SelectionImages[Entry->Row]->Height
-    );
-
-    if (Background) {
-        egComposeImage (
-            Background,
-            SelectionImages[Entry->Row],
-            0, 0
-        );
-
-        BltImageCompositeAny (
-            Background,
-            Entry->Image,
-            Entry->BadgeImage,
-            XPos, YPos
-        );
-
-        MY_FREE_IMAGE(Background);
-    }
-} // VOID DrawMainMenuEntry()
-
-static
-VOID PaintAll (
-    IN REFIT_MENU_SCREEN *Screen,
-    IN SCROLL_STATE      *State,
-    UINTN                *itemPosX,
-    UINTN                 row0PosY,
-    UINTN                 row1PosY,
-    UINTN                 textPosY
-) {
-    INTN i;
-
-    if (Screen->Entries[State->CurrentSelection]->Row == 0) {
-        AdjustScrollState (State);
-    }
-
-    for (i = State->FirstVisible; i <= State->MaxIndex; i++) {
-        if (Screen->Entries[i]->Row == 0) {
-            if (i <= State->LastVisible) {
-                DrawMainMenuEntry (
-                    Screen->Entries[i],
-                    (i == State->CurrentSelection) ? TRUE : FALSE,
-                    itemPosX[i - State->FirstVisible],
-                    row0PosY
-                );
-            }
-        }
-        else {
-            DrawMainMenuEntry (
-                Screen->Entries[i],
-                (i == State->CurrentSelection) ? TRUE : FALSE,
-                itemPosX[i],
-                row1PosY
-            );
-        }
-    }
-
-    if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_LABEL) &&
-        (!PointerActive || DrawSelection)
-    ) {
-        DrawTextWithTransparency (L"", 0, textPosY);
-        DrawTextWithTransparency (
-            Screen->Entries[State->CurrentSelection]->Title,
-            (ScreenW - egComputeTextWidth (Screen->Entries[State->CurrentSelection]->Title)) >> 1,
-            textPosY
-        );
-    }
-    else {
-        DrawTextWithTransparency (L"", 0, textPosY);
-    }
-
-    if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_HINTS)) {
-        DrawTextWithTransparency (
-            Screen->Hint1,
-            (ScreenW - egComputeTextWidth (Screen->Hint1)) / 2,
-            ScreenH - (egGetFontHeight() * 3)
-        );
-
-        DrawTextWithTransparency (
-            Screen->Hint2,
-            (ScreenW - egComputeTextWidth (Screen->Hint2)) / 2,
-            ScreenH - (egGetFontHeight() * 2)
-        );
-    }
-} // static VOID PaintAll()
-
-// Move the selection to State->CurrentSelection
-// Adjust icon row if necessary
-static
-VOID PaintSelection (
-    IN REFIT_MENU_SCREEN *Screen,
-    IN SCROLL_STATE      *State,
-    UINTN                *itemPosX,
-    UINTN                 row0PosY,
-    UINTN                 row1PosY,
-    UINTN                 textPosY
-) {
-    UINTN XSelectPrev, XSelectCur, YPosPrev, YPosCur;
-
-    if (
-        (State->CurrentSelection < State->InitialRow1) &&
-        (
-            (State->CurrentSelection > State->LastVisible) ||
-            (State->CurrentSelection < State->FirstVisible)
-        )
-    ) {
-        // Current selection is not visible ... Redraw the menu
-        MainMenuStyle (Screen, State, MENU_FUNCTION_PAINT_ALL, NULL);
-
-        // Early Return
-        return;
-    }
-
-    if (Screen->Entries[State->PreviousSelection]->Row == 0) {
-        XSelectPrev = State->PreviousSelection - State->FirstVisible;
-        YPosPrev = row0PosY;
-    }
-    else {
-        XSelectPrev = State->PreviousSelection;
-        YPosPrev = row1PosY;
-    }
-
-    if (Screen->Entries[State->CurrentSelection]->Row == 0) {
-        XSelectCur = State->CurrentSelection - State->FirstVisible;
-        YPosCur = row0PosY;
-    }
-    else {
-        XSelectCur = State->CurrentSelection;
-        YPosCur = row1PosY;
-    }
-
-    DrawMainMenuEntry (
-        Screen->Entries[State->PreviousSelection],
-        FALSE,
-        itemPosX[XSelectPrev],
-        YPosPrev
-    );
-
-    DrawMainMenuEntry (
-        Screen->Entries[State->CurrentSelection],
-        TRUE,
-        itemPosX[XSelectCur],
-        YPosCur
-    );
-
-    if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_LABEL) &&
-        (!PointerActive || DrawSelection)
-    ) {
-        DrawTextWithTransparency (L"", 0, textPosY);
-        DrawTextWithTransparency (
-            Screen->Entries[State->CurrentSelection]->Title,
-            (ScreenW - egComputeTextWidth (Screen->Entries[State->CurrentSelection]->Title)) >> 1,
-            textPosY
-        );
-    }
-    else {
-        DrawTextWithTransparency (L"", 0, textPosY);
-    }
-} // static VOID MoveSelection (VOID)
-
-// Fetch the icon specified by ExternalFilename if available,
-// or by BuiltInIcon if not.
-static
-EG_IMAGE * GetIcon (
-    IN EG_EMBEDDED_IMAGE *BuiltInIcon,
-    IN CHAR16            *ExternalFilename
-) {
-    EG_IMAGE *Icon;
-
-    Icon = egFindIcon (
-        ExternalFilename,
-        GlobalConfig.IconSizes[ICON_SIZE_SMALL]
-    );
-    if (Icon != NULL) {
-        // Early Return
-        return Icon;
-    }
-
-    return egPrepareEmbeddedImage (BuiltInIcon, TRUE, NULL);
-} // static EG_IMAGE * GetIcon()
-
-// Display an icon at the specified location. The Y position is
-// specified as the center value, and so is adjusted by half
-// the icon's height. The X position is set along the icon's left
-// edge if Alignment == ALIGN_LEFT, and along the right edge if
-// Alignment == ALIGN_RIGHT
-static
-VOID PaintIcon (
-    IN EG_IMAGE *Icon,
-    UINTN        PosX,
-    UINTN        PosY,
-    UINTN        Alignment
-) {
-    if (Icon == NULL) {
-        // Early Return
-        return;
-    }
-
-    if (Alignment == ALIGN_RIGHT) {
-        PosX -= Icon->Width;
-    }
-
-    egDrawImageWithTransparency (
-        Icon,
-        NULL,
-        PosX,
-        PosY - (Icon->Height / 2),
-        Icon->Width,
-        Icon->Height
-    );
-} // static VOID PaintIcon()
+} // VOID GraphicsMenuStyle()
 
 UINTN ComputeRow0PosY (
     IN BOOLEAN ApplyOffset
 ) {
     UINTN Row0PosY;
     INTN  IconRowTweak;
+
 
     // Default IconRowTweak to zero
     // Keep rows in central position
@@ -2463,75 +3164,6 @@ UINTN ComputeRow0PosY (
     return Row0PosY;
 } // UINTN ComputeRow0PosY()
 
-// Display (or erase) the arrow icons to the left
-// and right of an icon's row ... as appropriate.
-static
-VOID PaintArrows (
-    SCROLL_STATE *State,
-    UINTN         PosX,
-    UINTN         PosY,
-    UINTN         row0Loaders
-) {
-    UINTN            RightX;
-    static EG_IMAGE *LeftArrow       =  NULL;
-    static EG_IMAGE *RightArrow      =  NULL;
-    static EG_IMAGE *LeftBackground  =  NULL;
-    static EG_IMAGE *RightBackground =  NULL;
-    static BOOLEAN   LoadedArrows    = FALSE;
-
-    #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
-    #endif
-
-    RightX = (ScreenW + (TileSizes[0] + TILE_XSPACING) * State->MaxVisible) / 2 + TILE_XSPACING;
-
-    if (!LoadedArrows && !(GlobalConfig.HideUIFlags & HIDEUI_FLAG_ARROWS)) {
-        #if REFIT_DEBUG > 0
-        MY_MUTELOGGER_SET;
-        #endif
-        LeftArrow  = GetIcon (&egemb_arrow_left,  L"arrow_left" );
-        RightArrow = GetIcon (&egemb_arrow_right, L"arrow_right");
-        #if REFIT_DEBUG > 0
-        MY_MUTELOGGER_OFF;
-        #endif
-
-        if (LeftArrow) {
-            LeftBackground = egCropImage (
-                GlobalConfig.ScreenBackground,
-                PosX - LeftArrow->Width,
-                PosY - (LeftArrow->Height / 2),
-                LeftArrow->Width,
-                LeftArrow->Height
-            );
-        }
-        if (RightArrow) {
-            RightBackground = egCropImage (
-                GlobalConfig.ScreenBackground,
-                RightX,
-                PosY - (RightArrow->Height / 2),
-                RightArrow->Width,
-                RightArrow->Height
-            );
-        }
-        LoadedArrows = TRUE;
-    }
-
-    // For PaintIcon() calls, the starting Y position is moved to the midpoint
-    // of the surrounding row; PaintIcon() adjusts this back up by half the
-    // icon's height to properly center it.
-    if (LeftArrow && LeftBackground) {
-        (State->FirstVisible > 0)
-            ? PaintIcon (LeftArrow, PosX, PosY, ALIGN_RIGHT)
-            : BltImage (LeftBackground, PosX - LeftArrow->Width, PosY - (LeftArrow->Height / 2));
-    }
-
-    if (RightArrow && RightBackground) {
-        (State->LastVisible < (row0Loaders - 1))
-            ? PaintIcon (RightArrow, RightX, PosY, ALIGN_LEFT)
-            : BltImage (RightBackground, RightX, PosY - (RightArrow->Height / 2));
-    }
-} // VOID PaintArrows()
-
 // Display main menu in graphics mode
 VOID MainMenuStyle (
     IN REFIT_MENU_SCREEN *Screen,
@@ -2539,6 +3171,10 @@ VOID MainMenuStyle (
     IN UINTN              Function,
     IN CHAR16            *ParamText
 ) {
+    #if REFIT_DEBUG > 0
+    BOOLEAN CheckMute = FALSE;
+    #endif
+
     INTN   i;
     UINTN  row0Count, row1Count, row1PosX, row1PosXRunning;
 
@@ -2546,9 +3182,6 @@ VOID MainMenuStyle (
     static UINTN *itemPosX;
     static UINTN  row0PosY, textPosY;
 
-    #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
-    #endif
 
     State->ScrollMode = SCROLL_MODE_ICONS;
     switch (Function) {
@@ -2662,6 +3295,7 @@ UINTN FindMainMenuItem (
     static UINTN *itemPosX;
     static UINTN  row0PosY;
 
+
     row0Count = 0;
     row1Count = 0;
     row0Loaders = 0;
@@ -2749,6 +3383,7 @@ UINTN FindMainMenuItem (
 VOID GenerateWaitList(VOID) {
     UINTN PointerCount;
 
+
     if (WaitList != NULL) {
         // Early Return
         return;
@@ -2776,6 +3411,7 @@ UINTN WaitForInput (
     UINTN       Length;
     UINTN       Index;
     EFI_EVENT   TimerEvent;
+
 
     // Generate WaitList if not already generated.
     GenerateWaitList();
@@ -2833,56 +3469,15 @@ UINTN WaitForInput (
     return INPUT_TIMEOUT;
 } // UINTN WaitForInput()
 
-// Enable the user to edit boot loader options.
-// Returns TRUE if the user exited with edited options; FALSE if the user
-// pressed Esc to terminate the edit.
-static
-BOOLEAN EditOptions (
-    LOADER_ENTRY *MenuEntry
-) {
-    UINTN    x_max, y_max;
-    CHAR16  *EditedOptions;
-    BOOLEAN  retval;
-
-    if (GlobalConfig.HideUIFlags & HIDEUI_FLAG_EDITOR) {
-        // Early Return
-        return FALSE;
-    }
-
-    REFIT_CALL_4_WRAPPER(
-        gST->ConOut->QueryMode, gST->ConOut,
-        gST->ConOut->Mode->Mode, &x_max, &y_max
-    );
-
-    if (!GlobalConfig.TextOnly) {
-        SwitchToText (TRUE);
-    }
-
-    if (line_edit (MenuEntry->LoadOptions, &EditedOptions, x_max)) {
-        MY_FREE_POOL(MenuEntry->LoadOptions);
-        MenuEntry->LoadOptions = EditedOptions;
-
-        retval = TRUE;
-    }
-    else {
-        retval = FALSE;
-    }
-
-    if (!GlobalConfig.TextOnly) {
-        SwitchToGraphics();
-    }
-
-    return retval;
-} // VOID EditOptions()
-
-//
-// user-callable dispatcher functions
-//
-
 VOID DisplaySimpleMessage (
     CHAR16 *Message,
     CHAR16 *Title OPTIONAL
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16            *MsgStr;
+    BOOLEAN            CheckMute = FALSE;
+    #endif
+
     INTN               DefaultEntry;
     INTN               MenuExit;
     BOOLEAN            RetVal;
@@ -2890,9 +3485,6 @@ VOID DisplaySimpleMessage (
     REFIT_MENU_SCREEN *SimpleMessageMenu;
     REFIT_MENU_ENTRY  *ChosenOption;
 
-    #if REFIT_DEBUG > 0
-    CHAR16            *MsgStr;
-    #endif
 
     if (Message == NULL) {
         // Early Return
@@ -2909,20 +3501,24 @@ VOID DisplaySimpleMessage (
         Title = L"Information";
     }
 
-    #if REFIT_DEBUG > 0
-    MsgStr = PoolPrint (L"SimpleMessage:- '%s ::: %s'", Title, Message);
-    LOG_MSG("INFO: %s", MsgStr);
-    LOG_MSG("\n\n");
-    ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", MsgStr);
-    MY_FREE_POOL(MsgStr);
-    #endif
-
     SimpleMessageMenu->Title      = StrDuplicate (Title);
     SimpleMessageMenu->TitleImage = BuiltinIcon (BUILTIN_ICON_FUNC_ABOUT);
     SimpleMessageMenu->Hint1      = StrDuplicate (L"Press 'Enter' to Return to Main Menu");
     SimpleMessageMenu->Hint2      = StrDuplicate (L""                                    );
 
+    #if REFIT_DEBUG > 0
+    MsgStr = PoolPrint (L"DisplaySimpleMessage:- '%s ::: %s'", Title, Message);
+    LOG_MSG("INFO: %s", MsgStr);
+    LOG_MSG("\n\n");
+    ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", MsgStr);
+    MY_FREE_POOL(MsgStr);
+
+    MY_MUTELOGGER_SET;
+    #endif
     AddMenuInfoLine (SimpleMessageMenu, Message, FALSE);
+    #if REFIT_DEBUG > 0
+    MY_MUTELOGGER_OFF;
+    #endif
 
     RetVal = GetMenuEntryReturn (&SimpleMessageMenu);
     if (!RetVal) {
@@ -2946,39 +3542,6 @@ VOID DisplaySimpleMessage (
     FreeMenuScreen (&SimpleMessageMenu);
 } // VOID DisplaySimpleMessage()
 
-// Save a list of items to be hidden to NVRAM or disk,
-// as determined by GlobalConfig.UseNvram.
-static
-VOID SaveHiddenList (
-    IN CHAR16 *HiddenList,
-    IN CHAR16 *VarName
-) {
-    EFI_STATUS Status;
-    UINTN      ListLen;
-
-    if (VarName == NULL) {
-        CheckError (EFI_INVALID_PARAMETER, L"in SaveHiddenList!!");
-
-        // Early Return ... Prevent NULL dererencing
-        return;
-    }
-
-    if (HiddenList == NULL) {
-        ListLen = 0;
-    }
-    else {
-        ListLen = StrLen (HiddenList) * 2 + 2;
-    }
-
-    Status = EfivarSetRaw (
-        &RefindPlusGuid, VarName,
-        HiddenList, ListLen, TRUE
-    );
-    if (EFI_ERROR(Status)) {
-        CheckError (Status, L"in SaveHiddenList!!");
-    }
-} // VOID SaveHiddenList()
-
 // Present a menu for the user to delete (un-hide) hidden tags.
 VOID ManageHiddenTags (VOID) {
     INTN                 DefaultEntry;
@@ -2999,13 +3562,13 @@ VOID ManageHiddenTags (VOID) {
     REFIT_MENU_ENTRY    *ChosenOption;
     REFIT_MENU_SCREEN   *RestoreItemMenu;
 
+
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_LINE_THIN_SEP, L"Prepare Menu Screen");
     ALT_LOG(1, LOG_LINE_NORMAL, L"Screen Title:- '%s'", LABEL_HIDDEN);
     #endif
 
     AllTags  = NULL;
-    SaveTags = SaveTools = SaveLegacy = SaveFirmware = FALSE;
 
     HiddenTags = ReadHiddenTags (L"HiddenTags");
     if (HiddenTags != NULL &&
@@ -3092,7 +3655,8 @@ VOID ManageHiddenTags (VOID) {
         LogExit (MenuExit, __func__, ChosenOption->Title);
         #endif
 
-        // Previously unset defaults
+        SaveTags = SaveTools = SaveLegacy = SaveFirmware = FALSE;
+
         if (MenuExit == MENU_EXIT_ENTER) {
             if (HiddenTags    ) SaveTags     |= DeleteItemFromCsvList (ChosenOption->Title, &HiddenTags    );
             if (HiddenTools   ) SaveTools    |= DeleteItemFromCsvList (ChosenOption->Title, &HiddenTools   );
@@ -3126,13 +3690,14 @@ VOID ManageHiddenTags (VOID) {
 CHAR16 * ReadHiddenTags (
     CHAR16 *VarName
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16 *CheckErrMsg;
+    #endif
+
     CHAR16     *Buffer;
     UINTN       Size;
     EFI_STATUS  Status;
 
-    #if REFIT_DEBUG > 0
-    CHAR16 *CheckErrMsg;
-    #endif
 
     Buffer = NULL;
     Status = EfivarGetRaw (
@@ -3168,484 +3733,7 @@ CHAR16 * ReadHiddenTags (
     }
 
     return Buffer;
-} // CHAR16* ReadHiddenTags()
-
-// Add PathName to the hidden tags variable specified by *VarName.
-static
-VOID AddToHiddenTags (
-    CHAR16 *VarName,
-    CHAR16 *Pathname
-) {
-    EFI_STATUS  Status;
-    CHAR16     *HiddenTags;
-
-    if (Pathname == NULL || StrLen (Pathname) == 0) {
-        // Early Return
-        return;
-    }
-
-    HiddenTags = ReadHiddenTags (VarName);
-    if (FindSubStr (HiddenTags, Pathname)) {
-        CheckError (EFI_ALREADY_STARTED, L"in 'AddToHiddenTags'");
-
-        // Early Return
-        return;
-    }
-
-    MergeUniqueStrings (&HiddenTags, Pathname, L',');
-    Status = EfivarSetRaw (
-        &RefindPlusGuid, VarName,
-        HiddenTags, StrLen (HiddenTags) * 2 + 2, TRUE
-    );
-    if (EFI_ERROR(Status)) {
-        CheckError (Status, L"in 'AddToHiddenTags'!!");
-    }
-
-    MY_FREE_POOL(HiddenTags);
-} // VOID AddToHiddenTags()
-
-// Adds a filename, specified by the *Loader variable, to the *VarName UEFI variable,
-// using the mostly-prepared *HideEfiMenu structure to prompt the user to confirm
-// hiding that item.
-// Returns TRUE if item was hidden, FALSE otherwise.
-static
-BOOLEAN HideEfiTag (
-    LOADER_ENTRY      *Loader,
-    REFIT_MENU_SCREEN *HideEfiMenu,
-    CHAR16            *VarName
-) {
-    INTN               DefaultEntry;
-    UINTN              MenuExit;
-    CHAR16            *GuidStr;
-    CHAR16            *FullPath;
-    CHAR16            *TempPath;
-    BOOLEAN            TagHidden;
-    BOOLEAN            MyLoadPath;
-    BOOLEAN            GotVolName;
-    REFIT_VOLUME      *TestVolume;
-    MENU_STYLE_FUNC    Style;
-    REFIT_MENU_ENTRY  *ChosenOption;
-
-    if (Loader             == NULL ||
-        VarName            == NULL ||
-        HideEfiMenu        == NULL ||
-        Loader->Volume     == NULL ||
-        Loader->LoaderPath == NULL
-    ) {
-        // Early Return
-        return FALSE;
-    }
-
-    GotVolName = (
-        Loader->Volume->VolName           &&
-        StrLen (Loader->Volume->VolName) > 0
-    );
-
-    MyLoadPath = (
-        Loader->LoaderPath           &&
-        StrLen (Loader->LoaderPath) > 0
-    );
-
-    if (GotVolName) {
-        if (!MyLoadPath) {
-            TempPath = StrDuplicate (Loader->Volume->VolName);
-        }
-        else {
-            TempPath = PoolPrint (
-                L"%s:%s", Loader->Volume->VolName, Loader->LoaderPath
-            );
-        }
-    }
-    else if (MyLoadPath) {
-        TempPath = StrDuplicate (Loader->LoaderPath);
-    }
-    else {
-        TempPath = StrDuplicate (L"Item Selected on Main Screen");
-    }
-
-    AddMenuInfoLine (HideEfiMenu, L"Hide EFI Entry Below?",    FALSE);
-    AddMenuInfoLine (HideEfiMenu, PoolPrint (L"%s", TempPath),  TRUE);
-    MY_FREE_POOL(TempPath);
-
-    do {
-        TagHidden = GetMenuEntryYesNo (&HideEfiMenu);
-        if (!TagHidden) {
-            FreeMenuScreen (&HideEfiMenu);
-
-            break;
-        }
-
-        DefaultEntry = 9999; // Use the Max Index
-        Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
-        MenuExit = DrawMenuScreen (
-            HideEfiMenu, Style,
-            &DefaultEntry, &ChosenOption
-        );
-
-        #if REFIT_DEBUG > 0
-        LogExit (MenuExit, __func__, ChosenOption->Title);
-        #endif
-
-        if (MenuExit != MENU_EXIT_ENTER        ||
-            MyStriCmp (ChosenOption->Title, L"No")
-        ) {
-            TagHidden = FALSE;
-        }
-        else {
-            TagHidden  = TRUE;
-
-            TestVolume = NULL;
-            GuidStr    = GuidAsString (&Loader->Volume->PartGuid);
-            FindVolume (&TestVolume, GuidStr);
-
-            if (TestVolume != NULL && TestVolume->RootDir != NULL) {
-                if (!GotVolName) {
-                    FullPath = PoolPrint (L"%s:", GuidStr);
-                }
-                else {
-                    TempPath = StrDuplicate (
-                        Loader->Volume->VolName
-                    );
-                    LimitStringLength (TempPath, 20);
-
-                    FullPath = PoolPrint (
-                        L"%-20s%s%s:",
-                        TempPath, DEFAULT_STRING_DELIM, GuidStr
-                    );
-
-                    MY_FREE_POOL(TempPath);
-                }
-
-                if (MyLoadPath) {
-                    MergeStrings (
-                        &FullPath,
-                        Loader->LoaderPath,
-                        (Loader->LoaderPath[0] == L'\\' ? L'\0' : L'\\')
-                    );
-                }
-            }
-            else if (GotVolName) {
-                FullPath = PoolPrint (L"%s:", Loader->Volume->VolName);
-            }
-            else {
-                FullPath = NULL;
-            }
-
-            MY_FREE_POOL(GuidStr);
-
-            if (FullPath != NULL) {
-                AddToHiddenTags (VarName, FullPath);
-            }
-            MY_FREE_POOL(FullPath);
-        }
-    } while (0); // This 'loop' only runs once
-
-    return TagHidden;
-} // BOOLEAN HideEfiTag()
-
-static
-BOOLEAN HideFirmwareTag (
-    LOADER_ENTRY      *Loader,
-    REFIT_MENU_SCREEN *HideFirmwareMenu
-) {
-    INTN               DefaultEntry;
-    UINTN              MenuExit;
-    BOOLEAN            TagHidden;
-    MENU_STYLE_FUNC    Style;
-    REFIT_MENU_ENTRY  *ChosenOption;
-
-    AddMenuInfoLine (HideFirmwareMenu, L"Hide Firmware Entry Below?",    FALSE);
-    AddMenuInfoLine (HideFirmwareMenu, PoolPrint (L"%s", Loader->Title),  TRUE);
-
-    TagHidden = GetMenuEntryYesNo (&HideFirmwareMenu);
-    if (!TagHidden) {
-        FreeMenuScreen (&HideFirmwareMenu);
-
-        // Early Return
-        return FALSE;
-    }
-
-    DefaultEntry = 9999; // Use the Max Index
-    Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
-    MenuExit = DrawMenuScreen (
-        HideFirmwareMenu, Style,
-        &DefaultEntry, &ChosenOption
-    );
-
-    #if REFIT_DEBUG > 0
-    LogExit (MenuExit, __func__, ChosenOption->Title);
-    #endif
-
-    if (MenuExit != MENU_EXIT_ENTER        ||
-        MyStriCmp (ChosenOption->Title, L"No")
-    ) {
-        TagHidden = FALSE;
-    }
-    else {
-        TagHidden = TRUE;
-        AddToHiddenTags(L"HiddenFirmware", Loader->Title);
-    }
-
-    return TagHidden;
-} // BOOLEAN HideFirmwareTag()
-
-
-static
-BOOLEAN HideLegacyTag (
-    LEGACY_ENTRY      *LegacyLoader,
-    REFIT_MENU_SCREEN *HideLegacyMenu
-) {
-    INTN               DefaultEntry;
-    UINTN              MenuExit;
-    CHAR16            *Name;
-    BOOLEAN            TagHidden;
-    BOOLEAN            BaseCheck;
-    MENU_STYLE_FUNC    Style;
-    REFIT_MENU_ENTRY  *ChosenOption;
-
-
-    BaseCheck = (
-        LegacyLoader->me.Title  != NULL &&
-        GlobalConfig.LegacyType != LEGACY_TYPE_MAC1
-    );
-
-    if (!BaseCheck &&
-        (
-            LegacyLoader->BdsOption              == NULL ||
-            LegacyLoader->BdsOption->Description == NULL ||
-            (
-                GlobalConfig.LegacyType != LEGACY_TYPE_UEFI &&
-                GlobalConfig.LegacyType != LEGACY_TYPE_MAC2
-            )
-        )
-    ) {
-        #if REFIT_DEBUG > 0
-        ALT_LOG(1, LOG_STAR_SEPARATOR,
-            L"Could *NOT* Load Menu in 'HideLegacyTag' Function ... 1"
-        );
-        #endif
-
-        FreeMenuScreen (&HideLegacyMenu);
-
-        // Early Return
-        return FALSE;
-    }
-
-    Name = PoolPrint (
-        L"%-20s%s%s"
-        L"Legacy BIOS Item",
-        DEFAULT_STRING_DELIM,
-        (BaseCheck)
-            ? LegacyLoader->me.Title
-            : LegacyLoader->BdsOption->Description
-    );
-
-    AddMenuInfoLine (HideLegacyMenu, L"Hide Legacy Entry Below?", FALSE);
-    AddMenuInfoLine (HideLegacyMenu, PoolPrint (L"%s", Name),      TRUE);
-
-    if (!GetMenuEntryYesNo (&HideLegacyMenu)) {
-        #if REFIT_DEBUG > 0
-        ALT_LOG(1, LOG_STAR_SEPARATOR,
-            L"Could *NOT* Load Menu in 'HideLegacyTag' Function ... 2"
-        );
-        #endif
-
-        FreeMenuScreen (&HideLegacyMenu);
-
-        // Early Return
-        return FALSE;
-    }
-
-    DefaultEntry = 9999; // Use the Max Index
-    Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
-    MenuExit = DrawMenuScreen (
-        HideLegacyMenu, Style,
-        &DefaultEntry, &ChosenOption
-    );
-
-    #if REFIT_DEBUG > 0
-    LogExit (MenuExit, __func__, ChosenOption->Title);
-    #endif
-
-    if (MenuExit != MENU_EXIT_ENTER        ||
-        MyStriCmp (ChosenOption->Title, L"No")
-    ) {
-        TagHidden = FALSE;
-    }
-    else {
-        TagHidden = TRUE;
-        AddToHiddenTags (L"HiddenLegacy", Name);
-    }
-    MY_FREE_POOL(Name);
-
-    return TagHidden;
-} // BOOLEAN HideLegacyTag()
-
-static
-VOID HideTag (
-    REFIT_MENU_ENTRY *ChosenOption
-) {
-    CHAR16            *NoChanges;
-    UINTN              TagFlag;
-    LOADER_ENTRY      *Loader;
-    LEGACY_ENTRY      *LegacyLoader;
-    REFIT_MENU_SCREEN *HideTagMenu;
-
-    if (ChosenOption == NULL) {
-        // Early Return
-        return;
-    }
-
-    HideTagMenu = AllocateZeroPool (sizeof (REFIT_MENU_SCREEN));
-    if (HideTagMenu == NULL) {
-        // Early Return
-        return;
-    }
-
-    HideTagMenu->TitleImage = BuiltinIcon (BUILTIN_ICON_FUNC_HIDDEN);
-    HideTagMenu->Hint1      = StrDuplicate (SELECT_OPTION_HINT     );
-    HideTagMenu->Hint2      = StrDuplicate (RETURN_MAIN_SCREEN_HINT);
-
-    TagFlag      = 0;
-    NoChanges    = L"No Changes Made on Hide Entry Call";
-    Loader       = (LOADER_ENTRY *) ChosenOption;
-    LegacyLoader = (LEGACY_ENTRY *) ChosenOption;
-
-    // DA-TAG: Investigate This ... Probably related to 'El Gordo'.
-    // Original: (BUG) RescanAll calls should be conditional on successful calls
-    //         to HideEfiTag or HideLegacyTag. For the former however, this
-    //         causes crashes on a second hide a tag call if the user chose "No"
-    //         to the first call. This seems to be related to memory management
-    //         of Volumes; the crash occurs in FindVolumeAndFilename() and lib.c
-    //         when calling DevicePathToStr. Calling RescanAll() on all returns
-    //         from HideEfiTag seems to be an effective workaround, but there is
-    //         likely a memory management bug somewhere that is the root cause.
-    // Update: One or more unknown memory conflicts, 'El Gordo' (The Big One),
-    //         is likely what has been noted upstream above.
-    //         Other apparent manifestations of El Gordo:
-    //           - https://sf.net/p/refind/discussion/general/thread/ed3185fb40
-    //           - https://sf.net/p/refind/discussion/general/thread/4dfcdfdd16
-    //           - https://github.com/joevt/RefindPlus/commit/8c303d504d58bb235e9d2218df8bdb939de9ed77
-    //           - https://github.com/dakanji/RefindPlus/issues/163
-    //         El Gordo is most likely a buffer overflow of some sort.
-    //         El Gordo might be in one or more filesystem drivers.
-    //         El Gordo might be spread across a number of files.
-    switch (ChosenOption->Tag) {
-        case TAG_LOADER:
-            if (GlobalConfig.SyncAPFS &&
-                Loader->Volume->FSType == FS_TYPE_APFS
-            ) {
-                DisplaySimpleMessage (
-                    L"Amend Config File Instead ... Update \"dont_scan_volumes\" Token",
-                    L"Hide Entry *IS NOT* Available on Synced APFS Loaders"
-                );
-            }
-            else if (Loader->DiscoveryType != DISCOVERY_TYPE_AUTO) {
-                DisplaySimpleMessage (
-                    L"Amend Config File Instead ... Disable Stanza",
-                    L"Hide Entry *IS NOT* Available on Manual Stanzas"
-                );
-            }
-            else {
-                HideTagMenu->Title = L"Hide UEFI Entry";
-                if (HideEfiTag (Loader, HideTagMenu, L"HiddenTags")) {
-                    // Changes Triggered
-                    TagFlag = 1;
-                }
-                else {
-                    // No Changes Triggered
-                    TagFlag = 2;
-                }
-            }
-
-            break;
-        case TAG_LEGACY:
-        case TAG_LEGACY_UEFI:
-            HideTagMenu->Title = L"Hide Legacy BIOS Entry";
-            if (HideLegacyTag (LegacyLoader, HideTagMenu)) {
-                // Changes Triggered
-                TagFlag = 1;
-            }
-            else {
-                // No Changes Triggered
-                TagFlag = 2;
-            }
-
-            break;
-        case TAG_FIRMWARE_LOADER:
-            HideTagMenu->Title = L"Hide Firmware BootOption Entry";
-            if (HideFirmwareTag(Loader, HideTagMenu)) {
-                // Changes Triggered
-                TagFlag = 1;
-            }
-            else {
-                // No Changes Triggered
-                TagFlag = 2;
-            }
-
-            break;
-        case TAG_SHELL:
-        case TAG_GDISK:
-        case TAG_GPTSYNC:
-        case TAG_MEMTEST:
-        case TAG_NETBOOT:
-        case TAG_MOK_TOOL:
-        case TAG_RECOVERY_MAC:
-        case TAG_RECOVERY_WIN:
-        case TAG_FWUPDATE_TOOL:
-            DisplaySimpleMessage (
-                L"Amend Config File Instead ... Update \"showtools\" Token",
-                L"Hide Entry *IS NOT* Available on This External Tool"
-            );
-
-            break;
-        case TAG_EXIT:
-        case TAG_ABOUT:
-        case TAG_REBOOT:
-        case TAG_HIDDEN:
-        case TAG_INSTALL:
-        case TAG_SHUTDOWN:
-        case TAG_FIRMWARE:
-        case TAG_BOOTORDER:
-        case TAG_CSR_ROTATE:
-        case TAG_CLEAN_NVRAM:
-            DisplaySimpleMessage (
-                L"Amend Config File Instead ... Update \"showtools\" Token",
-                L"Hide Entry *IS NOT* Available on Any Internal Tool"
-            );
-
-            break;
-        case TAG_TOOL:
-            HideTagMenu->Title = L"Hide Tool Entry";
-            if (HideEfiTag (Loader, HideTagMenu, L"HiddenTools")) {
-                // Changes Triggered
-                TagFlag = 1;
-            }
-            else {
-                // No Changes Triggered
-                TagFlag = 2;
-            }
-    } // switch
-
-    if (TagFlag == 1) {
-        #if REFIT_DEBUG > 0
-        LOG_MSG("Received User Input:");
-        LOG_MSG("%s  - %s", OffsetNext, HideTagMenu->Title);
-        LOG_MSG("\n\n");
-        #endif
-
-        RescanAll (FALSE);
-    }
-    else if (TagFlag == 2) {
-        #if REFIT_DEBUG > 0
-        LOG_MSG("INFO: %s:- '%s'", NoChanges, HideTagMenu->Title);
-        LOG_MSG("\n\n");
-        ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", NoChanges);
-        #endif
-    }
-
-    FreeMenuScreen (&HideTagMenu);
-} // VOID HideTag()
+} // CHAR16 * ReadHiddenTags()
 
 // Present a menu for the user to confirm Bluetooth Sync
 UINTN AbortSyncTrust (VOID) {
@@ -3893,6 +3981,13 @@ UINTN RunMainMenu (
     CHAR16            **DefaultSelection,
     REFIT_MENU_ENTRY  **ChosenOption
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16             *MsgStr;
+    UINTN               EntryPosition;
+
+    static BOOLEAN      ShowLoaded = TRUE;
+    #endif
+
     REFIT_MENU_ENTRY   *TempChosenOption;
     MENU_STYLE_FUNC     MainStyle;
     MENU_STYLE_FUNC     Style;
@@ -3900,13 +3995,6 @@ UINTN RunMainMenu (
     UINTN               MenuExit;
     INTN                DefaultEntryIndex;
     INTN                DefaultSubmenuIndex;
-
-    #if REFIT_DEBUG > 0
-    CHAR16             *MsgStr;
-    UINTN               EntryPosition;
-
-    static BOOLEAN      ShowLoaded = TRUE;
-    #endif
 
 
     LOG_SEP(L"X");
@@ -4214,65 +4302,6 @@ VOID FreeMenuScreen (
     LOG_SEP(L"X");
 } // VOID FreeMenuScreen()
 
-static
-VOID FreeLegacyEntry (
-    IN LEGACY_ENTRY **Entry
-) {
-    if (*Entry == NULL) {
-        // Early Return
-        return;
-    }
-
-    MY_FREE_POOL((*Entry)->me.Title);
-    MY_FREE_IMAGE((*Entry)->me.Image);
-    MY_FREE_IMAGE((*Entry)->me.BadgeImage);
-    FreeMenuScreen (&(*Entry)->me.SubScreen);
-
-    FreeBdsOption (&(*Entry)->BdsOption);
-    MY_FREE_POOL((*Entry)->LoadOptions);
-    MY_FREE_POOL(*Entry);
-} // VOID FreeLegacyEntry()
-
-static
-VOID FreeLoaderEntry (
-    IN LOADER_ENTRY **Entry
-) {
-    LOG_SEP(L"X");
-    LOG_INCREMENT();
-    BREAD_CRUMB(L"%a:  1 - START", __func__);
-
-    if (*Entry == NULL) {
-        BREAD_CRUMB(L"%a:  1a 1 - END:- VOID", __func__);
-        LOG_DECREMENT();
-        LOG_SEP(L"X");
-
-        // Early Return
-        return;
-    }
-
-    BREAD_CRUMB(L"%a:  2", __func__);
-    FreeMenuScreen (&(*Entry)->me.SubScreen);
-
-    BREAD_CRUMB(L"%a:  3", __func__);
-    MY_FREE_POOL((*Entry)->me.Title);
-    MY_FREE_IMAGE((*Entry)->me.Image);
-    MY_FREE_IMAGE((*Entry)->me.BadgeImage);
-
-    BREAD_CRUMB(L"%a:  4", __func__);
-    MY_FREE_POOL((*Entry)->Title);
-    MY_FREE_POOL((*Entry)->LoaderPath);
-    MY_FREE_POOL((*Entry)->InitrdPath);
-    MY_FREE_POOL((*Entry)->LoadOptions);
-    MY_FREE_POOL((*Entry)->EfiLoaderPath);
-
-    BREAD_CRUMB(L"%a:  5", __func__);
-    MY_FREE_POOL(*Entry);
-
-    BREAD_CRUMB(L"%a:  6 - END:- VOID", __func__);
-    LOG_DECREMENT();
-    LOG_SEP(L"X");
-} // VOID FreeLoaderEntry()
-
 VOID FreeMenuEntry (
     REFIT_MENU_ENTRY **Entry
 ) {
@@ -4310,13 +4339,13 @@ VOID FreeMenuEntry (
 
     #if REFIT_DEBUG > 1
     switch ((*Entry)->Tag) {
-        case TAG_TOOL:            TagType = L"TAG_TOOL"           ; break;
-        case TAG_LOADER:          TagType = L"TAG_LOADER"         ; break;
-        case TAG_LEGACY:          TagType = L"TAG_LEGACY"         ; break;
-        case TAG_LEGACY_UEFI:     TagType = L"TAG_LEGACY_UEFI"    ; break;
-        case TAG_RESET_NVRAM:     TagType = L"TAG_RESET_NVRAM"    ; break;
-        case TAG_FIRMWARE_LOADER: TagType = L"TAG_FIRMWARE_LOADER"; break;
-        default:                  TagType = L"DEFAULT"            ; break;
+        case TAG_TOOL:              TagType = L"TAG_TOOL"            ;  break;
+        case TAG_LOADER:            TagType = L"TAG_LOADER"          ;  break;
+        case TAG_LEGACY:            TagType = L"TAG_LEGACY"          ;  break;
+        case TAG_LEGACY_UEFI:       TagType = L"TAG_LEGACY_UEFI"     ;  break;
+        case TAG_RESET_NVRAM:       TagType = L"TAG_RESET_NVRAM"     ;  break;
+        case TAG_FIRMWARE_LOADER:   TagType = L"TAG_FIRMWARE_LOADER" ;  break;
+        default:                    TagType = L"DEFAULT"             ;  break;
     }
     #endif
 

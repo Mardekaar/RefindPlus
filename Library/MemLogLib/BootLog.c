@@ -163,14 +163,14 @@ EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
     Status = REFIT_CALL_5_WRAPPER(
         mRootDir->Open, mRootDir,
         &LogProtocol, mDebugLog,
-        EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE, 0
+        RefitReadWrite, 0
     );
     if (Status == EFI_NOT_FOUND) {
         // Try to create log file if not found
         REFIT_CALL_5_WRAPPER(
             mRootDir->Open, mRootDir,
             &LogProtocol, mDebugLog,
-            ReadWriteCreate, 0
+            RefitReadWriteCreate, 0
         );
     }
 
@@ -184,7 +184,7 @@ EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
             Status = REFIT_CALL_5_WRAPPER(
                 mRootDir->Open, mRootDir,
                 &LogProtocol, mDebugLog,
-                EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE, 0
+                RefitReadWrite, 0
             );
 
             // Try to create log file if not found
@@ -192,7 +192,7 @@ EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
                 REFIT_CALL_5_WRAPPER(
                     mRootDir->Open, mRootDir,
                     &LogProtocol, mDebugLog,
-                    ReadWriteCreate, 0
+                    RefitReadWriteCreate, 0
                 );
             }
 
@@ -235,7 +235,7 @@ VOID SaveMessageToDebugLogFile (
         Status = REFIT_CALL_5_WRAPPER(
             mRootDir->Open, mRootDir,
             &LogFile, mDebugLog,
-            EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE, 0
+            RefitReadWrite, 0
         );
         if (!EFI_ERROR(Status)) {
             Status = REFIT_CALL_1_WRAPPER(LogFile->Delete, LogFile);

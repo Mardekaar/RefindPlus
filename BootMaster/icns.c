@@ -66,8 +66,9 @@ typedef struct {
 
 BUILTIN_ICON TableBuiltinIconOS[BASE_OS_ICON_COUNT] = {
     { NULL, L"os_mac",              ICON_SIZE_BIG   },
-    { NULL, L"os_win",              ICON_SIZE_BIG   },
+    { NULL, L"os_windows",          ICON_SIZE_BIG   },
     { NULL, L"os_win8",             ICON_SIZE_BIG   },
+    { NULL, L"os_win",              ICON_SIZE_BIG   },
     { NULL, L"os_linux",            ICON_SIZE_BIG   },
     { NULL, L"os_legacy",           ICON_SIZE_BIG   },
     { NULL, L"os_clover",           ICON_SIZE_BIG   },
@@ -252,9 +253,8 @@ EG_IMAGE * LoadIndexedIcon (
 } // static EG_IMAGE * LoadIndexedIcon()
 
 // Load an OS icon from among the comma-delimited list provided in OSIconName.
-// Searches for icons with extensions in the ICON_EXTENSIONS list (via
-// egFindIcon()).
-// Returns image data. On failure, returns an ugly "dummy" icon.
+// Searches for icons with extensions in 'ICON_EXTENSIONS' via egFindIcon().
+// Returns image data ... An ugly "dummy" icon on failure.
 EG_IMAGE * LoadOSIcon (
     IN  CHAR16  *OSIconName OPTIONAL,
     IN  CHAR16  *FallbackIconName,
@@ -265,7 +265,7 @@ EG_IMAGE * LoadOSIcon (
     CHAR16          *BaseName;
     UINTN            Index2;
     UINTN            Index;
-    INTN             OurId; // 'INTN' is important
+    INTN             OurId; // DA-TAG: 'INTN' is important
 
 
     if (!AllowGraphicsMode) {
@@ -305,6 +305,40 @@ EG_IMAGE * LoadOSIcon (
         MY_FREE_POOL(BaseName);
         MY_FREE_POOL(CutoutName);
     } // while
+
+    // Try again with "os_" if that fails and BootLogo was set
+    if (BootLogo && Image == NULL) {
+        Index =    0;
+        OurId =   -1;
+        while (
+            Image == NULL &&
+            (CutoutName = FindCommaDelimited (OSIconName, Index++)) != NULL
+        ) {
+            BaseName = PoolPrint (
+                L"os_%s",
+                CutoutName
+            );
+
+            // Skip cache check if BootLogo is set
+            // BootLogo is not cached
+            if (GlobalConfig.HelpIcon && !BootLogo) {
+                for (Index2 = 0; Index2 < BASE_OS_ICON_COUNT; Index2++) {
+                    Image = LoadIndexedIcon (BaseName, Index2);
+                    if (Image != NULL) {
+                        OurId = (Index2 < BASE_OS_ICON_COUNT)
+                            ? Index2 : (BASE_OS_ICON_COUNT - 1);
+
+                        break;
+                    }
+                } // for
+            }
+
+            UpdateBaseIcon (BaseName, &Image);
+
+            MY_FREE_POOL(BaseName);
+            MY_FREE_POOL(CutoutName);
+        } // while
+    }
 
     // Try again using "FallbackIconName" if that fails
     if (Image == NULL) {

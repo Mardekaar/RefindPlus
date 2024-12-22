@@ -56,6 +56,12 @@ POINTER_STATE                   State;
 // Initialise Pointer Devices
 ////////////////////////////////////////////////////////////////////////////////
 VOID pdInitialize (VOID) {
+    #if REFIT_DEBUG > 0
+    EFI_STATUS  EnableStatusTouch;
+    EFI_STATUS  EnableStatusMouse;
+    CHAR16     *MsgStr;
+    #endif
+
     EFI_STATUS Status;
     EFI_STATUS HandleStatus;
     UINTN      Index;
@@ -64,10 +70,6 @@ VOID pdInitialize (VOID) {
 
 
     #if REFIT_DEBUG > 0
-    EFI_STATUS  EnableStatusTouch;
-    EFI_STATUS  EnableStatusMouse;
-    CHAR16     *MsgStr;
-
     MsgStr = StrDuplicate (L"M A N A G E   P O I N T E R   D E V I C E S");
     ALT_LOG(1, LOG_LINE_SEPARATOR, L"%s", MsgStr);
     LOG_MSG("%s", MsgStr);
@@ -271,11 +273,13 @@ VOID pdInitialize (VOID) {
 // Frees allocated memory and closes pointer protocols
 ////////////////////////////////////////////////////////////////////////////////
 VOID pdCleanup (VOID) {
-    UINTN Index;
-
     #if REFIT_DEBUG > 0
     CHAR16 *MsgStr;
+    #endif
 
+    UINTN   Index;
+
+    #if REFIT_DEBUG > 0
     MsgStr = L"Deconfigure Pointer Scenarios";
     ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
     LOG_MSG("%s:", MsgStr);

@@ -76,7 +76,7 @@
     MemoryAllocationLib|MdePkg/Library/UefiMemoryAllocationLib/UefiMemoryAllocationLib.inf
     HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
     BaseStackCheckLib|MdePkg/Library/BaseStackCheckLib/BaseStackCheckLib.inf
-# For Debug logging ... Initially by Jief_Machak (sf.net/u/jief7/profile) from Clover
+# For Debug logging ... Initially from Clover by Jief_Machak (sf.net/u/jief7/profile)
     MemLogLib|RefindPlusPkg/Library/MemLogLib/MemLogLib.inf
 # For Misc OpenCore Integration
     OcConsoleLib|OpenCorePkg/Library/OcConsoleLib/OcConsoleLib.inf

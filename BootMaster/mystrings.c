@@ -22,7 +22,7 @@
 BOOLEAN NestedStrStr = FALSE;
 
 
-/*++
+/*
  *
  * Routine Description:
  *
@@ -36,7 +36,7 @@ BOOLEAN NestedStrStr = FALSE;
  * Returns:
  *  The address of the matching substring after the delimiter
  *  or the original string if the delimiter was not found.
- * --*/
+ */
 CHAR16 * GetSubStrAfter (
     IN CHAR16 *InputDelimiter,
     IN CHAR16 *String
@@ -77,7 +77,7 @@ CHAR16 * GetSubStrAfter (
 } // CHAR16 * GetSubStrAfter()
 
 
-/*++
+/*
  *
  * Routine Description:
  *
@@ -93,7 +93,7 @@ CHAR16 * GetSubStrAfter (
  * Returns:
  *  The address of the matching substring before the delimiter
  *  or the original string if the delimiter was not found.
- * --*/
+ */
 CHAR16 * GetSubStrBefore (
     IN CHAR16 *InputDelimiter,
     IN CHAR16 *String
@@ -146,54 +146,13 @@ CHAR16 * GetSubStrBefore (
     return Result;
 } // CHAR16 * GetSubStrBefore()
 
-BOOLEAN StriSubCmp (
-    IN CHAR16 *SmallStr,
-    IN CHAR16 *BigStr
-) {
-    UINTN   BigStart;
-    UINTN   BigIndex;
-    UINTN   SmallIndex;
-    BOOLEAN Terminate;
-    BOOLEAN Found;
-
-
-    if (SmallStr == NULL || BigStr == NULL) {
-        return FALSE;
-    }
-
-    Found = Terminate = FALSE;
-    BigIndex = SmallIndex = BigStart = 0;
-    while (!Terminate) {
-        if (BigStr[BigIndex] == '\0') {
-            Terminate = TRUE;
-        }
-
-        if (SmallStr[SmallIndex] == '\0') {
-            Found     = TRUE;
-            Terminate = TRUE;
-        }
-
-        if ((SmallStr[SmallIndex] & ~0x20) == (BigStr[BigIndex] & ~0x20)) {
-            SmallIndex++;
-            BigIndex++;
-        }
-        else {
-            SmallIndex = 0;
-            BigStart++;
-            BigIndex = BigStart;
-        }
-    } // while
-
-    return Found;
-} // BOOLEAN StriSubCmp()
-
 // Performs a case-insensitive string comparison. This function is necesary
 // because some EFIs have buggy StriCmp() functions that actually perform
 // case-sensitive comparisons.
 // Returns TRUE if strings are identical, FALSE otherwise.
 BOOLEAN MyStriCmp (
-    IN const CHAR16 *String1,
-    IN const CHAR16 *String2
+    IN CHAR16 *String1,
+    IN CHAR16 *String2
 ) {
     if (String1 == NULL || String2 == NULL) {
         return FALSE;
@@ -209,41 +168,86 @@ BOOLEAN MyStriCmp (
     return (*String1 == *String2);
 } // BOOLEAN MyStriCmp()
 
-// As MyStriCmp but only checks whether String2 starts with String1
-// Returns TRUE on match, FALSE otherwise.
+// Checks whether String2 starts with String1
+// Returns TRUE on match; FALSE otherwise.
 BOOLEAN MyStrBegins (
-    IN const CHAR16 *String1,
-    IN const CHAR16 *String2
+    IN CHAR16 *String1,
+    IN CHAR16 *String2
 ) {
-    BOOLEAN StrBegins;
+    UINTN i;
+    UINTN Len1;
+    UINTN Len2;
 
-
-    if (String1 == NULL || String2 == NULL) {
+    if (String1 == NULL ||
+        String2 == NULL
+    ) {
         return FALSE;
     }
 
-    StrBegins = FALSE;
-    while (*String1 != L'\0') {
-        if ((*String1 & ~0x20) != (*String2 & ~0x20)) {
-            StrBegins = FALSE;
+    Len1 = StrLen (String1);
+    Len2 = StrLen (String2);
 
-            break;
+    // String1 cannot be longer than String2
+    if (Len1 > Len2) {
+        return FALSE;
+    }
+
+    for (i = 0; i < Len1; i++) {
+        if ((String1[i] & ~0x20) !=
+            (String2[i] & ~0x20)
+        ) {
+            // Exit ... Mismatch found
+            return FALSE;
         }
+    }
 
-        String1++;
-        String2++;
-        StrBegins = TRUE;
-    } // while
-
-    return StrBegins;
+    // String2 starts with String1
+    return TRUE;
 } // BOOLEAN MyStrBegins()
 
+// Checks whether String2 ends with String1
+// Returns TRUE on match; FALSE otherwise.
+BOOLEAN MyStrEnds (
+    IN CHAR16 *String1,
+    IN CHAR16 *String2
+) {
+    UINTN i;
+    UINTN Len1;
+    UINTN Len2;
 
-/*++
+    if (String1 == NULL ||
+        String2 == NULL
+    ) {
+        return FALSE;
+    }
+
+    Len1 = StrLen (String1);
+    Len2 = StrLen (String2);
+
+    // String1 cannot be longer than String2
+    if (Len1 > Len2) {
+        return FALSE;
+    }
+
+    // Compare from the end of each string
+    for (i = 0; i < Len1; i++) {
+        if ((String1[Len1 - 1 - i] & ~0x20) !=
+            (String2[Len2 - 1 - i] & ~0x20)
+        ) {
+            // Exit ... Mismatch found
+            return FALSE;
+        }
+    }
+
+    // String2 ends with String1
+    return TRUE;
+} // BOOLEAN MyStrEnds()
+
+/*
  *
  * Routine Description:
  *
- *  Find a substring.
+ *  Find a substring (Case Sensitive).
  *
  * Arguments:
  *
@@ -252,7 +256,7 @@ BOOLEAN MyStrBegins (
  *
  * Returns:
  *  The address of the first occurrence of the matching substring if successful, or NULL otherwise.
- * --*/
+ */
 CHAR16 * MyStrStr (
     IN CHAR16  *String,
     IN CHAR16  *StrCharSet
@@ -304,11 +308,80 @@ CHAR16 * MyStrStr (
     return NULL;
 } // CHAR16 * MyStrStr()
 
-/*++
+/*
  *
  * Routine Description:
  *
  *  As 'MyStrStr' but case insensitive and returns a BOOLEAN.
+ *
+ * Arguments:
+ *
+ *  BigStr    - Null-terminated string to search.
+ *  SmallStr  - Null-terminated string to search for.
+ *
+ * Returns:
+ *  TRUE if successful, or FALSE otherwise.
+ */
+BOOLEAN IsStriStr (
+    IN CHAR16 *BigStr,
+    IN CHAR16 *SmallStr
+) {
+    UINTN   BigStart;
+    UINTN   BigIndex;
+    UINTN   SmallIndex;
+    BOOLEAN Terminate;
+    BOOLEAN Found;
+
+
+    if (SmallStr == NULL || BigStr == NULL) {
+        return FALSE;
+    }
+
+    Found = Terminate = FALSE;
+    BigIndex = SmallIndex = BigStart = 0;
+    while (!Terminate) {
+        if (BigStr[BigIndex] == '\0') {
+            Terminate = TRUE;
+        }
+
+        if (SmallStr[SmallIndex] == '\0') {
+            Found     = TRUE;
+            Terminate = TRUE;
+        }
+
+        if ((SmallStr[SmallIndex] & ~0x20) == (BigStr[BigIndex] & ~0x20)) {
+            SmallIndex++;
+            BigIndex++;
+        }
+        else {
+            SmallIndex = 0;
+            BigStart++;
+            BigIndex = BigStart;
+        }
+    } // while
+
+    return Found;
+} // BOOLEAN IsStriStr()
+
+/**
+ * Convenience/compatibility function for IsStriStr
+ */
+BOOLEAN StriSubCmp (
+    IN CHAR16 *SmallStr,
+    IN CHAR16 *BigStr
+) {
+    return IsStriStr (
+        BigStr, SmallStr
+    );
+} // BOOLEAN StriSubCmp()
+
+/*
+ *
+ * Routine Description:
+ *
+ *  As 'MyStrStr' but case insensitive and returns a BOOLEAN.
+ *  For debugging ... Duplicates 'IsStriStr'
+ *  Remove later
  *
  * Arguments:
  *
@@ -317,11 +390,14 @@ CHAR16 * MyStrStr (
  *
  * Returns:
  *  TRUE if successful, or FALSE otherwise.
- * --*/
+ */
 BOOLEAN FindSubStr (
     IN CHAR16  *RawString,
     IN CHAR16  *RawStrCharSet
 ) {
+    BOOLEAN  FoundStr;
+
+
     LOG_SEP(L"X");
     LOG_INCREMENT();
     BREAD_CRUMB(L"%a:  1 - START:- Find '%s' in '%s'", __func__,
@@ -332,37 +408,14 @@ BOOLEAN FindSubStr (
         BREAD_CRUMB(L"%a:  return 'FALSE'", __func__);
         LOG_DECREMENT();
         LOG_SEP(L"X");
+
         return FALSE;
     }
 
-    CHAR16  *String     = StrDuplicate (RawString);
-    CHAR16  *StrCharSet = StrDuplicate (RawStrCharSet);
-    BOOLEAN  FoundStr   = FALSE;
+    BREAD_CRUMB(L"%a:  2", __func__);
+    FoundStr = IsStriStr (RawString, RawStrCharSet);
 
-    //BREAD_CRUMB(L"%a:  2", __func__);
-    ToLower (String);
-    ToLower (StrCharSet);
-
-    //BREAD_CRUMB(L"%a:  3", __func__);
-    NestedStrStr = TRUE;
-    #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
-    MY_MUTELOGGER_SET;
-    #endif
-    if (MyStrStr (String, StrCharSet)) {
-        //BREAD_CRUMB(L"%a:  3a 1", __func__);
-        FoundStr = TRUE;
-    }
-    #if REFIT_DEBUG > 0
-    MY_MUTELOGGER_OFF;
-    #endif
-    NestedStrStr = FALSE;
-
-    //BREAD_CRUMB(L"%a:  3", __func__);
-    MY_FREE_POOL(String);
-    MY_FREE_POOL(StrCharSet);
-
-    BREAD_CRUMB(L"%a:  4 - END:- return BOOLEAN FoundStr = '%s'", __func__,
+    BREAD_CRUMB(L"%a:  3 - END:- return BOOLEAN FoundStr = '%s'", __func__,
         FoundStr ? L"TRUE" : L"FALSE"
     );
     LOG_DECREMENT();
@@ -370,7 +423,6 @@ BOOLEAN FindSubStr (
 
     return FoundStr;
 } // BOOLEAN FindSubStr()
-
 
 /**
   Returns the first occurrence of a Null-terminated ASCII sub-string
@@ -492,14 +544,15 @@ VOID MergeStrings (
     IN     CHAR16  *Second,
     IN     CHAR16   AddChar
 ) {
+    #if REFIT_DEBUG > 1
+    CHAR16         *MsgStr;
+    #endif
+
     UINTN           Length1;
     UINTN           Length2;
     CHAR16         *NewString;
 
     #if REFIT_DEBUG > 1
-    CHAR16         *MsgStr;
-
-
     MsgStr = PoolPrint (
         L"Add '%s' to the end of '%s' (%s Separator)",
         Second  ? Second  : L"NULL",
@@ -580,6 +633,10 @@ VOID MergeUniqueStrings (
     IN     CHAR16  *Second,
     IN     CHAR16   AddChar
 ) {
+    #if REFIT_DEBUG > 1
+    CHAR16 *MsgStr;
+    #endif
+
     UINTN    i;
     UINTN    Length1;
     UINTN    Length2;
@@ -588,9 +645,6 @@ VOID MergeUniqueStrings (
     BOOLEAN  SkipMerge;
 
     #if REFIT_DEBUG > 1
-    CHAR16 *MsgStr;
-
-
     MsgStr = PoolPrint (
         L"If not already present as a substring, add '%s' to the end of '%s' (%s Separator)",
         Second  ? Second  : L"NULL",
@@ -1477,21 +1531,28 @@ BOOLEAN IsValidHex (
 // number, interpreting the string as a hexadecimal number, starting
 // at the specified position and continuing for the specified number
 // of characters or until the end of the string, whichever is first.
-// NumChars must be between 1 and 16. Ignores invalid characters.
+// NumChars must be between 1 and 16 (Excluding the "0x" notation).
+// The "0x" notation is optional in OurStr (makes no difference).
+// Invalid characters are handled without 'fouling' the result.
 UINT64 StrToHex (
-    CHAR16 *Input,
+    CHAR16 *OurStr,
     UINTN   Pos,
     UINTN   NumChars
 ) {
-    UINTN  NumDone, InputLength;
-    UINT64 retval;
-    CHAR16 a;
+    UINTN   InputLength;
+    UINTN   NumDone;
+    UINT64  retval;
+    CHAR16 *Input;   // *DO NOT* Free
+    CHAR16  a;
 
 
-    if (Input == NULL ||
-        NumChars == 0 ||
-        NumChars > 16
-    ) {
+    if (OurStr == NULL) {
+        return 0;
+    }
+
+    Input = GetSubStrAfter (L"0x", OurStr);
+
+    if (NumChars == 0 || NumChars > 16) {
         return 0;
     }
 

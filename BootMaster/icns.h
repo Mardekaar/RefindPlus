@@ -93,16 +93,17 @@ EG_IMAGE * BuiltinIcon (IN UINTN Id);
 #define BUILTIN_ICON_COUNT                 (25)
 
 #define BASE_OS_ICON_MAC                    (0)
-#define BASE_OS_ICON_WIN                    (1)
+#define BASE_OS_ICON_WINDOWS                (1)
 #define BASE_OS_ICON_WIN8                   (2)
-#define BASE_OS_ICON_LINUX                  (3)
-#define BASE_OS_ICON_LEGACY                 (4)
-#define BASE_OS_ICON_CLOVER                 (5)
-#define BASE_OS_ICON_OPENCORE               (6)
-#define BASE_OS_ICON_UNKNOWN                (7)
-#define BASE_OS_ICON_DUMMY                  (8)
-#define BASE_OS_ICON_UEFI                   (9)
-#define BASE_OS_ICON_COUNT                 (10)
+#define BASE_OS_ICON_WIN                    (3)
+#define BASE_OS_ICON_LINUX                  (4)
+#define BASE_OS_ICON_LEGACY                 (5)
+#define BASE_OS_ICON_CLOVER                 (6)
+#define BASE_OS_ICON_OPENCORE               (7)
+#define BASE_OS_ICON_UNKNOWN                (8)
+#define BASE_OS_ICON_DUMMY                  (9)
+#define BASE_OS_ICON_UEFI                  (10)
+#define BASE_OS_ICON_COUNT                 (11)
 
 #endif
 

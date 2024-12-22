@@ -3,7 +3,7 @@
  * An encoded RefindPlus Banner
  *
  * Copyright (c) 2021 Dayo Akanji
- * MIT License
+ * Released under the BSD Zero-Clause License
 **/
 static const UINT8 egemb_refindplus_banner_data[8888] = {
  0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00,

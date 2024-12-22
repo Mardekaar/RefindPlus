@@ -163,7 +163,7 @@ CHAR16 * RefitGetAppleDiskLabel (
 
 // These codes are returned with the csr-active-config NVRAM variable
 #define CSR_CLEAR_SETTING                      0x0000        // RefindPlus Custom Code
-#define CSR_ALLOW_UNTRUSTED_KEXTS              0x0001        // Introduced in macOS 10.11 El Capitan
+#define CSR_ALLOW_UNTRUSTED_KEXTS              0x0001        // Introduced in Mac OS 10.11 El Capitan
 #define CSR_ALLOW_UNRESTRICTED_FS              0x0002        //      Ditto
 #define CSR_ALLOW_TASK_FOR_PID                 0x0004        //      Ditto
 #define CSR_ALLOW_KERNEL_DEBUGGER              0x0008        //      Ditto
@@ -171,13 +171,13 @@ CHAR16 * RefitGetAppleDiskLabel (
 #define CSR_ALLOW_UNRESTRICTED_DTRACE          0x0020        //      Ditto
 #define CSR_ALLOW_UNRESTRICTED_NVRAM           0x0040        //      Ditto
 #define CSR_ALLOW_DEVICE_CONFIGURATION         0x0080        //      Ditto
-#define CSR_ALLOW_ANY_RECOVERY_OS              0x0100        // Introduced in macOS 10.12 Sierra
-#define CSR_ALLOW_UNAPPROVED_KEXTS             0x0200        // Introduced in macOS 10.13 High Sierra
-#define CSR_ALLOW_EXECUTABLE_POLICY_OVERRIDE   0x0400        // Introduced in macOS 10.14 Mojave
-#define CSR_ALLOW_UNAUTHENTICATED_ROOT         0x0800        // Introduced in macOS 11.00 Big Sur
+#define CSR_ALLOW_ANY_RECOVERY_OS              0x0100        // Introduced in Mac OS 10.12 Sierra
+#define CSR_ALLOW_UNAPPROVED_KEXTS             0x0200        // Introduced in Mac OS 10.13 High Sierra
+#define CSR_ALLOW_EXECUTABLE_POLICY_OVERRIDE   0x0400        // Introduced in Mac OS 10.14 Mojave
+#define CSR_ALLOW_UNAUTHENTICATED_ROOT         0x0800        // Introduced in Mac OS 11.00 Big Sur
 #define CSR_END_OF_LIST                        0xFFFFFFFF
 
-// Clear CSR for macOS 11.00 Big Sur (Custom)
+// Clear CSR for Mac OS 11.00 Big Sur (Custom)
 #define SIP_ENABLED_EX (CSR_CLEAR_SETTING)                                                 // 0x000
 
 // SIP/SSV "Enabled" Setting
@@ -201,7 +201,7 @@ CHAR16 * RefitGetAppleDiskLabel (
 #define SIP_ENABLED_BC02 (SIP_ENABLED_BC01 | CSR_ALLOW_APPLE_INTERNAL)                     // 0x251
 #define SIP_ENABLED_ABC2 (SIP_ENABLED_ABC1 | CSR_ALLOW_APPLE_INTERNAL)                     // 0x253
 
-// SIP "Disabled" Setting (macOS 10.11+)
+// SIP "Disabled" Setting (Mac OS 10.11+)
 #define SIP_DISABLED (CSR_ALLOW_UNTRUSTED_KEXTS | CSR_ALLOW_UNRESTRICTED_FS | \
     CSR_ALLOW_TASK_FOR_PID | CSR_ALLOW_APPLE_INTERNAL |                       \
     CSR_ALLOW_UNRESTRICTED_DTRACE | CSR_ALLOW_UNRESTRICTED_NVRAM)                          // 0x077
@@ -210,11 +210,11 @@ CHAR16 * RefitGetAppleDiskLabel (
 #define SIP_DISABLED_EX (SIP_DISABLED & ~CSR_ALLOW_APPLE_INTERNAL)                         // 0x067
 #define SIP_DISABLED_DBG (SIP_DISABLED_EX | CSR_ALLOW_KERNEL_DEBUGGER)                     // 0x06F
 
-// SIP "Disabled" Setting (macOS 10.13+)
+// SIP "Disabled" Setting (Mac OS 10.13+)
 #define SIP_DISABLED_KEXT (SIP_DISABLED_EX | CSR_ALLOW_UNAPPROVED_KEXTS)                   // 0x267
 #define SIP_DISABLED_EXTRA (SIP_DISABLED_KEXT | CSR_ALLOW_KERNEL_DEBUGGER)                 // 0x26F
 
-// SSV "Disabled" Settings (macOS 11.00+)
+// SSV "Disabled" Settings (Mac OS 11.00+)
 #define SSV_DISABLED (SIP_DISABLED | CSR_ALLOW_UNAUTHENTICATED_ROOT)                       // 0x877
 #define SSV_DISABLED_B (SSV_DISABLED | CSR_ALLOW_KERNEL_DEBUGGER)                          // 0x87F
 #define SSV_DISABLED_EX (SSV_DISABLED_B & ~CSR_ALLOW_APPLE_INTERNAL)                       // 0x86F

@@ -274,7 +274,7 @@ EFI_STATUS RenameFile (
     Status = REFIT_CALL_5_WRAPPER(
         BaseDir->Open, BaseDir,
         &FilePtr, OldName,
-        EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE, 0
+        RefitReadWrite, 0
     );
     if (EFI_ERROR(Status)) {
         // Early Return
@@ -373,7 +373,7 @@ EFI_STATUS CreateDirectories (
         REFIT_CALL_5_WRAPPER(
             BaseDir->Open, BaseDir,
             &TheDir, FileName,
-            ReadWriteCreate, EFI_FILE_DIRECTORY
+            RefitReadWriteCreate, EFI_FILE_DIRECTORY
         );
 
         Status = REFIT_CALL_1_WRAPPER(TheDir->Close, TheDir);
@@ -405,7 +405,7 @@ EFI_STATUS CopyOneFile (
     Status = REFIT_CALL_5_WRAPPER(
         SourceDir->Open, SourceDir,
         &SourceFile, SourceName,
-        EFI_FILE_MODE_READ, 0
+        RefitReadOnly, 0
     );
     if (EFI_ERROR(Status)) {
         #if REFIT_DEBUG > 0
@@ -459,7 +459,7 @@ EFI_STATUS CopyOneFile (
     Status = REFIT_CALL_5_WRAPPER(
         DestDir->Open, DestDir,
         &DestFile, DestName,
-        ReadWriteCreate, 0
+        RefitReadWriteCreate, 0
     );
     if (EFI_ERROR(Status)) {
         #if REFIT_DEBUG > 0
@@ -827,7 +827,7 @@ VOID CreateFallbackCSV (
     Status = REFIT_CALL_5_WRAPPER(
         TargetDir->Open, TargetDir,
         &FilePtr, L"\\EFI\\refindplus\\BOOT.CSV",
-        ReadWriteCreate, 0
+        RefitReadWriteCreate, 0
     );
 
     if (!EFI_ERROR(Status)) {

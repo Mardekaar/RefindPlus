@@ -41,7 +41,7 @@ EFI_GUID   AppleBootGuid  = APPLE_BOOT_VARIABLE_GUID;
 // Return details of Apple's Configurable Security Restrictions (CSR),
 // AKA the System Integrity Protection (SIP) or "rootless", status.
 // Claim this nvRAM setting is enabled if it is actually absent.
-// This is how macOS treats systems with this setting absent.
+// This is how Mac OS treats systems with this setting absent.
 EFI_STATUS GetCsrStatus (
     IN OUT UINT32 *CsrStatus
 ) {
@@ -388,14 +388,18 @@ VOID RotateCsrValue (
 
 
 EFI_STATUS NormaliseCSR (VOID) {
+    #if REFIT_DEBUG > 0
+    BOOLEAN CheckMute = FALSE;
+    #endif
+
     EFI_STATUS  Status;
     UINT32      OurCSR;
+
 
     // Normalisd Flag - Enable
     NormaliseCall = TRUE;
 
     #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
     MY_MUTELOGGER_SET;
     #endif
     Status = GetCsrStatus (&OurCSR);  // Get csr-active-config value
@@ -445,19 +449,19 @@ EFI_STATUS NormaliseCSR (VOID) {
 typedef struct EfiAppleSetOsInterface {
     UINT64 Version;
     EFI_STATUS EFIAPI (*SetOsVersion) (IN CHAR8 *Version);
-    EFI_STATUS EFIAPI (*SetOsVendor) (IN CHAR8 *Vendor);
+    EFI_STATUS EFIAPI (*SetOsVendor ) (IN CHAR8 *Vendor );
 } EfiAppleSetOsInterface;
 
-// Function to tell the firmware that macOS is being launched.
+// Function to tell the firmware that Mac OS is being launched.
 // This is required to work around problems on some Macs that
 // do not fully initialize hardware such as video displays
 // when third-party OSes are launched in EFI mode.
 EFI_STATUS SetAppleOSInfo (VOID) {
     EFI_STATUS               Status;
     EFI_GUID                 apple_set_os_guid  = EFI_APPLE_SET_OS_PROTOCOL_GUID;
-    CHAR16                  *AppleVersionOS     = NULL;
-    CHAR8                   *MacVersionStr      = NULL;
-    EfiAppleSetOsInterface  *SetOs              = NULL;
+    CHAR16                  *AppleVersionOS;
+    CHAR8                   *MacVersionStr;
+    EfiAppleSetOsInterface  *SetOurOS;
 
 
     if (!AppleFirmware) {
@@ -465,14 +469,16 @@ EFI_STATUS SetAppleOSInfo (VOID) {
         return EFI_NOT_STARTED;
     }
 
+    SetOurOS = NULL;
+
     Status = REFIT_CALL_3_WRAPPER(
         gBS->LocateProtocol, &apple_set_os_guid,
-        NULL, (VOID **) &SetOs
+        NULL, (VOID **) &SetOurOS
     );
     if (
         EFI_ERROR(Status) ||
-        SetOs == NULL     ||
-        SetOs->Version == 0
+        SetOurOS == NULL  ||
+        SetOurOS->Version == 0
     ) {
         // Early Return ... Treat as success
         return EFI_SUCCESS;
@@ -498,16 +504,16 @@ EFI_STATUS SetAppleOSInfo (VOID) {
 
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Set macOS Information:- '%s'",
+        L"Set Mac OS Information:- '%s'",
         AppleVersionOS
     );
     #endif
 
     UnicodeStrToAsciiStr (AppleVersionOS, MacVersionStr);
 
-    Status = REFIT_CALL_1_WRAPPER(SetOs->SetOsVersion, MacVersionStr);
-    if (!EFI_ERROR(Status) && SetOs->Version >= 2) {
-        REFIT_CALL_1_WRAPPER(SetOs->SetOsVendor, (CHAR8 *) "Apple Inc.");
+    Status = REFIT_CALL_1_WRAPPER(SetOurOS->SetOsVersion, MacVersionStr);
+    if (!EFI_ERROR(Status) && SetOurOS->Version >= 2) {
+        REFIT_CALL_1_WRAPPER(SetOurOS->SetOsVendor, (CHAR8 *) "Apple Inc.");
     }
 
     MY_FREE_POOL(MacVersionStr);
@@ -963,12 +969,12 @@ EFI_STATUS RefitGetApfsVolumeInfo (
 } // EFI_STATUS RefitGetApfsVolumeInfo()
 
 VOID RefitAppleFbInfoInstallProtocol (VOID) {
-    EFI_STATUS                       Status;
-    APPLE_FRAMEBUFFER_INFO_PROTOCOL *Protocol;
-
     #if REFIT_DEBUG > 0
     CHAR16 *MsgStr;
     #endif
+
+    EFI_STATUS                       Status;
+    APPLE_FRAMEBUFFER_INFO_PROTOCOL *Protocol;
 
     static
     APPLE_FRAMEBUFFER_INFO_PROTOCOL

@@ -6,7 +6,7 @@ A Boot Manager for Mac and PC
 
 <br>
 
-[![Release Version](https://img.shields.io/github/v/release/dakanji/RefindPlus?style=for-the-badge&label=current)](https://github.com/dakanji/RefindPlus/releases)[![Release Date](https://img.shields.io/github/release-date/dakanji/RefindPlus.svg?display_date=published_at&style=for-the-badge&color=informational&label=)](https://github.com/dakanji/RefindPlus/releases)
+[![Release Version](https://img.shields.io/github/v/release/dakanji/RefindPlus?style=for-the-badge&color=informational&label=current)](https://github.com/dakanji/RefindPlus/releases)[![Release Date](https://img.shields.io/github/release-date/dakanji/RefindPlus.svg?display_date=published_at&style=for-the-badge&color=informational&label=)](https://github.com/dakanji/RefindPlus/releases)
 
 [![Coverity Scan](https://img.shields.io/coverity/scan/22695)](https://scan.coverity.com/projects/22695)&nbsp;&nbsp;&nbsp;[![Codacy Grade](https://img.shields.io/codacy/grade/d2955171e96246579279c1a28c4b11cf?label=codacy)](https://app.codacy.com/gh/dakanji/RefindPlus/dashboard)
 

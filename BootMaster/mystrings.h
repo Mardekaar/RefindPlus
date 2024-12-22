@@ -71,12 +71,20 @@ BOOLEAN ReplaceSubstring (
     IN     CHAR16  *ReplString
 );
 BOOLEAN MyStriCmp (
-    IN const CHAR16 *String1,
-    IN const CHAR16 *String2
+    IN CHAR16 *String1,
+    IN CHAR16 *String2
+);
+BOOLEAN MyStrEnds (
+    IN CHAR16 *String1,
+    IN CHAR16 *String2
 );
 BOOLEAN MyStrBegins (
-    IN const CHAR16 *String1,
-    IN const CHAR16 *String2
+    IN CHAR16 *String1,
+    IN CHAR16 *String2
+);
+BOOLEAN IsStriStr (
+    IN CHAR16 *BigStr,
+    IN CHAR16 *SmallStr
 );
 
 CHAR16 * GetTimeString (VOID);
@@ -141,7 +149,7 @@ CHAR8 * MyAsciiStrStr (IN const CHAR8 *String, IN const CHAR8 *SearchString);
 
 UINTN NumCharsInCommon (IN CHAR16 *String1, IN CHAR16 *String2);
 
-UINT64 StrToHex (CHAR16 *Input, UINTN Position, UINTN NumChars);
+UINT64 StrToHex (CHAR16 *OurStr, UINTN Pos, UINTN NumChars);
 
 EFI_GUID StringAsGuid (CHAR16 *InString);
 #endif

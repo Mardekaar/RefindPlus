@@ -135,7 +135,7 @@ REFIT_CONFIG GlobalConfig = {
     .HelpText                  =                    TRUE,
     .SetAppleFB                =                    TRUE,
     .BannerScale               =          BANNER_NOSCALE,
-    .GraphicsFor               =        GRAPHICS_FOR_OSX,
+    .GraphicsFor               =       GRAPHICS_FOR_NONE,
     .LegacyType                =        LEGACY_TYPE_NONE,
     .RequestedTextMode         =   DONT_CHANGE_TEXT_MODE,
     .RequestedScreenWidth      =                       0,
@@ -191,13 +191,9 @@ REFIT_CONFIG GlobalConfig = {
         DEFAULT_MOUSE_SIZE
     },
     .ShowTools = {
-        TAG_BASE, TAG_BASE, TAG_BASE,
-        TAG_BASE, TAG_BASE, TAG_BASE,
-        TAG_BASE, TAG_BASE, TAG_BASE,
-        TAG_BASE, TAG_BASE, TAG_BASE,
-        TAG_BASE, TAG_BASE, TAG_BASE,
-        TAG_BASE, TAG_BASE, TAG_BASE,
-        TAG_BASE, TAG_BASE
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0
     }
 };
 
@@ -289,8 +285,6 @@ extern VOID              OcUnblockUnmountedPartitions (VOID);
 
 extern INTN                          LogLevelConfig;
 
-extern CHAR16                       *StrSelfUUID;
-
 extern EFI_FILE_PROTOCOL            *gVarsDir;
 
 extern BOOLEAN                       HasMacOS;
@@ -354,11 +348,11 @@ VOID UnexpectedReturn (
 
 static
 VOID InitRotateCSR (VOID) {
-    BOOLEAN            Confirmed;
-
     #if REFIT_DEBUG > 0
     CHAR16            *MsgStr;
     #endif
+
+    BOOLEAN            Confirmed;
 
 
     Confirmed = ConfirmRotate();
@@ -471,6 +465,15 @@ EFI_STATUS EFIAPI gRTSetVariableEx (
     IN  UINTN       VariableSize,
     IN  VOID       *VariableData OPTIONAL
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16         *MsgStr;
+    CHAR16         *LogStatus;
+    CHAR16         *LogNameTmp;
+    CHAR16         *LogNameFull;
+    BOOLEAN         ForceNative = FALSE;
+    static BOOLEAN  FirstTimeLog = TRUE;
+    #endif
+
     EFI_STATUS      Status;
     BOOLEAN         CurPolicyOEM;
     BOOLEAN         IsVendorMS;
@@ -480,18 +483,9 @@ EFI_STATUS EFIAPI gRTSetVariableEx (
     BOOLEAN         RevokeVar;
     BOOLEAN         HardNVram;
 
-    #if REFIT_DEBUG > 0
-    static BOOLEAN  FirstTimeLog = TRUE;
-    BOOLEAN         ForceNative = FALSE;
-    CHAR16         *MsgStr;
-    CHAR16         *LogStatus;
-    CHAR16         *LogNameTmp;
-    CHAR16         *LogNameFull;
-    #endif
 
-
-    if (!Attributes        ||
-        VendorGuid == NULL ||
+    if (Attributes   ==   0  ||
+        VendorGuid   == NULL ||
         VariableName == NULL
     ) {
         return EFI_INVALID_PARAMETER;
@@ -815,17 +809,17 @@ BOOLEAN CheckToggledCSR (VOID) {
 
 static
 VOID AlignCSR (VOID) {
+    #if REFIT_DEBUG > 0
+    CHAR16         *TmpStr;
+    CHAR16         *MsgStr;
+    #endif
+
     EFI_STATUS      Status;
     UINT32          CsrStatus;
     BOOLEAN         HandledCSR;
     BOOLEAN         RotatedCSR;
 
     static BOOLEAN  RunOnce = FALSE;
-
-    #if REFIT_DEBUG > 0
-    CHAR16         *TmpStr;
-    CHAR16         *MsgStr;
-    #endif
 
 
     if (RunOnce || GlobalConfig.CsrValues == NULL) {
@@ -856,7 +850,7 @@ VOID AlignCSR (VOID) {
             Status = EFI_NOT_STARTED;
             #endif
 
-            // Abort ... No macOS Instance
+            // Abort ... No Mac OS Instance
             break;
         }
 
@@ -992,17 +986,17 @@ EFI_STATUS StoreArgs (
 
 static
 VOID SetBootArgs (VOID) {
-    EFI_STATUS    Status;
-    CHAR16       *BootArg;
-    CHAR8        *DataNVram;
-    VOID         *VarData;
-
     #if REFIT_DEBUG > 0
     CHAR16  *MsgStr;
     BOOLEAN  LogDisableCheckAMFI;
     BOOLEAN  LogDisableCheckCompat;
     BOOLEAN  LogDisableNvramPanicLog;
     #endif
+
+    EFI_STATUS    Status;
+    CHAR16       *BootArg;
+    CHAR8        *DataNVram;
+    VOID         *VarData;
 
 
     if (GlobalConfig.SetBootArgs == NULL ||
@@ -1401,12 +1395,12 @@ EFI_STATUS NoNvramPanicLog (VOID) {
 
 static
 EFI_STATUS TrimCoerce (VOID) {
-    EFI_STATUS    Status;
-    CHAR8         DataNVram[1] = {0x01};
-
     #if REFIT_DEBUG > 0
     CHAR16 *MsgStr;
     #endif
+
+    EFI_STATUS    Status;
+    CHAR8         DataNVram[1] = {0x01};
 
 
     if (!GlobalConfig.ForceTRIM) {
@@ -1489,7 +1483,7 @@ EFI_STATUS EFIAPI HandleProtocolEx (
 } // EFI_STATUS HandleProtocolEx()
 
 static
-VOID ReMapOpenProtocol (VOID) {
+VOID RemapOpenProtocol (VOID) {
     if (GOPDraw == NULL && UGADraw == NULL) {
         // GOP and UGA Absent
         // Early Return
@@ -1514,12 +1508,17 @@ VOID ReMapOpenProtocol (VOID) {
         gBS->CalculateCrc32, gBS,
         gBS->Hdr.HeaderSize, &gBS->Hdr.CRC32
     );
-} // static VOID ReMapOpenProtocol()
+} // static VOID RemapOpenProtocol()
 
 static
 UINTN RunTrustSync (
     LOADER_ENTRY *Entry
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16                    *MsgStr;
+    BOOLEAN                    CheckMute = FALSE;
+    #endif
+
     EFI_STATUS                 Status;
     CHAR16                    *VarName;
     UINTN                      BootNum;
@@ -1529,11 +1528,8 @@ UINTN RunTrustSync (
     BOOLEAN                    AlreadyExists;
     EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
 
+
     #if REFIT_DEBUG > 0
-    CHAR16                    *MsgStr;
-    BOOLEAN                    CheckMute = FALSE;
-
-
     ALT_LOG(1, LOG_LINE_NORMAL, L"%s", Entry->me.Title);
 
     MY_MUTELOGGER_SET;
@@ -1688,15 +1684,15 @@ VOID RunNVramSync (
     CHAR16       *SelectionName,
     BOOLEAN       IsMacOS
 ) {
-    EFI_STATUS    Status;
-    BOOLEAN       Proceed;
-    UINT8        *TmpBuffer;
-    CHAR16       *PreviousBoot;
-
     #if REFIT_DEBUG > 0
     CHAR16       *MsgStr;
     BOOLEAN       CheckMute = FALSE;
     #endif
+
+    EFI_STATUS    Status;
+    BOOLEAN       Proceed;
+    UINT8        *TmpBuffer;
+    CHAR16       *PreviousBoot;
 
 
     if (GlobalConfig.SyncNVram < 1) {
@@ -1731,29 +1727,25 @@ VOID RunNVramSync (
         }
     }
 
-    if (Proceed) {
-        if (!GlobalConfig.TransientBoot) {
-            if (GlobalConfig.SyncNVram == 1 ||
-                GlobalConfig.SyncNVram == 2
+    if (Proceed                      &&
+        !GlobalConfig.TransientBoot  &&
+        (GlobalConfig.SyncNVram == 1 || GlobalConfig.SyncNVram == 2)
+    ) {
+        Status = EfivarGetRaw (
+            &RefindPlusGuid, L"PreviousBoot",
+            (VOID **) &PreviousBoot, NULL
+        );
+        if (!EFI_ERROR(Status)) {
+            if (MyStriCmp (PreviousBoot, SelectionName)) {
+                // Matched Previous
+                Proceed = FALSE;
+            }
+            else if (
+                IsMacOS &&
+                MyStrBegins (L"Load Instance: Mac OS", PreviousBoot)
             ) {
-                Status = EfivarGetRaw (
-                    &RefindPlusGuid, L"PreviousBoot",
-                    (VOID **) &PreviousBoot, NULL
-                );
-                if (!EFI_ERROR(Status)) {
-                    if (MyStriCmp (PreviousBoot, SelectionName)) {
-                        // Matched Previous
-                        Proceed = FALSE;
-                    }
-                    else {
-                        if (IsMacOS &&
-                            MyStrBegins (L"Load Instance: macOS", PreviousBoot)
-                        ) {
-                            // Sucessive macOS Boots
-                            Proceed = FALSE;
-                        }
-                    }
-                }
+                // Sucessive Mac OS Boots
+                Proceed = FALSE;
             }
         }
     }
@@ -1763,10 +1755,7 @@ VOID RunNVramSync (
     #endif
 
     if (Proceed &&
-        (
-            GlobalConfig.SyncNVram == 2 ||
-            GlobalConfig.SyncNVram == 3
-        )
+        (GlobalConfig.SyncNVram == 2 || GlobalConfig.SyncNVram == 3)
     ) {
         // Confirm Sync
         Proceed = ConfirmSyncNVram();
@@ -1803,25 +1792,25 @@ VOID RunMacBootSupportFuncs (
 ) {
     // Set Mac boot args if configured to
     // Disables AMFI if DisableCheckAMFI is active
-    // Disables macOS compatibility check if DisableCheckCompat is active
-    // Disables macOS kernel panic logging to nvRAM if DisableNvramPanicLog is active
+    // Disables Mac OS compatibility check if DisableCheckCompat is active
+    // Disables Mac OS kernel panic logging to nvRAM if DisableNvramPanicLog is active
     if (GlobalConfig.SetBootArgs != NULL &&
         GlobalConfig.SetBootArgs[0] != L'\0'
     ) {
         SetBootArgs();
     }
 
+    // Filter out the 'APPLE_INTERNAL' CSR bit if required
+    FilterCSR();
+
     // Disable AMFI if configured to and not previously disabled
     NoCheckAMFI();
 
-    // Disable macOS compatibility check if configured to and not previously disabled
+    // Disable Mac OS compatibility check if configured to and not previously disabled
     NoCheckCompat();
 
-    // Disable macOS kernel panic logging to nvRAM if configured to and not previously disabled
+    // Disable Mac OS kernel panic logging to nvRAM if configured to and not previously disabled
     NoNvramPanicLog();
-
-    // Filter out the 'APPLE_INTERNAL' CSR bit if required
-    FilterCSR();
 
     // Enable TRIM on non-Apple SSDs if configured to
     TrimCoerce();
@@ -1830,7 +1819,7 @@ VOID RunMacBootSupportFuncs (
     RunNVramSync (SelectionName, TRUE);
 
     // Re-Map OpenProtocol
-    ReMapOpenProtocol();
+    RemapOpenProtocol();
 } // static VOID RunMacBootSupportFuncs()
 
 static
@@ -2731,7 +2720,7 @@ BOOLEAN ShowInfoMOK (
         FindTool (
             AllToolLocations, MOK_FILES,
             ToolPurpose, BUILTIN_ICON_TOOL_MOK,
-            FALSE, TRUE, TAG_MOK_TOOL
+            FALSE, TRUE, TAG_MOK
         );
 
         if (MOKEntryItems == NULL) {
@@ -2831,7 +2820,7 @@ BOOLEAN ShowInfoFwUpdate (
         FindTool (
             AllToolLocations, FWUPDATE_FILES,
             ToolPurpose, BUILTIN_ICON_TOOL_FWUPDATE,
-            FALSE, TRUE, TAG_FWUPDATE_TOOL
+            FALSE, TRUE, TAG_FWUPDATE
         );
 
         if (FwUpdateEntryItems == NULL) {
@@ -3167,8 +3156,8 @@ VOID AboutRefindPlus (VOID) {
         AboutMenu,
         PoolPrint (
             L"EFI Version   : %s %d.%02d%s",
-            ((gST->Hdr.Revision >> 16U) > 1) ? L"UEFI" : L"EFI",
-            gST->Hdr.Revision >> 16U,
+            (EfiMajorVersion > 1) ? L"UEFI" : L"EFI",
+            EfiMajorVersion,
             gST->Hdr.Revision & ((1 << 16) - 1),
             (WarnVersionEFI)
                 ? L" (Spoofed by Others)"
@@ -3282,13 +3271,13 @@ VOID PrepToolMenu (
 
 
     switch (TypeTag) {
+        case TAG_MOK:           TypeStr = LABEL_MOK         ; break;
         case TAG_SHELL:         TypeStr = LABEL_SHELL       ; break;
         case TAG_GDISK:         TypeStr = LABEL_GDISK       ; break;
         case TAG_GPTSYNC:       TypeStr = LABEL_GPTSYNC     ; break;
         case TAG_MEMTEST:       TypeStr = LABEL_MEMTEST     ; break;
         case TAG_NETBOOT:       TypeStr = LABEL_NETBOOT     ; break;
-        case TAG_MOK_TOOL:      TypeStr = LABEL_MOK         ; break;
-        case TAG_FWUPDATE_TOOL: TypeStr = LABEL_FWUPDATE    ; break;
+        case TAG_FWUPDATE:      TypeStr = LABEL_FWUPDATE    ; break;
         case TAG_RECOVERY_MAC:  TypeStr = LABEL_RECOVERY_MAC; break;
         case TAG_RECOVERY_WIN:  TypeStr = LABEL_RECOVERY_WIN; break;
     } // switch
@@ -3302,13 +3291,13 @@ VOID PrepToolMenu (
     ToolFlag = FALSE;
 
     switch (TypeTag) {
+        case TAG_MOK:           ToolFlag = ShowInfoMOK         (TypeStr, &OurEntry); break;
         case TAG_SHELL:         ToolFlag = ShowInfoShell       (TypeStr, &OurEntry); break;
         case TAG_GDISK:         ToolFlag = ShowInfoGDisk       (TypeStr, &OurEntry); break;
         case TAG_GPTSYNC:       ToolFlag = ShowInfoGPTSync     (TypeStr, &OurEntry); break;
         case TAG_MEMTEST:       ToolFlag = ShowInfoMemTest     (TypeStr, &OurEntry); break;
         case TAG_NETBOOT:       ToolFlag = ShowInfoNetBoot     (TypeStr, &OurEntry); break;
-        case TAG_MOK_TOOL:      ToolFlag = ShowInfoMOK         (TypeStr, &OurEntry); break;
-        case TAG_FWUPDATE_TOOL: ToolFlag = ShowInfoFwUpdate    (TypeStr, &OurEntry); break;
+        case TAG_FWUPDATE:      ToolFlag = ShowInfoFwUpdate    (TypeStr, &OurEntry); break;
         case TAG_RECOVERY_MAC:  ToolFlag = ShowInfoRecoveryMac (TypeStr, &OurEntry); break;
         case TAG_RECOVERY_WIN:  ToolFlag = ShowInfoRecoveryWin (TypeStr, &OurEntry); break;
     } // switch
@@ -3458,8 +3447,18 @@ VOID RescanAll (
     BOOLEAN  CheckMute = FALSE;
     UINTN    ThislogLevel;
     CHAR16  *MsgStr;
+    #endif
 
 
+    // Default UI Scale
+    IconScaleSet                            =                     FALSE;
+    ExtremeHiDPI                            =                     FALSE;
+    GlobalConfig.IconSizes[ICON_SIZE_BIG]   =     DEFAULT_BIG_ICON_SIZE;
+    GlobalConfig.IconSizes[ICON_SIZE_BADGE] = DEFAULT_BIG_ICON_SIZE / 4;
+    GlobalConfig.IconSizes[ICON_SIZE_SMALL] =   DEFAULT_SMALL_ICON_SIZE;
+    GlobalConfig.IconSizes[ICON_SIZE_MOUSE] =        DEFAULT_MOUSE_SIZE;
+
+    #if REFIT_DEBUG > 0
     TmpLevel = (GlobalConfig.LogLevel == 0) ? TRUE : FALSE;
     if (TmpLevel) {
         GlobalConfig.LogLevel = 1;
@@ -3477,14 +3476,6 @@ VOID RescanAll (
         GlobalConfig.LogLevel = 0;
     }
     #endif
-
-    // Default UI Scale
-    IconScaleSet                            =                     FALSE;
-    ExtremeHiDPI                            =                     FALSE;
-    GlobalConfig.IconSizes[ICON_SIZE_BIG]   =     DEFAULT_BIG_ICON_SIZE;
-    GlobalConfig.IconSizes[ICON_SIZE_BADGE] = DEFAULT_BIG_ICON_SIZE / 4;
-    GlobalConfig.IconSizes[ICON_SIZE_SMALL] =   DEFAULT_SMALL_ICON_SIZE;
-    GlobalConfig.IconSizes[ICON_SIZE_MOUSE] =        DEFAULT_MOUSE_SIZE;
 
     // Reset MainMenu
     FreeList (
@@ -3596,39 +3587,38 @@ VOID InitializeLib (
 static
 BOOLEAN SecureBootSetup (VOID) {
     EFI_STATUS Status;
+    BOOLEAN    Retval;
 
-    ShimFound  = ShimLoaded() ;
     SecureFlag = secure_mode();
-    SecureBootFailure = FALSE ;
+    ShimFound  =  ShimLoaded();
+    Retval     =        FALSE;
+    SecureBootFailure = FALSE;
 
     if (SecureFlag && ShimFound) {
         Status = security_policy_install();
         if (!EFI_ERROR(Status)) {
-            return TRUE;
+            Retval = TRUE;
         }
-
-        SecureBootFailure = TRUE;
-
-        #if REFIT_DEBUG > 0
-        LOG_MSG("** FATAL ERROR: Failed to Install MOK Secure Boot Extensions");
-        LOG_MSG("\n\n");
-        #endif
+        else {
+            SecureBootFailure = TRUE;
+        }
     }
 
-    return FALSE;
-} // VOID static SecureBootSetup()
+    return Retval;
+} // static BOOLEAN SecureBootSetup()
 
 // Remove our own Secure Boot extensions.
 // Returns TRUE on success, FALSE otherwise
 static
 BOOLEAN SecureBootUninstall (VOID) {
+    #if REFIT_DEBUG > 0
+    BOOLEAN CheckMute = FALSE;
+    #endif
+
     EFI_STATUS  Status;
     CHAR16     *MsgStr;
     BOOLEAN     Success;
 
-    #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
-    #endif
 
     Success = TRUE;
     if (SecureFlag) {
@@ -3673,16 +3663,16 @@ static
 VOID SetConfigFilename (
     EFI_HANDLE ImageHandle
 ) {
+    #if REFIT_DEBUG > 0
+    BOOLEAN CheckMute = FALSE;
+    #endif
+
     EFI_STATUS                  Status;
     CHAR16                     *Options;
     CHAR16                     *FileName;
     CHAR16                     *SubString;
     CHAR16                     *MsgStr;
     EFI_LOADED_IMAGE_PROTOCOL  *Info;
-
-    #if REFIT_DEBUG > 0
-    BOOLEAN CheckMute = FALSE;
-    #endif
 
 
     Status = REFIT_CALL_3_WRAPPER(
@@ -3756,6 +3746,10 @@ VOID SetConfigFilename (
 //  PreviousBoot variable, if it is available. If it is not available, delete that element.
 static
 VOID AdjustDefaultSelection (VOID) {
+    #if REFIT_DEBUG > 0
+    CHAR16     *TmpStr;
+    #endif
+
     EFI_STATUS  Status;
     UINTN       i;
     CHAR16     *Element;
@@ -3765,9 +3759,8 @@ VOID AdjustDefaultSelection (VOID) {
     BOOLEAN     FormatLog;
     BOOLEAN     Ignore;
 
-    #if REFIT_DEBUG > 0
-    CHAR16     *TmpStr;
 
+    #if REFIT_DEBUG > 0
     LOG_MSG("U P D A T E   D E F A U L T   S E L E C T I O N");
     #endif
 
@@ -4094,6 +4087,18 @@ EFI_STATUS EFIAPI efi_main (
     EFI_HANDLE         ImageHandle,
     EFI_SYSTEM_TABLE  *SystemTable
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16            *StrSelfGUID;
+    CHAR16            *StrSelfUUID;
+    BOOLEAN            CheckMute   = FALSE;
+    BOOLEAN            ForceNative = FALSE;
+    #endif
+
+    #if REFIT_DEBUG > 1
+    UINTN              ThislogLevel;
+    BOOLEAN            TempLevelFlip;
+    #endif
+
     EFI_STATUS         Status;
     EFI_TIME           Now;
     UINTN              i, k;
@@ -4123,19 +4128,6 @@ EFI_STATUS EFIAPI efi_main (
     EFI_INPUT_KEY      key;
     REFIT_MENU_ENTRY  *ChosenOption;
 
-
-    #if REFIT_DEBUG > 0
-    CHAR16            *SelfGUID;
-
-    #if REFIT_DEBUG > 1
-    UINTN              ThislogLevel;
-    BOOLEAN            TempLevelFlip;
-    #endif
-
-    // Different Types
-    BOOLEAN            CheckMute   = FALSE;
-    BOOLEAN            ForceNative = FALSE;
-    #endif
 
     /* Init Bootstrap */
     InitializeLib (ImageHandle, SystemTable);
@@ -4293,12 +4285,12 @@ EFI_STATUS EFIAPI efi_main (
         MY_FREE_POOL(MsgStr);
     }
     else {
-        SelfGUID    = GuidAsString (&SelfVolume->PartGuid);
+        StrSelfGUID = GuidAsString (&SelfVolume->PartGuid);
         StrSelfUUID = GuidAsString (&SelfVolume->VolUuid);
-        LOG_MSG("INFO: Self-Volume Data:- '%s  :::  %s  :::  %s'", SelfVolume->VolName, SelfGUID, StrSelfUUID);
+        LOG_MSG("INFO: Self-Volume Data:- '%s  :::  %s  :::  %s'", SelfVolume->VolName, StrSelfGUID, StrSelfUUID);
         LOG_MSG("%s      Program Filename:- '%s'", OffsetNext, (SelfBaseName != NULL) ? SelfBaseName : L"Not Set");
         LOG_MSG("%s      Install Location:- '%s'", OffsetNext, (SelfDirPath  != NULL) ? SelfDirPath  : L"Not Set");
-        MY_FREE_POOL(SelfGUID);
+        MY_FREE_POOL(StrSelfGUID);
         MY_FREE_POOL(StrSelfUUID);
     }
     LOG_MSG("\n\n");
@@ -4322,6 +4314,8 @@ EFI_STATUS EFIAPI efi_main (
 
     /* Load Config Tokens */
     ReadConfig (GlobalConfig.ConfigFilename);
+
+    /* Set some Convenience Variables */
     VarNoCheckAMFI     = GlobalConfig.DisableCheckAMFI    ;
     VarNoCheckCompat   = GlobalConfig.DisableCheckCompat  ;
     VarDisablePanicLog = GlobalConfig.DisableNvramPanicLog;
@@ -4484,7 +4478,7 @@ EFI_STATUS EFIAPI efi_main (
     switch (GlobalConfig.LegacyType) {
         case LEGACY_TYPE_MAC1: MsgStr = StrDuplicate (L"Mac-Style"        ); break;
         case LEGACY_TYPE_MAC2: MsgStr = StrDuplicate (L"UEFI-Style on Mac"); break;
-        case LEGACY_TYPE_MAC3: MsgStr = StrDuplicate (L"Absent on Mac"    ); break;
+        case LEGACY_TYPE_MAC3: MsgStr = StrDuplicate (L"Absent: Cat3 Mac" ); break;
         case LEGACY_TYPE_UEFI: MsgStr = StrDuplicate (L"UEFI-Style"       ); break;
         default:               MsgStr = StrDuplicate (L"Absent"           );
     }
@@ -4539,7 +4533,7 @@ EFI_STATUS EFIAPI efi_main (
         Status = SetAppleOSInfo();
 
         #if REFIT_DEBUG > 0
-        LOG_MSG("INFO: Spoof macOS Version ... %r", Status);
+        LOG_MSG("INFO: Spoof Mac OS Version ... %r", Status);
         LOG_MSG("\n\n");
         #endif
     }
@@ -4648,38 +4642,6 @@ EFI_STATUS EFIAPI efi_main (
     MY_NATIVELOGGER_OFF;
     #endif
 
-    // Show Secure Boot Failure Notice and Shut Down
-    if (SecureBootFailure) {
-        #if REFIT_DEBUG > 0
-        MsgStr = StrDuplicate (L"Secure Boot Failure");
-        ALT_LOG(1, LOG_STAR_SEPARATOR, L"Display %s Warning", MsgStr);
-        LOG_MSG("INFO: User Warning:- '%s ... Forcing Shutdown'", MsgStr);
-        LOG_MSG("\n\n");
-        MY_FREE_POOL(MsgStr);
-        #endif
-
-        #if REFIT_DEBUG > 0
-        MY_MUTELOGGER_SET;
-        #endif
-        SwitchToText (FALSE);
-        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_ERROR);
-        PrintUglyText (L"                                                          ", NEXTLINE);
-        PrintUglyText (L"                Secure Boot Config Failure                ", NEXTLINE);
-        PrintUglyText (L"              Forcing Shutdown in 9 Seconds!              ", NEXTLINE);
-        PrintUglyText (L"                                                          ", NEXTLINE);
-        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
-        PauseSeconds (9);
-        #if REFIT_DEBUG > 0
-        MY_MUTELOGGER_OFF;
-        END_TAG();
-        #endif
-
-        REFIT_CALL_4_WRAPPER(
-            gRT->ResetSystem, EfiResetShutdown,
-            EFI_SUCCESS, 0, NULL
-        );
-    }
-
     // Apply Scan Delay if set
     if (GlobalConfig.ScanDelay > 0) {
         MsgStr = StrDuplicate (L"Paused for Scan Delay");
@@ -4737,7 +4699,7 @@ EFI_STATUS EFIAPI efi_main (
 
     // Show Inconsistent UEFI 2.x Implementation Warning
     #if REFIT_DEBUG > 0
-    if (WarnMissingQVInfo) {
+    if (!SecureBootFailure && WarnMissingQVInfo) {
         SwitchToText (FALSE);
 
         LOG_MSG("D I S P L A Y   U S E R   N O T I C E");
@@ -4794,7 +4756,7 @@ EFI_STATUS EFIAPI efi_main (
     // Show Config Mismatch Warning
     // DA-TAG: Separate REFIT_DEBUG sections for flexibility
     #if REFIT_DEBUG > 0
-    if (ConfigWarn) {
+    if (!SecureBootFailure && ConfigWarn) {
         SwitchToText (FALSE);
 
         LOG_MSG("D I S P L A Y   U S E R   N O T I C E");
@@ -4854,7 +4816,7 @@ EFI_STATUS EFIAPI efi_main (
     // Show WarnOC Warning
     // DA-TAG: Separate REFIT_DEBUG sections for flexibility
     #if REFIT_DEBUG > 0
-    if (WarnOC) {
+    if (!SecureBootFailure && WarnOC) {
         SwitchToText (FALSE);
 
         LOG_MSG("D I S P L A Y   U S E R   N O T I C E");
@@ -4907,6 +4869,62 @@ EFI_STATUS EFIAPI efi_main (
         RefitStall (25);
     } // if WarnOC
     #endif
+
+    // Show Secure Boot Failure Notice
+    if (SecureBootFailure) {
+        SwitchToText (FALSE);
+
+        LOG_MSG("D I S P L A Y   U S E R   N O T I C E");
+        MsgStr = StrDuplicate (L"Secure Boot Failure");
+        ALT_LOG(1, LOG_LINE_THIN_SEP, L"Display %s Warning", MsgStr);
+        LOG_MSG("INFO: User Warning:- '%s'", MsgStr);
+        MY_FREE_POOL(MsgStr);
+
+        ForceContinue = (GlobalConfig.ContinueOnWarning) ? TRUE : FALSE;
+        GlobalConfig.ContinueOnWarning = TRUE;
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_SET;
+        #endif
+        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_ERROR);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+        PrintUglyText (L"                Secure Boot Config Failure                ", NEXTLINE);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+
+        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+        PrintUglyText (L"            Program Behaviour *IS NOT* Defined            ", NEXTLINE);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+        PauseForKey();
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_OFF;
+        #endif
+        GlobalConfig.ContinueOnWarning = ForceContinue;
+        ForceContinue = FALSE;
+
+        MsgStr = StrDuplicate (L"Warning Acknowledged or Timed Out");
+        ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+        ALT_LOG(1, LOG_BLANK_LINE_SEP, L"X");
+        LOG_MSG("%s      %s ...", OffsetNext, MsgStr);
+        MY_FREE_POOL(MsgStr);
+
+        if (AllowGraphicsMode) {
+            LOG_MSG("Restore Graphics Mode");
+            LOG_MSG("\n\n");
+
+            GraphicsScreenDirty = TRUE;
+            SwitchToGraphicsAndClear (TRUE);
+        }
+        else {
+            LOG_MSG("Proceeding");
+            LOG_MSG("\n\n");
+
+            BltClearScreen (FALSE);
+        }
+
+        // Wait 1 second
+        // DA-TAG: 100 Loops == 1 Sec
+        RefitStall (100);
+    }
 
     // Set CSR if required
     AlignCSR();
@@ -5019,13 +5037,13 @@ EFI_STATUS EFIAPI efi_main (
         }
 
         switch (ChosenOption->Tag) {
+            case TAG_MOK:
             case TAG_SHELL:
             case TAG_GDISK:
             case TAG_GPTSYNC:
             case TAG_MEMTEST:
             case TAG_NETBOOT:
-            case TAG_MOK_TOOL:
-            case TAG_FWUPDATE_TOOL:
+            case TAG_FWUPDATE:
             case TAG_RECOVERY_MAC:
             case TAG_RECOVERY_WIN:
                 PrepToolMenu (ChosenOption->Tag);
@@ -5034,77 +5052,68 @@ EFI_STATUS EFIAPI efi_main (
             case TAG_LOADER:   // Boot OS via *.efi File
                 OurLoaderEntry = (LOADER_ENTRY *) ChosenOption;
                 EntryVol       = OurLoaderEntry->Volume;
-                FoundVentoy    = FALSE;
 
-                #if REFIT_DEBUG > 0
-                MY_MUTELOGGER_SET;
-                #endif
-
-                if (!FindSubStr (OurLoaderEntry->Title, L"macOS"  ) &&
-                    !FindSubStr (OurLoaderEntry->Title, L"Mac OS" ) &&
-                    !FindSubStr (OurLoaderEntry->Title, L"Install") &&
-                    FindSubStr (
+                if (!IsStriStr (OurLoaderEntry->Title, L"Mac OS"  ) &&
+                    !IsStriStr (OurLoaderEntry->Title, L"Install") &&
+                    IsStriStr (
                         OurLoaderEntry->LoaderPath,
                         L"System\\Library\\CoreServices"
                     )
                 ) {
-                    // Fix undetected 'macOS'
-                    OurLoaderEntry->Title = (FindSubStr (EntryVol->VolName, L"PreBoot"))
-                        ? L"macOS" : L"RefindPlus";
+                    // Fix undetected 'Mac OS'
+                    OurLoaderEntry->Title = (IsStriStr (EntryVol->VolName, L"PreBoot"))
+                        ? L"Mac OS" : L"RefindPlus";
                 }
-                FoundInstallerMac = FALSE;
 
-                if (!FindSubStr (OurLoaderEntry->Title, L"RefindPlus")) {
-                    if (!FindSubStr (OurLoaderEntry->Title, L"Windows") &&
-                        FindSubStr (
-                            OurLoaderEntry->LoaderPath,
-                            L"EFI\\Microsoft\\Boot"
-                        )
-                    ) {
-                        // Fix undetected Windows
-                        OurLoaderEntry->Title = L"Windows (UEFI)";
-                    }
-                    else {
-                        FoundInstallerMac = (
-                            MyStrStr (OurLoaderEntry->Title, L"Install OS X") ||
-                            MyStrStr (OurLoaderEntry->Title, L"OS X Install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->Title, L"Install macOS") ||
-                            MyStrStr (OurLoaderEntry->Title, L"macOS Install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->Title, L"Install Mac OS") ||
-                            MyStrStr (OurLoaderEntry->Title, L"Mac OS Install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->Title, L"com.apple.install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"Install OS X") ||
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"OS X Install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"Install macOS") ||
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"macOS Install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"Install Mac OS") ||
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"Mac OS Install")
-                        ) || (
-                            MyStrStr (OurLoaderEntry->LoaderPath, L"com.apple.install")
-                        ) || (
-                            MyStrStr (EntryVol->VolName, L"Install OS X") ||
-                            MyStrStr (EntryVol->VolName, L"OS X Install")
-                        ) || (
-                            MyStrStr (EntryVol->VolName, L"Install macOS") ||
-                            MyStrStr (EntryVol->VolName, L"macOS Install")
-                        ) || (
-                            MyStrStr (EntryVol->VolName, L"Install Mac OS") ||
-                            MyStrStr (EntryVol->VolName, L"Mac OS Install")
-                        ) || (
-                            MyStrStr (EntryVol->VolName, L"com.apple.install")
+                if (IsStriStr (
+                        OurLoaderEntry->LoaderPath,
+                        L"EFI\\Microsoft\\Boot"
+                    )
+                ) {
+                    // Fix undetected Windows
+                    OurLoaderEntry->OSType = 'W';
+                    OurLoaderEntry->Title = L"Windows (UEFI)";
+                    if (!OurLoaderEntry->UseGraphicsMode) {
+                        OurLoaderEntry->UseGraphicsMode = (
+                            GlobalConfig.GraphicsFor & GRAPHICS_FOR_WINDOWS
                         );
                     }
-                } // if !FindSubStr L"RefindPlus"
+                }
 
-                #if REFIT_DEBUG > 0
-                MY_MUTELOGGER_OFF;
-                #endif
+                FoundInstallerMac = (
+                    MyStrStr (OurLoaderEntry->Title, L"Install OS X") ||
+                    MyStrStr (OurLoaderEntry->Title, L"OS X Install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->Title, L"Install macOS") ||
+                    MyStrStr (OurLoaderEntry->Title, L"macOS Install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->Title, L"Install Mac OS") ||
+                    MyStrStr (OurLoaderEntry->Title, L"Mac OS Install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->Title, L"com.apple.install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"Install OS X") ||
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"OS X Install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"Install macOS") ||
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"macOS Install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"Install Mac OS") ||
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"Mac OS Install")
+                ) || (
+                    MyStrStr (OurLoaderEntry->LoaderPath, L"com.apple.install")
+                ) || (
+                    MyStrStr (EntryVol->VolName, L"Install OS X") ||
+                    MyStrStr (EntryVol->VolName, L"OS X Install")
+                ) || (
+                    MyStrStr (EntryVol->VolName, L"Install macOS") ||
+                    MyStrStr (EntryVol->VolName, L"macOS Install")
+                ) || (
+                    MyStrStr (EntryVol->VolName, L"Install Mac OS") ||
+                    MyStrStr (EntryVol->VolName, L"Mac OS Install")
+                ) || (
+                    MyStrStr (EntryVol->VolName, L"com.apple.install")
+                );
 
                 if (FoundInstallerMac) {
                     #if REFIT_DEBUG > 0
@@ -5114,7 +5123,7 @@ EFI_STATUS EFIAPI efi_main (
                             ? L"Run DirectBoot"
                             : L"Received User Input"
                     );
-                    MsgStr = StrDuplicate (L"Load macOS Installer");
+                    MsgStr = StrDuplicate (L"Load Mac OS Installer");
                     ALT_LOG(1, LOG_THREE_STAR_SEP, L"%s", MsgStr);
                     LOG_MSG(
                         "%s  - %s%s '%s'",
@@ -5136,11 +5145,17 @@ EFI_STATUS EFIAPI efi_main (
                     }
                 }
                 else if (
+                    OurLoaderEntry->OSType == 'M' ||
                     (
-                        SubScreenBoot && MyStrStr (SelectionName, L"macOS")
+                        SubScreenBoot &&
+                        (
+                            MyStrStr (SelectionName, L"macOS") ||
+                            MyStrStr (SelectionName, L"Mac OS")
+                        )
+                    ) || (
+                        MyStrStr (OurLoaderEntry->Title, L"macOS") ||
+                        MyStrStr (OurLoaderEntry->Title, L"Mac OS")
                     )
-                    || MyStrStr (OurLoaderEntry->Title,           L"macOS")
-                    || OurLoaderEntry->OSType == 'M'
                 ) {
                     #if REFIT_DEBUG > 0
                     // DA-TAG: Using separate instances of 'Received User Input'
@@ -5168,11 +5183,9 @@ EFI_STATUS EFIAPI efi_main (
                     }
                 }
                 else if (
-                    (
-                        SubScreenBoot && MyStrStr (SelectionName, L"Windows")
-                    )
-                    || MyStrStr (OurLoaderEntry->Title,           L"Windows")
-                    || OurLoaderEntry->OSType == 'W'
+                    OurLoaderEntry->OSType == 'W'                           ||
+                    (SubScreenBoot && MyStrStr (SelectionName, L"Windows")) ||
+                    MyStrStr (OurLoaderEntry->Title,           L"Windows")
                 ) {
                     #if REFIT_DEBUG > 0
                     // DA-TAG: Using separate instances of 'Received User Input'
@@ -5209,11 +5222,9 @@ EFI_STATUS EFIAPI efi_main (
                     }
                 }
                 else if (
-                    (
-                        SubScreenBoot && MyStrStr (SelectionName, L"Grub")
-                    )
-                    || MyStrStr (OurLoaderEntry->Title,           L"Grub")
-                    || OurLoaderEntry->OSType == 'G'
+                    OurLoaderEntry->OSType == 'G'                        ||
+                    (SubScreenBoot && MyStrStr (SelectionName, L"Grub")) ||
+                    MyStrStr (OurLoaderEntry->Title,           L"Grub")
                 ) {
                     #if REFIT_DEBUG > 0
                     MsgStr = StrDuplicate (L"Load Instance: Linux (Grub)");
@@ -5238,84 +5249,10 @@ EFI_STATUS EFIAPI efi_main (
                         KeepTrustChain = TRUE;
                     }
                 }
-                else if (MyStrStr (OurLoaderEntry->LoaderPath, L"vmlinuz")) {
-                    #if REFIT_DEBUG > 0
-                    MsgStr = StrDuplicate (L"Load Instance: Linux (VMLinuz)");
-                    ALT_LOG(1, LOG_THREE_STAR_SEP, L"%s", MsgStr);
-                    // DA-TAG: Using separate instances of 'Received User Input'
-                    LOG_MSG("%s:",
-                        (GlobalConfig.DirectBoot)
-                            ? L"Run DirectBoot"
-                            : L"Received User Input"
-                    );
-                    LOG_MSG(
-                        "%s  - %s:- '%s'",
-                        OffsetNext, MsgStr,
-                        OurLoaderEntry->LoaderPath
-                    );
-
-                    MY_FREE_POOL(MsgStr);
-                    #endif
-
-                    SkipTrustChain = TRUE;
-                    if (GlobalConfig.SyncTrust & ENFORCE_TRUST_LINUX) {
-                        KeepTrustChain = TRUE;
-                    }
-                }
-                else if (MyStrStr (OurLoaderEntry->LoaderPath, L"bzImage")) {
-                    #if REFIT_DEBUG > 0
-                    MsgStr = StrDuplicate (L"Load Instance: Linux (BZImage)");
-                    ALT_LOG(1, LOG_THREE_STAR_SEP, L"%s", MsgStr);
-                    // DA-TAG: Using separate instances of 'Received User Input'
-                    LOG_MSG("%s:",
-                        (GlobalConfig.DirectBoot)
-                            ? L"Run DirectBoot"
-                            : L"Received User Input"
-                    );
-                    LOG_MSG(
-                        "%s  - %s:- '%s'",
-                        OffsetNext, MsgStr,
-                        OurLoaderEntry->LoaderPath
-                    );
-
-                    MY_FREE_POOL(MsgStr);
-                    #endif
-
-                    SkipTrustChain = TRUE;
-                    if (GlobalConfig.SyncTrust & ENFORCE_TRUST_LINUX) {
-                        KeepTrustChain = TRUE;
-                    }
-                }
-                else if (MyStrStr (OurLoaderEntry->LoaderPath, L"kernel")) {
-                    #if REFIT_DEBUG > 0
-                    MsgStr = StrDuplicate (L"Load Instance: Linux (Kernel)");
-                    ALT_LOG(1, LOG_THREE_STAR_SEP, L"%s", MsgStr);
-                    // DA-TAG: Using separate instances of 'Received User Input'
-                    LOG_MSG("%s:",
-                        (GlobalConfig.DirectBoot)
-                            ? L"Run DirectBoot"
-                            : L"Received User Input"
-                    );
-                    LOG_MSG(
-                        "%s  - %s:- '%s'",
-                        OffsetNext, MsgStr,
-                        OurLoaderEntry->LoaderPath
-                    );
-
-                    MY_FREE_POOL(MsgStr);
-                    #endif
-
-                    SkipTrustChain = TRUE;
-                    if (GlobalConfig.SyncTrust & ENFORCE_TRUST_LINUX) {
-                        KeepTrustChain = TRUE;
-                    }
-                }
                 else if (
-                    (
-                        SubScreenBoot && MyStrStr (SelectionName, L"Linux")
-                    )
-                    || MyStrStr (OurLoaderEntry->Title,           L"Linux")
-                    || OurLoaderEntry->OSType == 'L'
+                    OurLoaderEntry->OSType == 'L'                         ||
+                    (SubScreenBoot && MyStrStr (SelectionName, L"Linux")) ||
+                    MyStrStr (OurLoaderEntry->Title,           L"Linux")
                 ) {
                     #if REFIT_DEBUG > 0
                     // DA-TAG: Using separate instances of 'Received User Input'
@@ -5324,7 +5261,24 @@ EFI_STATUS EFIAPI efi_main (
                             ? L"Run DirectBoot"
                             : L"Received User Input"
                     );
-                    MsgStr = StrDuplicate (L"Load Instance: Linux");
+
+                    if (IsStriStr (OurLoaderEntry->LoaderPath, L"vmlinuz")) {
+                        TypeStr = L" (VMLinuz)";
+                    }
+                    else if (IsStriStr (OurLoaderEntry->LoaderPath, L"bzImage")) {
+                        TypeStr = L" (BZImage)";
+                    }
+                    else if (IsStriStr (OurLoaderEntry->LoaderPath, L"kernel")) {
+                        TypeStr = L" (Kernel)";
+                    }
+                    else if (IsStriStr (OurLoaderEntry->LoaderPath, L"zImage")) {
+                        TypeStr = L" (ZImage)";
+                    }
+                    else {
+                        TypeStr = L"";
+                    }
+
+                    MsgStr = PoolPrint (L"Load Instance: Linux%s", TypeStr);
                     ALT_LOG(1, LOG_THREE_STAR_SEP, L"%s", MsgStr);
                     LOG_MSG("%s  - %s", OffsetNext, MsgStr);
                     if (EntryVol->VolName == NULL) {
@@ -5464,6 +5418,7 @@ EFI_STATUS EFIAPI efi_main (
                     }
                 }
                 else {
+                    FoundVentoy = FALSE;
                     i = 0;
                     while (
                         !FoundVentoy              &&
@@ -5575,7 +5530,7 @@ EFI_STATUS EFIAPI efi_main (
                         OffsetNext, MsgStr,
                         (EntryVol)
                             ? EntryVol->OSName
-                            : L"'NULL' Volume OSName"
+                            : L"OS Name: 'NULL'"
                     );
                     MY_FREE_POOL(MsgStr);
                 }
@@ -5596,7 +5551,7 @@ EFI_STATUS EFIAPI efi_main (
 
             break;
             case TAG_TOOL:     // Start a UEFI tool
-                TypeStr = L"UEFI Tool";
+                TypeStr = L"uEFI Tool";
 
                 OurLoaderEntry = (LOADER_ENTRY *) ChosenOption;
                 #if REFIT_DEBUG > 0
@@ -5756,30 +5711,26 @@ EFI_STATUS EFIAPI efi_main (
                         (FileName = FindCommaDelimited (NVRAMCLEAN_FILES, k++)) != NULL
                     ) {
                         for (i = 0; i < VolumesCount; i++) {
-                            FileName = PoolPrint (L"%s\\%s", FilePath, FileName);
+                            // Temp string holder
+                            MsgStr = PoolPrint (L"%s\\%s", FilePath, FileName);
                             if (Volumes[i]->RootDir != NULL &&
-                                FileExists (Volumes[i]->RootDir, FilePath)
+                                FileExists (Volumes[i]->RootDir, MsgStr)
                             ) {
-                                FoundTool = TRUE;
                                 OurLoaderEntry = AllocateZeroPool (sizeof (LOADER_ENTRY));
                                 if (OurLoaderEntry) {
-                                    OurLoaderEntry->me.Title        = StrDuplicate (TypeStr);
-                                    OurLoaderEntry->me.Tag          =        TAG_RESET_NVRAM;
-                                    OurLoaderEntry->Volume          =             Volumes[i];
-                                    OurLoaderEntry->LoaderPath      = PoolPrint (
-                                        L"%s\\%s", FilePath, FileName
-                                    );
+                                    OurLoaderEntry->me.Title   = StrDuplicate (TypeStr);
+                                    OurLoaderEntry->me.Tag     =        TAG_RESET_NVRAM;
+                                    OurLoaderEntry->Volume     =             Volumes[i];
+                                    OurLoaderEntry->LoaderPath =                 MsgStr;
+                                    FoundTool                  =                   TRUE;
                                 }
 
                                 // Break out of 'for' loop
                                 break;
                             }
-                        } // for
 
-                        // Reset 'FoundTool' if 'OurLoaderEntry' is NULL
-                        if (FoundTool && OurLoaderEntry == NULL) {
-                            FoundTool = FALSE;
-                        }
+                            MY_FREE_POOL(MsgStr);
+                        } // for
 
                         MY_FREE_POOL(FileName);
                     } // while

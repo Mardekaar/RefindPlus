@@ -12,30 +12,38 @@ on:
 
 permissions:
   issues: write
-  pull-requests: write
-  discussions: write
 
 concurrency:
   group: lock
 
+# Workflow-wide environment variable
+env:
+  JOB_CONDITION: ${{ github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock' }}
+
+# Lock Threads - https://github.com/dakanji/lock-threads
 jobs:
 
-  # Lock Threads - https://github.com/dakanji/lock-threads
-  lock:
-    name: Lock Threads
+  lock-threads-01:
+    name: Lock Resolved Issues
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: env.JOB_CONDITION
     steps:
 
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
+      - id: rate-limit-check01
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Lock Resolved issues
+      - id: avoid-rate-limit-01
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check01.outputs.sleep_time }}
+
+      - id: main-action-01
         uses: dakanji/lock-threads@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           issue-lock-reason: ''
           issue-inactive-days: '1'
           include-any-issue-labels: 'Resolved'
@@ -46,17 +54,30 @@ jobs:
             Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
           process-only: 'issues'
 
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
+  lock-threads-02:
+    name: Lock Invalid/Not-Planned/Misc Issues
+    needs: [lock-threads-01]
+    runs-on: ubuntu-24.04
 
-      - name: Lock Invalid/Not-Planned Issues
+    if: env.JOB_CONDITION
+    steps:
+      - id: rate-limit-check02
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - id: avoid-rate-limit-02
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check02.outputs.sleep_time }}
+
+      - id: main-action-02
         uses: dakanji/lock-threads@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           issue-lock-reason: ''
           issue-inactive-days: '2'
-          include-any-issue-labels: 'Invalid, Not-Planned'
+          include-any-issue-labels: 'Invalid, Not-Planned, Duplicate, Cannot-Replicate, Cancelled'
           remove-issue-labels: 'Stale, Tagged, Queries, Unresolved, Uncertain, Accepted'
           issue-comment: |-
             This thread is being locked.
@@ -64,33 +85,27 @@ jobs:
             Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
           process-only: 'issues'
 
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
+  lock-threads-03:
+    name: Lock Incomplete/Abandoned Issues
+    needs: [lock-threads-02]
+    runs-on: ubuntu-24.04
 
-      - name: Lock Misc Issues
+    if: env.JOB_CONDITION
+    steps:
+      - id: rate-limit-check03
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - id: avoid-rate-limit-03
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check03.outputs.sleep_time }}
+
+      - id: main-action-03
         uses: dakanji/lock-threads@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-lock-reason: ''
-          add-issue-labels: ''
-          issue-inactive-days: '2'
-          include-any-issue-labels: 'Duplicate, Cannot-Replicate, Cancelled'
-          remove-issue-labels: 'Stale, Tagged, Queries, Unresolved, Uncertain, Accepted'
-          issue-comment: |-
-            This thread is being locked.
-
-            Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
-          process-only: 'issues'
-
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
-
-      - name: Lock Incomplete/Abandoned Issues
-        uses: dakanji/lock-threads@v5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           issue-lock-reason: ''
           add-issue-labels: 'Abandoned'
           issue-inactive-days: '4'
@@ -102,14 +117,27 @@ jobs:
             Trigger: Apparent Abandonment.
           process-only: 'issues'
 
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
+  lock-threads-04:
+    name: Lock Unclear Issues
+    needs: [lock-threads-03]
+    runs-on: ubuntu-24.04
 
-      - name: Lock Unclear Issues
+    if: env.JOB_CONDITION
+    steps:
+      - id: rate-limit-check04
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - id: avoid-rate-limit-04
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check04.outputs.sleep_time }}
+
+      - id: main-action-04
         uses: dakanji/lock-threads@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           issue-lock-reason: ''
           issue-inactive-days: '7'
           include-any-issue-labels: 'Unclear'
@@ -120,14 +148,27 @@ jobs:
             Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
           process-only: 'issues'
 
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
+  lock-threads-05:
+    name: Lock Inactive Issues
+    needs: [lock-threads-04]
+    runs-on: ubuntu-24.04
 
-      - name: Lock Inactive Issues
+    if: env.JOB_CONDITION
+    steps:
+      - id: rate-limit-check05
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - id: avoid-rate-limit-05
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check05.outputs.sleep_time }}
+
+      - id: main-action-05
         uses: dakanji/lock-threads@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           issue-lock-reason: ''
           add-issue-labels: 'Resolved'
           issue-inactive-days: '3'
@@ -140,14 +181,27 @@ jobs:
             Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
           process-only: 'issues'
 
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
+  lock-threads-06:
+    name: Lock Acknowledged/Known Issues
+    needs: [lock-threads-05]
+    runs-on: ubuntu-24.04
 
-      - name: Lock Acknowledged/Known Issues
+    if: env.JOB_CONDITION
+    steps:
+      - id: rate-limit-check06
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - id: avoid-rate-limit-06
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check06.outputs.sleep_time }}
+
+      - id: main-action-06
         uses: dakanji/lock-threads@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT_TOKEN }}
           issue-lock-reason: ''
           add-issue-labels: ''
           issue-inactive-days: '40'
@@ -158,17 +212,3 @@ jobs:
 
             Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
           process-only: 'issues'
-
-      - name: PreStep-Pause
-        run: |
-          sleep 128s
-
-      - name: Lock Declined Pull Requests
-        uses: dakanji/lock-threads@v5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pr-lock-reason: ''
-          pr-inactive-days: '2'
-          include-any-pr-labels: 'Declined'
-          remove-pr-labels: 'Tagged'
-          process-only: 'prs'

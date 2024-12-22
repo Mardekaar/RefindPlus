@@ -993,10 +993,10 @@ chunk_found:
                         break;
                     }
                 case GRUB_BTRFS_CHUNK_TYPE_RAID1C4:
-                    redundancy++;
+                    redundancy += 1;
                     /* fall through */
                 case GRUB_BTRFS_CHUNK_TYPE_RAID1C3:
-                    redundancy++;
+                    redundancy += 1;
                     /* fall through */
                 case GRUB_BTRFS_CHUNK_TYPE_DUPLICATED:
                 case GRUB_BTRFS_CHUNK_TYPE_RAID1:
@@ -1004,7 +1004,7 @@ chunk_found:
                         stripen = 0;
                         stripe_offset = off;
                         csize = fsw_u64_le_swap (chunk->size) - off;
-                        redundancy++;
+                        redundancy += 1;
                         DPRINT(
                             L"read_logical %d chunk_found dup/raid1 off=%lx csize=%d redundancy=%d\n",
                             __LINE__, stripe_offset, csize, redundancy

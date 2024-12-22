@@ -72,13 +72,13 @@
 #define TAG_GPTSYNC               (6)
 #define TAG_RECOVERY_MAC          (7)
 #define TAG_RECOVERY_WIN          (8)
-#define TAG_MOK_TOOL              (9)
+#define TAG_MOK                   (9)
 #define TAG_FIRMWARE             (10)
 #define TAG_MEMTEST              (11)
 #define TAG_GDISK                (12)
 #define TAG_NETBOOT              (13)
 #define TAG_CSR_ROTATE           (14)
-#define TAG_FWUPDATE_TOOL        (15)
+#define TAG_FWUPDATE             (15)
 #define TAG_HIDDEN               (16)
 #define TAG_INSTALL              (17)
 #define TAG_BOOTORDER            (18)
@@ -251,12 +251,12 @@ EFI\\OEM\\Boot\\bootmgfw.efi"
 // Default Ventoy Partitions
 #define VENTOY_NAMES          L"VTOYEFI,Ventoy"
 
-// Misc macOS Paths/Files
+// Misc Mac OS Paths/Files
 #define MACOSX_LOADER_DIR     L"System\\Library\\CoreServices"
 #define MACOSX_LOADER_PATH    ( MACOSX_LOADER_DIR L"\\boot.efi" )
 #define MACOSX_DIAGNOSTICS    ( MACOSX_LOADER_DIR L"\\.diagnostics\\diags.efi" )
 
-// Files that may be macOS recovery files
+// Files that may be Mac OS recovery files
 #define MACOS_RECOVERY_BASE         L"com.apple.recovery.boot"
 #define MACOS_RECOVERY_FILES        ( MACOS_RECOVERY_BASE L"\\boot.efi" )
 #define MACOS_RECOVERY_VERSION_FILE ( MACOS_RECOVERY_BASE L"\\SystemVersion.plist" )
@@ -598,7 +598,9 @@ extern UINTN                    DataVolumesCount;
 extern UINT32                   AccessFlagsFull;
 extern UINT32                   AccessFlagsBoot;
 
-extern UINT64                   ReadWriteCreate;
+extern UINT64                   RefitReadOnly;
+extern UINT64                   RefitReadWrite;
+extern UINT64                   RefitReadWriteCreate;
 
 extern BOOLEAN                  SingleAPFS;
 extern BOOLEAN                  MuteLogger;

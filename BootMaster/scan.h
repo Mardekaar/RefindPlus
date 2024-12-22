@@ -148,7 +148,7 @@ LinuxMint,Manjaro,OpenSUSE,Redhat,Slackware,SUSE,Ubuntu,Zorin"
 #define RECOVERY_NAME_APFS      L"APFS Instance"
 
 
-EG_IMAGE * GetDiskBadge (IN UINTN DiskType);
+EG_IMAGE * GetDiskBadge (IN UINT8 DiskType);
 
 LOADER_ENTRY * InitializeLoaderEntry (IN LOADER_ENTRY *Entry);
 LOADER_ENTRY * CopyLoaderEntry (IN LOADER_ENTRY *Entry);

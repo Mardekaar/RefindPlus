@@ -13,16 +13,16 @@ Please refer to that project's repository (https://github.com/xaionaro/edk2-buil
 
 ## Python
 
-The build process requires Python 2 but Python was essentially removed from macOS in 12.x Monterey.
-If running this version of macOS or newer, download and install Python 2.7.18 from the Python website (https://www.python.org/downloads).
+The build process requires Python 2 but Python was essentially removed from Mac OS in 12.x Monterey.
+If running this version of Mac OS or newer, download and install Python 2.7.18 from the Python website (https://www.python.org/downloads).
 
-**NB:** Python 2 is available by default on macOS 11.x Big Sur and older.
+**NB:** Python 2 is available by default on Mac OS 11.x Big Sur and older.
 
 ## Xcode
 
 ### Base Installation
 
-Download the version of Xcode for your macOS version from the Mac App Store and install.
+Download the version of Xcode for your Mac OS version from the Mac App Store and install.
 The third-party maintained XcodeReleases website (https://xcodereleases.com) provides convenient links to Xcode packages on Apple's servers.
 
 ### Commandline Tools Installation
@@ -39,9 +39,9 @@ $ xcode-select --install
 
 ### Background
 
-While Xcode provides a full development environment as well as a suite of different utilities, it does not provide all the tools required for TianoCore EDK II development as required to build RefindPlus on macOS natively.
+While Xcode provides a full development environment as well as a suite of different utilities, it does not provide all the tools required for TianoCore EDK II development as required to build RefindPlus on Mac OS natively.
 
-This guide focuses on using HomeBrew to provide the required tools but equivalent steps can be taken in MacPorts and Fink; which may offer better support for older versions of macOS.
+This guide focuses on using HomeBrew to provide the required tools but equivalent steps can be taken in MacPorts and Fink; which may offer better support for older versions of Mac OS.
 Substitute equivalent commands in as required.
 
 You will find installation instructions on the HomeBrew website (https://brew.sh)
@@ -73,14 +73,14 @@ $ brew install acpica && brew upgrade acpica
 
 ### Install Image Converter
 
-The mtoc/ocmtoc utilities convert the macOS Mach-O image format to the PE/COFF format required by the UEFI specifications.
+The mtoc/ocmtoc utilities convert the Mac OS Mach-O image format to the PE/COFF format required by the UEFI specifications.
 
-On macOS 10.15 Catalina/Older, use...
+On Mac OS 10.15 Catalina/Older, use...
 ```
 $ brew uninstall ocmtoc && brew install mtoc && brew upgrade mtoc
 ```
 
-On macOS 11.x Big Sur/Newer or if MTOC fails on Catalina/Older, use...
+On Mac OS 11.x Big Sur/Newer or if MTOC fails on Catalina/Older, use...
 ```
 $ brew uninstall mtoc && brew install ocmtoc && brew upgrade ocmtoc
 ```

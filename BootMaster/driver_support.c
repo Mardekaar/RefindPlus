@@ -579,10 +579,10 @@ UINTN ScanDriverDir (
     // Look through contents of the directory
     DirIterOpen (SelfRootDir, Path, &DirIter);
 
-    DriversArr = NULL;
     FirstLoop = TRUE;
-    ArrayCount = ProtocolIndex = DriversArrNum = NumFound = 0;
+    DriversArr = NULL;
     DriversArrSize = DriversArrSizeNew = 16;
+    ArrayCount = ProtocolIndex = DriversArrNum = NumFound = 0;
     while (DirIterNext (&DirIter, 2, LOADER_MATCH_PATTERNS, &DirEntry)) {
         if (DirEntry->FileName[0] == '.') {
             // Skip this
@@ -661,7 +661,7 @@ UINTN ScanDriverDir (
 
     Status = DirIterClose (&DirIter);
     if (EFI_ERROR(Status) && Status != EFI_NOT_FOUND) {
-        ErrMsg = PoolPrint (L"While Scanning the '%s' Directory", Path);
+        ErrMsg = PoolPrint (L"While Scanning the '%s' Directory for uEFI Drivers", Path);
         CheckError (Status, ErrMsg);
         MY_FREE_POOL(ErrMsg);
     }
@@ -678,6 +678,11 @@ UINTN ScanDriverDir (
 // Originally from rEFIt's main.c (BSD), but modified since then (GPLv3).
 // Returns TRUE if any drivers are loaded, FALSE otherwise.
 BOOLEAN LoadDrivers (VOID) {
+    #if REFIT_DEBUG > 0
+    CHAR16        *MsgStr;
+    const CHAR16  *MsgNotFound = L"Not Found or Empty";
+    #endif
+
     UINTN        i, k;
     UINTN        NumFound;
     UINTN        CurFound;
@@ -694,11 +699,8 @@ BOOLEAN LoadDrivers (VOID) {
     UINTN        DriversIndex;
 #endif
 
+
     #if REFIT_DEBUG > 0
-    CHAR16        *MsgStr;
-    const CHAR16  *MsgNotFound = L"Not Found or Empty";
-
-
     // Load drivers from the subdirectories of RefindPlus' home directory
     // specified in the DRIVER_DIRS constant.
     ALT_LOG(1, LOG_THREE_STAR_SEP, L"Load Provided Drivers in Program Default Folder");
@@ -709,8 +711,8 @@ BOOLEAN LoadDrivers (VOID) {
 #endif
     #endif
 
-    DriversListProg = DriversListUser = DriversListAll = NULL;
     NumFound = CurFound = i = 0;
+    DriversListProg = DriversListUser = DriversListAll = NULL;
 
     if (SelfDirPath == NULL) {
         SelfDirectory = NULL;
@@ -795,8 +797,7 @@ BOOLEAN LoadDrivers (VOID) {
                     LOG_MSG(
                         "%s  - %s",
                         (GlobalConfig.LogLevel <= LOGLEVELMAX)
-                            ? OffsetNext
-                            : L"",
+                            ? OffsetNext : L"",
                         MsgNotFound
                     );
                     #endif

@@ -61,20 +61,20 @@ BOOLEAN SecureFlag = FALSE;
 
 
 /*
- * Check whether we are in Secure Boot and user mode
+ * Check whether we are in Secure Boot mode
  */
 BOOLEAN secure_mode (VOID) {
     #if REFIT_DEBUG > 0
     BOOLEAN CheckMute = FALSE;
     #endif
 
-    EFI_STATUS  Status;
-    EFI_GUID    GlobalVar = EFI_GLOBAL_VARIABLE;
-    UINTN       CharSize;
-    UINT8      *SetupMode;
-    UINT8      *Sec;
+    EFI_STATUS      Status;
+    EFI_GUID        GlobalVar = EFI_GLOBAL_VARIABLE;
+    UINTN           CharSize;
+    UINT8          *SetupMode;
+    UINT8          *Sec;
 
-    static BOOLEAN DoneOnce   = FALSE;
+    static BOOLEAN  DoneOnce = FALSE;
 
 
     if (DoneOnce) {
@@ -90,7 +90,8 @@ BOOLEAN secure_mode (VOID) {
         (VOID **) &Sec, &CharSize
     );
 
-    /* FIXME - More paranoia here? */
+    // DA-TAG Investigate This
+    //        More paranoia here?
     if (*Sec != 1         ||
         EFI_ERROR(Status) ||
         CharSize != sizeof (CHAR8)
@@ -137,7 +138,7 @@ BOOLEAN ShimLoaded (VOID) {
         NULL, (VOID **) &shim_lock
     );
 
-    ShimFound = (!EFI_ERROR(Status)) ? TRUE : FALSE;
+    ShimFound = (EFI_ERROR(Status)) ? FALSE : TRUE;
 
     return ShimFound;
 } // ShimLoaded()

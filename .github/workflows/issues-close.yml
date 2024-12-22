@@ -23,9 +23,16 @@ jobs:
     if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'stale'
     steps:
 
-      - name: PreStep-Pause
-        run: |
-          sleep 32s
+      - name: Check Rate Limit
+        id: rate-limit-check01
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Avoid Rate Limit
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check01.outputs.sleep_time }}
 
       - name: Handle Cancelled/Duplicate/Invalid/Wierd/Not-Planned Issues
         uses: actions/stale@v9
@@ -39,11 +46,18 @@ jobs:
           stale-issue-label: 'Tagged'
           any-of-labels: 'Cancelled, Duplicate, Known-Issue, Invalid, Cannot-Replicate, Not-Planned'
           remove-issue-stale-when-updated: false
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.PAT_TOKEN }}
 
-      - name: PreStep-Pause
-        run: |
-          sleep 32s
+      - name: Check Rate Limit
+        id: rate-limit-check02
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Avoid Rate Limit
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check02.outputs.sleep_time }}
 
       - name: Handle Incomplete Issues
         uses: actions/stale@v9
@@ -64,11 +78,18 @@ jobs:
           stale-issue-label: 'Stale'
           any-of-labels: 'Incomplete'
           remove-issue-stale-when-updated: true
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.PAT_TOKEN }}
 
-      - name: PreStep-Pause
-        run: |
-          sleep 32s
+      - name: Check Rate Limit
+        id: rate-limit-check03
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Avoid Rate Limit
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check03.outputs.sleep_time }}
 
       - name: Handle No-Response Issues
         uses: actions/stale@v9
@@ -89,11 +110,18 @@ jobs:
           stale-issue-label: 'Stale'
           any-of-labels: 'Queries'
           remove-issue-stale-when-updated: true
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.PAT_TOKEN }}
 
-      - name: PreStep-Pause
-        run: |
-          sleep 32s
+      - name: Check Rate Limit
+        id: rate-limit-check04
+        uses: ./.github/actions/check-rate-limit
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Avoid Rate Limit
+        uses: ./.github/actions/avoid-rate-limit
+        with:
+          sleep_time: ${{ steps.rate-limit-check04.outputs.sleep_time }}
 
       - name: Catchall Closer
         uses: actions/stale@v9
@@ -113,4 +141,4 @@ jobs:
           exempt-assignees: 'dakanji'
           stale-issue-label: 'Stale'
           remove-issue-stale-when-updated: true
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.PAT_TOKEN }}

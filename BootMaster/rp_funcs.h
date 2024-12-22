@@ -2,7 +2,7 @@
  * BootMaster/rp_funcs.h
  *
  * Copyright (c) 2021-2024 Dayo Akanji (sf.net/u/dakanji/profile)
- * Licensed under the MIT License
+ * Released under the BSD Zero-Clause License
  */
 
 #ifndef _RP_FUNCS_H

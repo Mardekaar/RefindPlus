@@ -367,7 +367,7 @@ EFI_STATUS egLoadFile (
     Status = REFIT_CALL_5_WRAPPER(
         BaseDir->Open, BaseDir,
         &FileHandle, FileName,
-        EFI_FILE_MODE_READ, 0
+        RefitReadOnly, 0
     );
     if (EFI_ERROR(Status)) {
         return Status;
@@ -479,7 +479,7 @@ EFI_STATUS egSaveFile (
     Status = REFIT_CALL_5_WRAPPER(
         BaseDir->Open, BaseDir,
         &FileHandle, FileName,
-        ReadWriteCreate, 0
+        RefitReadWriteCreate, 0
     );
     if (EFI_ERROR(Status)) {
         return Status;
@@ -723,7 +723,7 @@ EG_IMAGE * egLoadIconAnyType (
 
     #if REFIT_DEBUG > 0
     if (Image == NULL) {
-        ALT_LOG(1, LOG_THREE_STAR_MID, L"In egLoadIconAnyType ... Load Icon:- 'Not Ready'");
+        ALT_LOG(1, LOG_THREE_STAR_MID, L"In egLoadIconAnyType - Icon:- 'Not Ready'");
     }
     #endif
 

@@ -201,50 +201,52 @@ CHAR16 * FindInitrd (
             InitrdName = StrDuplicate (InitrdNames->Value);
         }
         else {
-            BREAD_CRUMB(L"%a:  9b 1", __func__);
+            BREAD_CRUMB(L"%a:  9a 1b 1", __func__);
             MaxSharedChars  = 0;
             MaxSharedInitrd = CurrentInitrdName = InitrdNames;
 
-            BREAD_CRUMB(L"%a:  9b 2", __func__);
+            BREAD_CRUMB(L"%a:  9a 1b 2", __func__);
             while (CurrentInitrdName != NULL) {
                 LOG_SEP(L"X");
-                BREAD_CRUMB(L"%a:  9b 2a 1 - WHILE LOOP:- START", __func__);
+                BREAD_CRUMB(L"%a:  9a 1b 2a 1 - WHILE LOOP:- START", __func__);
 
-                BREAD_CRUMB(L"%a:  9b 2a 2", __func__);
+                BREAD_CRUMB(L"%a:  9a 1b 2a 2", __func__);
                 KernelPostNum = MyStrStr (LoaderPath, KernelVersion);
 
-                BREAD_CRUMB(L"%a:  9b 2a 3", __func__);
+                BREAD_CRUMB(L"%a:  9a 1b 2a 3", __func__);
                 InitrdPostNum = MyStrStr (CurrentInitrdName->Value, KernelVersion);
 
-                BREAD_CRUMB(L"%a:  9b 2a 4", __func__);
+                BREAD_CRUMB(L"%a:  9a 1b 2a 4", __func__);
                 SharedChars = NumCharsInCommon (KernelPostNum, InitrdPostNum);
 
-                BREAD_CRUMB(L"%a:  9b 2a 5", __func__);
+                BREAD_CRUMB(L"%a:  9a 1b 2a 5", __func__);
                 if ((SharedChars > MaxSharedChars) ||
                     (
                         SharedChars == MaxSharedChars
                         && StrLen (CurrentInitrdName->Value) < StrLen (MaxSharedInitrd->Value)
                     )
                 ) {
-                    BREAD_CRUMB(L"%a:  9b 2a 5a 1", __func__);
+                    BREAD_CRUMB(L"%a:  9a 1b 2a 5a 1", __func__);
                     MaxSharedChars = SharedChars;
                     MaxSharedInitrd = CurrentInitrdName;
                 }
 
-                BREAD_CRUMB(L"%a:  9b 2a 6", __func__);
-                // TODO: Compute number of shared characters & compare with max.
+                BREAD_CRUMB(L"%a:  9a 1b 2a 6", __func__);
+                // DA-TAG: Investigate This
+                //         Compute number of shared characters and compare with max.
                 CurrentInitrdName = CurrentInitrdName->Next;
-            }
+            } // while
 
-            BREAD_CRUMB(L"%a:  9b 3", __func__);
+            BREAD_CRUMB(L"%a:  9a 1b 3", __func__);
             if (MaxSharedInitrd != NULL) {
-                BREAD_CRUMB(L"%a:  9b 3a 1", __func__);
+                BREAD_CRUMB(L"%a:  9a 1b 3a 1", __func__);
                 InitrdName = StrDuplicate (MaxSharedInitrd->Value);
+                BREAD_CRUMB(L"%a:  9a 1b 3a 2", __func__);
             }
-            BREAD_CRUMB(L"%a:  9b 4", __func__);
+            BREAD_CRUMB(L"%a:  9a 1b 4", __func__);
         } // if/else InitrdNames->Next == NULL
 
-        BREAD_CRUMB(L"%a:  9b 4", __func__);
+        BREAD_CRUMB(L"%a:  9a 2", __func__);
     } // if
 
     BREAD_CRUMB(L"%a:  10", __func__);
@@ -383,7 +385,7 @@ CHAR16 * GetMainLinuxOptions (
     LOG_SEP(L"X");
 
     return FullOptions;
-} // static CHAR16 * GetMainLinuxOptions()
+} // CHAR16 * GetMainLinuxOptions()
 
 // Read the specified file and add values of "ID", "NAME", or "DISTRIB_ID"
 // tokens to the "OSIconName" list. Intended for adding Linux distribution
@@ -395,16 +397,19 @@ VOID ParseReleaseFile (
     CHAR16        *FileName,
     BOOLEAN        FirstOnly
 ) {
+    EFI_STATUS    Status;
     UINTN         FileSize;
     UINTN         TokenCount;
     CHAR16      **TokenList;
     CHAR16       *TempName;
     BOOLEAN       Updated;
+    BOOLEAN       Depart;
     REFIT_FILE   *File;
 
 
-    if (Volume   == NULL || // Check Pointer 'Volume'
-        FileName == NULL    // Check Pointer 'FileName'
+    if (Volume == NULL ||
+        FileName == NULL ||
+        !FileExists (Volume->RootDir, FileName)
     ) {
         return;
     }
@@ -416,27 +421,33 @@ VOID ParseReleaseFile (
 
     FileSize = 0;
     TempName = NULL;
-    if (FileExists (Volume->RootDir, FileName) &&
-        (RefitReadFile (Volume->RootDir, FileName, File, &FileSize) == EFI_SUCCESS)
-    ) {
-        Updated = FALSE;
-        do {
+    Updated  = FALSE;
+    Depart   = FALSE;
+
+    Status = RefitReadFile (
+        Volume->RootDir, FileName,
+        File, &FileSize
+    );
+    if (!EFI_ERROR(Status)) {
+        for (;;) {
             TokenCount = ReadTokenLine (File, &TokenList);
-            if ((TokenCount > 1) &&
+            if (TokenCount == 0) {
+                // Flag to exit loop
+                Depart = TRUE;
+            }
+            else if (
+                TokenCount > 1 &&
                 (
                     MyStriCmp (TokenList[0], L"ID") ||
                     MyStriCmp (TokenList[0], L"NAME") ||
                     MyStriCmp (TokenList[0], L"DISTRIB_ID")
                 )
             ) {
-                if (FirstOnly) {
-                    // Prefer 'ID' if 'FirstOnly' is true
-                    if (MyStriCmp (TokenList[0], L"ID")) {
-                        Updated = TRUE;
-                    }
-                    else {
-                        Updated = FALSE;
-                    }
+                if (FirstOnly &&
+                    MyStriCmp (TokenList[0], L"ID")
+                ) {
+                    // Exit loop on 'ID' if 'FirstOnly' is true
+                    Updated = TRUE;
                 }
 
                 MY_FREE_POOL(TempName);
@@ -446,27 +457,29 @@ VOID ParseReleaseFile (
 
             FreeTokenLine (&TokenList, &TokenCount);
 
-            if (Updated && FirstOnly) {
+            if (Depart || (Updated && FirstOnly)) {
+                // Exit Loop Here
                 break;
             }
-        } while (TokenCount > 0);
-
-        if (!FirstOnly) {
-            ToLower (*OSIconName);
-        }
-        else {
-            // Capitalise First Letter
-            if ((TempName[0] >= L'a') && (TempName[0] <= L'z')) {
-                TempName[0] = TempName[0] - L'a' + L'A';
-            }
-
-            MY_FREE_POOL(*OSIconName);
-            *OSIconName = StrDuplicate (TempName);
-        }
-
-        MY_FREE_POOL(TempName);
-        MY_FREE_FILE(File);
+        } // for ;;
     }
+
+    MY_FREE_FILE(File);
+
+    if (!FirstOnly) {
+        ToLower (*OSIconName);
+        MY_FREE_POOL(TempName);
+
+        return;
+    }
+
+    // Capitalise First Letter
+    if ((TempName[0] >= L'a') && (TempName[0] <= L'z')) {
+        TempName[0] = TempName[0] - L'a' + L'A';
+    }
+
+    MY_FREE_POOL(*OSIconName);
+    *OSIconName = TempName;
 } // VOID ParseReleaseFile()
 
 // Try to guess Linux distribution name and add to OSIconName list
@@ -479,7 +492,7 @@ VOID GuessLinuxDistribution (
     LOG_SEP(L"X");
     LOG_INCREMENT();
     BREAD_CRUMB(L"%a:  1 - START", __func__);
-    BREAD_CRUMB(L"%a:  2 - Input OSIconNameList = %s", __func__,
+    BREAD_CRUMB(L"%a:  2 - Input OSIconNameList = '%s'", __func__,
         (*OSIconName != NULL) ? *OSIconName : L"NULL"
     );
 
@@ -493,8 +506,12 @@ VOID GuessLinuxDistribution (
         ParseReleaseFile (OSIconName, Volume, L"etc\\lsb-release", FirstOnly);
     }
 
-    // Search for clues in the kernel's filename.
+    // DA-TAG: Strip out misc unwanted
     BREAD_CRUMB(L"%a:  5", __func__);
+    DeleteItemFromCsvList (L"gnu",   OSIconName);
+    DeleteItemFromCsvList (L"linux", OSIconName);
+
+    // Search for clues in kernel filename
     if (FindSubStr (LoaderPath, L".fc")) {
         BREAD_CRUMB(L"%a:  5a 1 - Fedora Loader", __func__);
         if (FirstOnly && *OSIconName == NULL) {
@@ -527,7 +544,7 @@ VOID GuessLinuxDistribution (
     LOG_SEP(L"X");
 } // VOID GuessLinuxDistribution()
 
-// Add a Linux kernel as a submenu entry for another (pre-existing) Linux kernel entry
+// Add a Linux kernel as submenu entry for another (pre-existing) kernel entry
 VOID AddKernelToSubmenu (
     LOADER_ENTRY *TargetLoader,
     CHAR16       *FileName,
@@ -546,7 +563,7 @@ VOID AddKernelToSubmenu (
 
 
     #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_LINE_THIN_SEP, L"Add Linux Kernel as SubMenu Entry");
+    ALT_LOG(1, LOG_STAR_HEAD_SEPX, L"Add Linux Kernel as SubMenu Entry");
     #endif
 
     LOG_SEP(L"X");
@@ -575,7 +592,14 @@ VOID AddKernelToSubmenu (
 
     BREAD_CRUMB(L"%a:  6", __func__);
     Path = VolName = SubmenuName = NULL;
-    while ((TokenCount = ReadTokenLine (File, &TokenList)) > 1) {
+    for (;;) {
+        TokenCount = ReadTokenLine (File, &TokenList);
+        if (TokenCount < 2) {
+            FreeTokenLine (&TokenList, &TokenCount);
+
+            break;
+        }
+
         LOG_SEP(L"X");
         BREAD_CRUMB(L"%a:  6a 1 - WHILE LOOP:- START", __func__);
         ReplaceSubstring (&(TokenList[1]), KERNEL_VERSION, KernelVersion);
@@ -599,57 +623,54 @@ VOID AddKernelToSubmenu (
             );
 
             BREAD_CRUMB(L"%a:  6a 3a 4", __func__);
-            MY_FREE_POOL(SubEntry->LoaderPath);
-            MY_FREE_POOL(SubEntry->LoadOptions);
-
-            BREAD_CRUMB(L"%a:  6a 3a 5", __func__);
             SubEntry->me.Title = StrDuplicate (SubmenuName);
-
-            BREAD_CRUMB(L"%a:  6a 3a 6", __func__);
             LimitStringLength (SubEntry->me.Title, MAX_LINE_LENGTH);
 
-            BREAD_CRUMB(L"%a:  6a 3a 7", __func__);
-            SubEntry->LoadOptions = AddInitrdToOptions (TokenList[1], InitrdName);
+            BREAD_CRUMB(L"%a:  6a 3a 5", __func__);
+            MY_FREE_POOL(SubEntry->LoadOptions);
+            SubEntry->LoadOptions = AddInitrdToOptions (
+                TokenList[1], InitrdName
+            );
 
-            BREAD_CRUMB(L"%a:  6a 3a 8", __func__);
+            BREAD_CRUMB(L"%a:  6a 3a 6", __func__);
+            MY_FREE_POOL(SubEntry->LoaderPath);
             SubEntry->LoaderPath = StrDuplicate (FileName);
-
-            BREAD_CRUMB(L"%a:  6a 3a 9", __func__);
             CleanUpPathNameSlashes (SubEntry->LoaderPath);
 
-            BREAD_CRUMB(L"%a:  6a 3a 10", __func__);
+            BREAD_CRUMB(L"%a:  6a 3a 7", __func__);
             SubEntry->Volume = Volume;
             SubEntry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_LINUX;
-
-            BREAD_CRUMB(L"%a:  6a 3a 11", __func__);
             AddMenuEntry (SubScreen, (REFIT_MENU_ENTRY *) SubEntry);
+
+            BREAD_CRUMB(L"%a:  6a 3a 8", __func__);
+            MY_FREE_POOL(SubmenuName);
+            MY_FREE_POOL(VolName);
+            MY_FREE_POOL(Path);
         }
+
         BREAD_CRUMB(L"%a:  6a 4", __func__);
         FreeTokenLine (&TokenList, &TokenCount);
 
         BREAD_CRUMB(L"%a: 6a 5 - WHILE LOOP:- END", __func__);
         LOG_SEP(L"X");
-    } // while
+    } // for ;;
 
     BREAD_CRUMB(L"%a:  7", __func__);
-    FreeTokenLine (&TokenList, &TokenCount);
-
-    BREAD_CRUMB(L"%a:  8", __func__);
-    MY_FREE_FILE(File);
-    MY_FREE_POOL(Path);
-    MY_FREE_POOL(VolName);
-    MY_FREE_POOL(InitrdName);
-    MY_FREE_POOL(SubmenuName);
     MY_FREE_POOL(KernelVersion);
+    MY_FREE_POOL(InitrdName);
+    MY_FREE_FILE(File);
 
     #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_THREE_STAR_MID, L"Added Linux Kernel as SubMenu Entry");
+    ALT_LOG(1, LOG_THREE_STAR_END,
+        L"Added Linux Kernel SubMenu Entry to %s",
+        TargetLoader->Title
+    );
     #endif
 
-    BREAD_CRUMB(L"%a:  9 - END:- VOID", __func__);
+    BREAD_CRUMB(L"%a:  8 - END:- VOID", __func__);
     LOG_DECREMENT();
     LOG_SEP(L"X");
-} // static VOID AddKernelToSubmenu()
+} // VOID AddKernelToSubmenu()
 
 // Returns TRUE if a file with the same name as the original but with
 // ".efi.signed" is also present in the same directory. Ubuntu is using
@@ -674,7 +695,10 @@ BOOLEAN HasSignedCounterpart (
     if (NewFile != NULL) {
         if (FileExists(Volume->RootDir, NewFile)) {
             #if REFIT_DEBUG > 0
-            ALT_LOG(1, LOG_LINE_NORMAL, L"Found Signed Counterpart to '%s'", FullName);
+            ALT_LOG(1, LOG_LINE_NORMAL,
+                L"Found Signed Counterpart to '%s'",
+                FullName
+            );
             #endif
 
             retval = TRUE;

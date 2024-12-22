@@ -1,5 +1,11 @@
 0.14.2.AB (PRE-RELEASE):
 -----------------------
+- Fixes `CleanNVram` Handling
+  * Invalid path to external binary was defined
+    - Effectively disabled the feature on UEFI-PC
+    - Forced garbage collection worked on Apple Macs worked as fallback
+      * Errors messages were still shown and logged
+  * This bug was introduced in v0.14.0.AA (Commit c0906f1)
 - Improves `Shortcut Key` Handling
   * No longer allocates keys based on the operating system type/name
     - There was no way of knowing what would be loaded in many cases
@@ -7,10 +13,10 @@
     - Key: `A` is allocated to `About Refindplus`
     - Key: `Z` is allocated to `System Shutdown` (Previously `U`)
   * Keys are now basically allocated on display position
-    - Order: `1, 2 ... 9, C ... X, Y` (30 keys)
+    - Order: `1, 2, 3 ... 8, 9, B, C ... W, X, Y` (31 keys)
     - Key `0` is an internally reserved key
     - Keys `A` and `Z` are used for tools
-    - Keys `B`, `I` and `O` are not used
+    - Keys `I` and `O` are not used
 - Improves `Mac Recovery` Handling
   * Now labels HFS Recovery instances with the Mac OS version
   * Activates previously disabled implementation for APFS
@@ -24,6 +30,20 @@
       * Tool instances are processed for display when actively selected
       * The actual tool instances are then displayed for use if available
       * The outcomes of such searches are cached for reuse in that session
+- Improves `Manual Stanza` Handling
+  * Removes requirement for the `volume` token to be set before some other tokens
+    - Volumes can now be defined anywhere in a stanza without issue
+  * Improves handling of `disabled` tokens
+- Amends `Misc` Handling
+  * Applies multiple sundry optimisations and standardisation
+    - Includes introduction of an `os_windows` icon to be used for Windows when available
+      * Works around the now dated inherited `os-win` and `os-win8` arrangement
+      * The existing arrangement is maintained
+    - Adds `os_ventoy` icon
+    - Now uses upstream emulated storage location if present
+  * The `use_graphics_for` token now defaults to `osx linux windows`
+  * Addressed static analysis flags
+    - Drops inherited unused `filesystems/test` folder and contents
 
 
 0.14.2.AA (08 OCT 2024):
@@ -1214,7 +1234,7 @@
 
 0.13.1.AB (02 Mar 2021):
 -----------------------
-- Fixes APFS ReMapping
+- Fixes APFS Remapping
   * APFS Containers were not excluded as should have been the case
 - Fixes Hour Logging
   * Deviation from GetTime spec meant some log files were not in chronological order

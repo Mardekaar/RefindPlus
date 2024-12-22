@@ -61,8 +61,8 @@
 
 typedef struct {
     UINT8   *Buffer;
-    UINTN   BufferSize;
-    UINTN   Encoding;
+    UINTN    BufferSize;
+    UINTN    Encoding;
     CHAR8   *Current8Ptr;
     CHAR8   *End8Ptr;
     CHAR16  *Current16Ptr;

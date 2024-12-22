@@ -346,6 +346,10 @@ BOOLEAN IsValidLoader (
 
     return TRUE;
 #else
+    #if REFIT_DEBUG > 0
+    CHAR16          *AbortReason;
+    #endif
+
     EFI_STATUS       Status;
     BOOLEAN          IsValid;
     BOOLEAN          AppleBinaryFat;
@@ -356,9 +360,6 @@ BOOLEAN IsValidLoader (
     UINT64           PESig;
     EFI_FILE_HANDLE  FileHandle;
 
-    #if REFIT_DEBUG > 0
-    CHAR16          *AbortReason;
-    #endif
 
     Header = AllocatePool (EFI_HEADER_SIZE);
     if (Header == NULL) {
@@ -400,7 +401,7 @@ BOOLEAN IsValidLoader (
         Status = REFIT_CALL_5_WRAPPER(
             RootDir->Open, RootDir,
             &FileHandle, FileName,
-            EFI_FILE_MODE_READ, 0
+            RefitReadOnly, 0
         );
         if (EFI_ERROR(Status)) {
             #if REFIT_DEBUG > 0
@@ -561,6 +562,11 @@ EFI_STATUS StartEFIImage (
     IN   BOOLEAN        IsDriver,
     OUT  EFI_HANDLE    *NewImageHandle OPTIONAL
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16  *ConstMsgStr;
+    BOOLEAN  CheckMute = FALSE;
+    #endif
+
     EFI_STATUS                           Status;
     EFI_STATUS                           ReturnStatus;
     EFI_GUID                             SystemdGuid = SYSTEMD_GUID_VALUE;
@@ -575,11 +581,6 @@ EFI_STATUS StartEFIImage (
     EFI_DEVICE_PATH_PROTOCOL            *DevicePath;
     EFI_LOADED_IMAGE_PROTOCOL           *ChildLoadedImage;
 
-    #if REFIT_DEBUG > 0
-    CHAR16  *ConstMsgStr;
-
-    BOOLEAN  CheckMute = FALSE;
-    #endif
 
     if (Volume == NULL) {
         ReturnStatus = EFI_INVALID_PARAMETER;
@@ -636,6 +637,9 @@ EFI_STATUS StartEFIImage (
     MY_FREE_POOL(MsgStr);
 
     do {
+        ChildImageHandle = NULL;
+        TempImageHandle  = NULL;
+
         ReturnStatus = EFI_LOAD_ERROR;  // In case list is empty
 
         // DA-TAG: Investigate This
@@ -678,7 +682,6 @@ EFI_STATUS StartEFIImage (
         }
         #endif
 
-        ChildImageHandle = NULL;
         // DA-TAG: Investigate This
         //         Commented-out lines below could be more efficient if the file
         //         were read ahead of time and passed as a pre-loaded image to
@@ -700,6 +703,32 @@ EFI_STATUS StartEFIImage (
             NULL, 0, &ChildImageHandle
         );
         MY_FREE_POOL(DevicePath);
+        if (EFI_ERROR(ReturnStatus)) {
+            if (ReturnStatus != EFI_ACCESS_DENIED   &&
+                ReturnStatus != EFI_SECURITY_VIOLATION
+            ) {
+                MsgStrEx = PoolPrint (
+                    L"Returned While Loading Image:- '%s'",
+                    ImageTitle
+                );
+                CheckError (ReturnStatus, MsgStrEx);
+                MY_FREE_POOL(MsgStrEx);
+            }
+            else {
+                #if REFIT_DEBUG > 0
+                MsgStr = StrDuplicate (L"Secure Boot Validation Failure");
+                ALT_LOG(1, LOG_STAR_SEPARATOR, L"ERROR: %s", MsgStr);
+                LOG_MSG("\n\n");
+                LOG_MSG("WARN: %s", MsgStr);
+                MY_FREE_POOL(MsgStr);
+                #endif
+
+                WarnSecureBootError (ImageTitle, Verbose);
+            }
+
+            // Unload and Bail Out
+            break;
+        }
 
         if (SecureFlag && ShimFound) {
             // Load ourself into memory. This is a trick to work around a bug in
@@ -712,10 +741,6 @@ EFI_STATUS StartEFIImage (
             // here to keep it smaller than a kernel) works around this problem.
             // See the replacements.c file in Shim, especially its start_image()
             // function, for the source of the problem.
-            //
-            // NOTE: This does not check the return status or handle errors.
-            // It could conceivably do weird things if, say, RefindPlus were on
-            // a USB drive that the user pulls before launching a program.
             #if REFIT_DEBUG > 0
             MsgStr = StrDuplicate (L"Shim 0.8 'Load/Start Image' Hack Applied");
             ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
@@ -724,33 +749,16 @@ EFI_STATUS StartEFIImage (
             MY_FREE_POOL(MsgStr);
             #endif
 
+            // NOTE: This does not check the return status or handle errors.
+            // It could conceivably do weird things if, say, RefindPlus is
+            // on a USB drive that is removed before launching a program.
+            //
             // Ignore return status here
-            TempImageHandle = NULL;
             REFIT_CALL_6_WRAPPER(
                 gBS->LoadImage, FALSE,
                 SelfImageHandle, GlobalConfig.SelfDevicePath,
                 NULL, 0, &TempImageHandle
             );
-        }
-
-        if (ReturnStatus == EFI_ACCESS_DENIED   ||
-            ReturnStatus == EFI_SECURITY_VIOLATION
-        ) {
-            #if REFIT_DEBUG > 0
-            MsgStr = PoolPrint (
-                L"'%r' Returned by Secure Boot While Loading %s",
-                ReturnStatus, ImageTitle
-            );
-            ALT_LOG(1, LOG_STAR_SEPARATOR, L"ERROR: %s", MsgStr);
-            LOG_MSG("\n\n");
-            LOG_MSG("INFO: %s", MsgStr);
-            MY_FREE_POOL(MsgStr);
-            #endif
-
-            WarnSecureBootError (ImageTitle, Verbose);
-
-            // Bail Out
-            break;
         }
 
         do {
@@ -771,8 +779,7 @@ EFI_STATUS StartEFIImage (
 
             ChildLoadedImage->LoadOptions     = (VOID *) FullLoadOptions;
             ChildLoadedImage->LoadOptionsSize = (FullLoadOptions)
-                ? ((UINT32) StrLen (FullLoadOptions) + 1) * sizeof (CHAR16)
-                : 0;
+                ? ((UINT32) StrLen (FullLoadOptions) + 1) * sizeof (CHAR16) : 0;
 
             // DA-TAG: Investigate This
             //         Re-enable the EFI watchdog timer (optionally)
@@ -836,7 +843,7 @@ EFI_STATUS StartEFIImage (
 
             #if REFIT_DEBUG > 0
             if (IsDriver) {
-                ConstMsgStr = L"UEFI Driver";
+                ConstMsgStr = L"uEFI Driver";
             }
             else {
                 ConstMsgStr = L"Child Image";
@@ -849,6 +856,7 @@ EFI_STATUS StartEFIImage (
             }
             #endif
 
+            // Turn control over to child image
             ReturnStatus = REFIT_CALL_3_WRAPPER(
                 gBS->StartImage, ChildImageHandle,
                 NULL, NULL
@@ -893,7 +901,7 @@ EFI_STATUS StartEFIImage (
                         PauseSeconds (4);
                         PrintUglyText (L"                                            ", NEXTLINE);
                         PrintUglyText (L"                                            ", NEXTLINE);
-                        PrintUglyText (L"  Applicable Disks *NOT* Found for GPTSync  ", NEXTLINE);
+                        PrintUglyText (L"  Applicable Disks for GPTSync *NOT* Found  ", NEXTLINE);
                         PrintUglyText (L"           Returning to Main Menu           ", NEXTLINE);
                         PrintUglyText (L"                                            ", NEXTLINE);
                         PrintUglyText (L"                                            ", NEXTLINE);
@@ -924,9 +932,9 @@ EFI_STATUS StartEFIImage (
         } while (0); // This 'loop' only runs once
 
         // DA-TAG: bailout_unload:
-        // Unload the image ... we do not care if it works or not
         if (!IsDriver) {
             REFIT_CALL_1_WRAPPER(gBS->UnloadImage, ChildImageHandle);
+            REFIT_CALL_1_WRAPPER(gBS->UnloadImage, TempImageHandle);
         }
     } while (0); // This 'loop' only runs once
 
@@ -1015,13 +1023,13 @@ EFI_STATUS RebootIntoFirmware (VOID) {
 VOID RebootIntoLoader (
     LOADER_ENTRY *Entry
 ) {
-    EFI_STATUS  Status;
-    CHAR16     *TmpStr;
-    CHAR16     *MsgStr;
-
     #if REFIT_DEBUG > 0
     BOOLEAN CheckMute = FALSE;
     #endif
+
+    EFI_STATUS  Status;
+    CHAR16     *TmpStr;
+    CHAR16     *MsgStr;
 
 
     TmpStr = L"Reboot into nvRAM Boot Option";
@@ -1149,19 +1157,19 @@ VOID StartLoader (
 VOID StartTool (
     IN LOADER_ENTRY *Entry
 ) {
-    EFI_STATUS  Status;
-    CHAR16     *MsgStr;
-    CHAR16     *LoaderPath;
-
     #if REFIT_DEBUG > 0
     BOOLEAN CheckMute = FALSE;
     #endif
+
+    EFI_STATUS  Status;
+    CHAR16     *MsgStr;
+    CHAR16     *LoaderPath;
 
 
     IsBoot     = FALSE;
     LoaderPath = Basename (Entry->LoaderPath);
     MsgStr     = PoolPrint (
-        L"Start Child (Tool) Image Loader:- '%s'",
+        L"Start Child Image (Tool) Loader:- '%s'",
         Entry->LoaderPath
     );
 

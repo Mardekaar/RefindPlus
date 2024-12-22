@@ -6,7 +6,7 @@ A Boot Manager for Mac and PC
 
 <br>
 
-[![Release Version](https://img.shields.io/github/v/release/dakanji/RefindPlus?style=for-the-badge&label=current)](https://github.com/dakanji/RefindPlus/releases)[![Release Date](https://img.shields.io/github/release-date/dakanji/RefindPlus.svg?display_date=published_at&style=for-the-badge&color=informational&label=)](https://github.com/dakanji/RefindPlus/releases)
+[![Release Version](https://img.shields.io/github/v/release/dakanji/RefindPlus?style=for-the-badge&color=informational&label=current)](https://github.com/dakanji/RefindPlus/releases)[![Release Date](https://img.shields.io/github/release-date/dakanji/RefindPlus.svg?display_date=published_at&style=for-the-badge&color=informational&label=)](https://github.com/dakanji/RefindPlus/releases)
 
 [![Coverity Scan](https://img.shields.io/coverity/scan/22695)](https://scan.coverity.com/projects/22695)&nbsp;&nbsp;&nbsp;[![Codacy Grade](https://img.shields.io/codacy/grade/d2955171e96246579279c1a28c4b11cf?label=codacy)](https://app.codacy.com/gh/dakanji/RefindPlus/dashboard)
 
@@ -42,10 +42,10 @@ Some features:
   - Basically allows working as if NVMe is natively supported by the firmware.
 - Provides APFS filesystem capability, if required, via an inbuilt `APFS JumpStart` driver.
   - Removes the need to load external drivers on units without native APFS support.
-  - Additionally ensures matching APFS drivers for specific macOS versions are used.
+  - Additionally ensures matching APFS drivers for specific Mac OS versions are used.
   - Basically allows working as if APFS is natively supported by the firmware.
 - Fully supports APFS filesystem requirements.
-  - This allows booting recent macOS versions from single named volumes.
+  - This allows booting recent Mac OS versions from single named volumes.
     - As opposed to generic and difficult to distinguish `PreBoot` volumes.
     - Avoids compromising system integrity by otherwise requiring SIP to be disabled.
   - This also allows booting `FileVault` encrypted volumes from single named volumes.
@@ -53,7 +53,7 @@ Some features:
 
 ## Installation
 
-[MyBootMgr](https://www.dakanji.com/creations/index.html) is recommended to automate installing RefindPlus when running macOS on Intel-based Macs. Alternatively, as the RefindPlus efi file can function as a drop-in replacement for the upstream efi file, the [rEFInd package](https://www.rodsbooks.com/refind/installing.html) can be installed first and its efi file replaced with the RefindPlus efi file. (Ensure the RefindPlus efi file is renamed to match). This manual process allows installing RefindPlus on other operating systems supported upstream.
+[MyBootMgr](https://www.dakanji.com/creations/index.html) is recommended to automate installing RefindPlus when running Mac OS on Intel-based Macs. Alternatively, as the RefindPlus efi file can function as a drop-in replacement for the upstream efi file, the [rEFInd package](https://www.rodsbooks.com/refind/installing.html) can be installed first and its efi file replaced with the RefindPlus efi file (Ensure the RefindPlus efi file is renamed to match). This manual process allows installing RefindPlus on other operating systems supported upstream.
 
 > [!NOTE]
 >
@@ -94,11 +94,11 @@ decline_help_text     |Disables feature that sets screen text to complementary c
 decouple_key_f10      |Unmaps the `F10` key from native screenshots (the `\` key remains mapped)
 disable_apfs_load     |Disables inbuilt provision of APFS filesystem capability
 disable_apfs_sync     |Disables feature allowing direct APFS/FileVault boot (Without "PreBoot")
-disable_check_amfi    |Disables AMFI Checks on macOS if required
+disable_check_amfi    |Disables AMFI Checks on Mac OS if required
 disable_check_compat  |Disables Mac version compatibility checks if required
 disable_pass_gop_thru |Disables feature that provides GOP instance on UGA for some loading screens
 disable_legacy_sync   |Disables detailed indentification of Mac legacy BIOS boot capability
-disable_nvram_paniclog|Disables logging macOS kernel panics to nvRAM
+disable_nvram_paniclog|Disables logging Mac OS kernel panics to nvRAM
 disable_nvram_protect |Disables blocking of potentially harmful write attempts to Legacy Mac nvRAM
 disable_reload_gop    |Disables reinstallation of UEFI 2.x GOP drivers on EFI 1.x units
 disable_rescan_dxe    |Disables scanning for newly revealed DXE drivers when connecting handles
@@ -112,17 +112,17 @@ hidden_icons_prefer   |Prioritises `.VolumeIcon` and `.VolumeBadge` image icons 
 icon_row_move         |Repositions the main screen icon rows (vertically)
 icon_row_tune         |Fine tunes the resulting `icon_row_move` outcome
 mitigate_primed_buffer|Allows enhanced intervention to handle apparent primed keystroke buffers
-nvram_protect_ex      |Extends `NvramProtect`, if set, to macOS and `unknown` UEFI boots
+nvram_protect_ex      |Extends `NvramProtect`, if set, to Mac OS and `unknown` UEFI boots
 nvram_variable_limit  |Limits nvRAM write attempts to the specified variable size
 pass_uga_through      |Provides UGA instance on GOP to permit EFI Boot with modern GPUs
-persist_boot_args     |Overrides using vRAM (instead of nvRAM) for macOS boot argument items
+persist_boot_args     |Overrides using vRAM (instead of nvRAM) for Mac OS boot argument items
 prefer_uga            |Prefers UGA use (when available) regardless of GOP availability
 ransom_drives         |Frees partitions locked by how certain firmware load inbuilt drivers
 renderer_direct_gop   |Provides a potentially improved GOP instance for certain GPUs
 renderer_text         |Provides a text renderer for text output when otherwise unavailable
 scale_ui              |Provides control of UI element scaling
 screen_rgb            |Allows setting arbitrary screen background colours
-set_boot_args         |Allows setting arbitrary macOS boot arguments
+set_boot_args         |Allows setting arbitrary Mac OS boot arguments
 supply_nvme           |Enables an inbuilt NvmExpress driver
 supply_uefi           |Enables feature that emulates UEFI 2.x support on EFI 1.x units
 sync_nvram            |Resets nvRAM settings, such as BlueTooth, on some boot types if required
@@ -143,7 +143,7 @@ In addition to the new functionality listed above, the following upstream tokens
 - **"showtools":** Additional tool added:
   - `clean_nvram` : Allows resetting nvRAM directly from RefindPlus.
     - When run on Apple firmware, RefindPlus will additionally trigger nvRAM garbage collection
-- **"csr_values":** A value of `0` can be set as the `Enabled` value to allow `Over The Air` (OTA) updates when running macOS 11.x (Big Sur), or later, with SIP enabled.
+- **"csr_values":** A value of `0` can be set as the `Enabled` value to allow `Over The Air` (OTA) updates when running Mac OS 11.x (Big Sur), or later, with SIP enabled.
   - This is equivalent to activating the `csr_normalise` token.
 - **"log_level":** Controls the native log format and an implementation of the upstream format.
   - Only active on `DEBUG` and `NOOPT` builds while `RELEASE` builds remain optimised for day-to-day use.
@@ -180,7 +180,7 @@ Significant visible implementation differences vis-a-vis the upstream base are:
   - > Activate the RefindPlus-specific `disable_set_applefb` configuration token to switch this feature off.
 - **APFS Filesystem Provision:** RefindPlus defaults to always providing APFS Filesystem capability, when not available but is required, without a need to load an APFS driver. This is done using an inbuilt `SupplyAPFS` feature.
   - > Activate the RefindPlus-specific `disable_apfs_load` configuration token to switch this feature off.
-- **APFS PreBoot Volumes:** RefindPlus always synchronises APFS System and PreBoot partitions transparently such that the Preboot partitions of APFS volumes are always used to boot APFS formatted macOS. Hence, a single option for booting macOS on APFS volumes is presented in RefindPlus to provide maximum APFS compatibility.
+- **APFS PreBoot Volumes:** RefindPlus always synchronises APFS System and PreBoot partitions transparently such that the Preboot partitions of APFS volumes are always used to boot APFS formatted Mac OS. Hence, a single option for booting Mac OS on APFS volumes is presented in RefindPlus to provide maximum APFS compatibility.
   - > Activate the RefindPlus-specific `disable_apfs_sync` configuration token to switch this feature off.
 - **Mac nvRAM Protection:** RefindPlus always prevents UEFI Windows Secure Boot from saving certificates to Mac nvRAM as this can result in damage and an inability to boot. Blocking these certificates does not impact the operation of UEFI Windows on Macs. This filtering only happens when Mac firmware is detected and is not applied to other types of firmware.
   - > Activate the RefindPlus-specific `disable_nvram_protect` configuration token to switch this feature off.
@@ -190,7 +190,7 @@ Significant visible implementation differences vis-a-vis the upstream base are:
   - > The RefindPlus implementation enforces the limitation for inclusion to secondary configuration files.
 - **Shortcut Keys:** RefindPlus does not allocate shortcut keys based on the operating system type/name as there is no way of knowing what would actually be loaded in many cases.
   - > Tools are not allocated shortcut keys with the exception of `Key A` allocated to `About Refindplus` and `Key Z` allocated to `System Shutdown`.
-  - > For loaders, keys are allocated based on display position in the order of `Key 1` to `Key Y`. Alphabetical Keys `B, I and O` are not used while Numeric Key `0` is reserved for internal use.
+  - > For loaders, keys are allocated based on display position in the order of `Key 1` to `Key Y`. Alphabetical Keys `I and O` are not used while Numeric Key `0` is reserved for internal use.
 - **Disabled Manual Stanzas:** The processing of a user configured boot stanza is halted, and the `Entry` object immediately discarded, once a `Disabled` setting is encountered. The outcome is the same as upstream, which always continues to create and return a fully built object in such cases to be discarded later. The approach adopted in RefindPlus allows for an optimised loading process particularly when such `Disabled` tokens are placed immediately after the `menuentry` line (see examples near the bottom of the `config.conf-sample-Dev` file).
   - > This also applies to `submenuentry` items which can be enabled or disabled separately.
 - **Pointer Device Priority:** The upstream implementation of pointer device priority is based on how the `enable_mouse` and `enable_touch` pointer device control tokens appear in the configuration file(s) when both are active. The last pointer device control token read in the main configuration file and/or any supplementary/override configuration file will be used and the other disregarded. In RefindPlus however, `enable_touch` always takes priority when both tokens are active without regard to the order of appearance in the configuration file(s).

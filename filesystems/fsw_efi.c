@@ -187,10 +187,10 @@ EFI_STATUS fsw_efi_dnode_fill_FileInfo(
 
 #define CACHE_SIZE 131072 /* 128KiB */
 struct cache_data {
-   fsw_u8            *Cache;
+   fsw_u8           *Cache;
    fsw_u64           CacheStart;
    BOOLEAN           CacheValid;
-   FSW_VOLUME_DATA   *Volume; // NOTE: Do not deallocate; copied here to ID volume
+   FSW_VOLUME_DATA  *Volume;     // NOTE: Do not deallocate; copied here to ID volume
 };
 
 #define NUM_CACHES 2 /* Do not increase without modifying fsw_efi_read_block() */
@@ -281,11 +281,8 @@ EFI_STATUS EFIAPI fsw_efi_main(
         gBS->InstallProtocolInterface, &fsw_efi_DriverBinding_table.DriverBindingHandle,
         &gMyEfiComponentNameProtocolGuid, EFI_NATIVE_INTERFACE, &fsw_efi_ComponentName_table
     );
-    if (EFI_ERROR(Status)) {
-        return Status;
-    }
 
-    return EFI_SUCCESS;
+    return Status;
 }
 
 #ifdef __MAKEWITH_GNUEFI
@@ -427,6 +424,7 @@ fsw_efi_DriverBinding_Start(
             &gMyEfiDiskIoProtocolGuid, This->DriverBindingHandle, ControllerHandle
         );
     }
+
     return Status;
 }
 
@@ -1160,7 +1158,6 @@ EFI_STATUS fsw_efi_dnode_getinfo(
         // Prepare for return
         *BufferSize = RequiredSize;
         Status = EFI_SUCCESS;
-
     } else {
         Status = EFI_UNSUPPORTED;
     }
