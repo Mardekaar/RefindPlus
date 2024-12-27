@@ -20,21 +20,15 @@ jobs:
     name: Flag or Close Issues
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'stale'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'stale')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - name: Check Rate Limit
-        id: rate-limit-check01
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Avoid Rate Limit
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check01.outputs.sleep_time }}
 
       - name: Handle Cancelled/Duplicate/Invalid/Wierd/Not-Planned Issues
         uses: actions/stale@v9
@@ -50,16 +44,10 @@ jobs:
           remove-issue-stale-when-updated: false
           repo-token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Check Rate Limit
-        id: rate-limit-check02
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Avoid Rate Limit
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check02.outputs.sleep_time }}
 
       - name: Handle Incomplete Issues
         uses: actions/stale@v9
@@ -82,16 +70,10 @@ jobs:
           remove-issue-stale-when-updated: true
           repo-token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Check Rate Limit
-        id: rate-limit-check03
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Avoid Rate Limit
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check03.outputs.sleep_time }}
 
       - name: Handle No-Response Issues
         uses: actions/stale@v9
@@ -114,16 +96,10 @@ jobs:
           remove-issue-stale-when-updated: true
           repo-token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Check Rate Limit
-        id: rate-limit-check04
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Avoid Rate Limit
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check04.outputs.sleep_time }}
 
       - name: Catchall Closer
         uses: actions/stale@v9

@@ -1,0 +1,121 @@
+name: Rate Limit Handler
+description: Check rate limits and dynamically calculate/apply sleep times.
+inputs:
+  token:
+    description: Personal Access Token (PAT) for GitHub API.
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Handle Rate Limits
+      shell: bash
+      run: |
+        TOKEN="${{ inputs.token }}"
+        SLEEP_TIME=0
+        BASE_TIME=64
+        MAX_RETRIES=6
+        RETRY_COUNT=0
+
+        calculate_sleep_time() {
+          RATE_LIMIT_DATA=$(curl -s --max-time 10 \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/rate_limit)
+          printf "Primary Rate Limit Response:\n%s\n" "$RATE_LIMIT_DATA"
+
+          # Validate JSON response
+          if ! echo "$RATE_LIMIT_DATA" | jq -e '.' > /dev/null 2>&1; then
+            SLEEP_TIME=$BASE_TIME
+            echo "Error: Invalid JSON Response!"
+            echo "       Defaulting sleep time to $SLEEP_TIME seconds."
+            return
+          fi
+
+          REMAINING_CALLS=$(echo "$RATE_LIMIT_DATA" | jq -r '.resources.core.remaining // 0')
+          RESET_TIME=$(echo "$RATE_LIMIT_DATA" | jq -r '.resources.core.reset // 0')
+
+          CURRENT_TIME=$(date +%s)
+          WAIT_PERIOD=$(( RESET_TIME - CURRENT_TIME ))
+          if (( WAIT_PERIOD < 0 )); then
+            SLEEP_TIME=$(( BASE_TIME * 2 ))
+            echo "Error: Invalid Wait Time Esitmate!"
+            echo "       Defaulting sleep time to $SLEEP_TIME seconds."
+            return
+          fi
+
+          if (( REMAINING_CALLS > 99 )); then
+            SLEEP_TIME=0
+          elif (( REMAINING_CALLS > 1 )); then
+            SLEEP_TIME=$(( WAIT_PERIOD / REMAINING_CALLS ))
+          else
+            SLEEP_TIME=$(( WAIT_PERIOD + 60 ))
+          fi
+
+          if (( SLEEP_TIME < 0 )); then
+            SLEEP_TIME=0
+          fi
+
+          echo "Calculated sleep time is $SLEEP_TIME seconds."
+        }
+
+        handle_secondary_rate_limit() {
+          while (( RETRY_COUNT < MAX_RETRIES )); do
+            RESPONSE=$(curl -s -I --max-time 10 \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/rate_limit)
+            printf "Secondary Rate Limit Response:\n%s\n" "$RESPONSE"
+
+            RETRY_BASE=$(echo "$RESPONSE" | grep -i '^retry-after:' | awk '{print $2}' | tr -d '\r') || true
+            if [[ -z "$RETRY_BASE" ]]; then
+              # Default to a small retry interval if 'RETRY_BASE' is not set
+              RETRY_AFTER=2
+              echo "'Retry-After' header not detected."
+              echo "Proceed after a token $RETRY_AFTER seconds."
+              sleep "$RETRY_AFTER"
+              break
+            fi
+
+            if ! [[ "$RETRY_BASE" =~ ^[0-9]+$ ]]; then
+              # Ensure RETRY_BASE is numeric and valid
+              echo "Error: Invalid 'Retry-After' header value: '$RETRY_BASE'."
+              echo "       Defaulting to $BASE_TIME seconds."
+              RETRY_BASE=BASE_TIME
+            elif (( RETRY_BASE < BASE_TIME )); then
+              echo "Warn: Invalid 'RETRY_BASE' value: '$RETRY_BASE'."
+              echo "      Defaulting to $BASE_TIME seconds."
+              RETRY_BASE=$BASE_TIME
+            fi
+
+            SCALE_FACTOR=$(( RETRY_COUNT + 1 ))
+            RETRY_AFTER=$(( RETRY_BASE * SCALE_FACTOR * SCALE_FACTOR ))
+            echo "Secondary Rate Limit is Active."
+            echo "Wait $RETRY_AFTER seconds for reset..."
+            sleep "$RETRY_AFTER"
+
+            RETRY_COUNT=$SCALE_FACTOR
+            if (( RETRY_COUNT >= MAX_RETRIES )); then
+              break
+            fi
+          done
+        }
+
+        # Check for secondary rate limits
+        handle_secondary_rate_limit
+
+        # Calculate sleep time for primary rate limits
+        calculate_sleep_time
+
+        # Pause if necessary
+        if (( SLEEP_TIME == 0 )); then
+          echo "Skip Pause ... Far from Primary Rate Limit."
+        else
+          if (( SLEEP_TIME < BASE_TIME )); then
+            echo "Defaulting sleep time to $BASE_TIME seconds."
+            SLEEP_TIME=$BASE_TIME
+          fi
+          echo "Apply ${SLEEP_TIME} Second Pause for Primary Rate Limit."
+          sleep "$SLEEP_TIME"
+        fi

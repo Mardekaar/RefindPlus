@@ -23,22 +23,17 @@ jobs:
     name: Lock Resolved Issues
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - id: rate-limit-check01
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
-      - id: avoid-rate-limit-01
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check01.outputs.sleep_time }}
-
-      - id: main-action-01
+      - name: Handle Thread Lock
         uses: dakanji/lock-threads@v5
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -57,22 +52,17 @@ jobs:
     needs: [lock-threads-01]
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - id: rate-limit-check02
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
-      - id: avoid-rate-limit-02
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check02.outputs.sleep_time }}
-
-      - id: main-action-02
+      - name: Handle Thread Lock
         uses: dakanji/lock-threads@v5
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -91,22 +81,17 @@ jobs:
     needs: [lock-threads-02]
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - id: rate-limit-check03
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
-      - id: avoid-rate-limit-03
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check03.outputs.sleep_time }}
-
-      - id: main-action-03
+      - name: Handle Thread Lock
         uses: dakanji/lock-threads@v5
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -126,22 +111,17 @@ jobs:
     needs: [lock-threads-03]
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - id: rate-limit-check04
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
-      - id: avoid-rate-limit-04
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check04.outputs.sleep_time }}
-
-      - id: main-action-04
+      - name: Handle Thread Lock
         uses: dakanji/lock-threads@v5
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -160,22 +140,17 @@ jobs:
     needs: [lock-threads-04]
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - id: rate-limit-check05
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
-      - id: avoid-rate-limit-05
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check05.outputs.sleep_time }}
-
-      - id: main-action-05
+      - name: Handle Thread Lock
         uses: dakanji/lock-threads@v5
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
@@ -196,22 +171,17 @@ jobs:
     needs: [lock-threads-05]
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
+    if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
 
-      - id: rate-limit-check06
-        uses: ./.github/actions/check-rate-limit
+      - name: Handle Rate Limits
+        uses: ./.github/actions/handle-rate-limits
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
-      - id: avoid-rate-limit-06
-        uses: ./.github/actions/avoid-rate-limit
-        with:
-          sleep_time: ${{ steps.rate-limit-check06.outputs.sleep_time }}
-
-      - id: main-action-06
+      - name: Handle Thread Lock
         uses: dakanji/lock-threads@v5
         with:
           github-token: ${{ secrets.PAT_TOKEN }}
