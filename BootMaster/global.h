@@ -43,7 +43,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -294,6 +294,12 @@ EFI\\OEM\\Boot\\bootmgfw.efi"
 #define REQUIRE_TRUST_VERIFY     (64)
 #define ENFORCE_TRUST_EVERY     (127) // 1 + 2 + 4 + 8 + 16 + 32 + 64
 
+// Bit codes (Actual Decimal) ... Used in GlobalConfig.DisableBootLogo
+#define DISABLE_BOOTLOGO_OFF      (0) // Binary: 0000 0000 0000
+#define DISABLE_BOOTLOGO_LIN      (1) // Binary: 0000 0000 0001
+#define DISABLE_BOOTLOGO_WIN      (2) // Binary: 0000 0000 0010
+#define DISABLE_BOOTLOGO_ALL      (3) // Binary: 0000 0000 0011 (1 + 2)
+
 // Bit codes (Actual Decimal) ... Used in GlobalConfig.HideUIFlags
 #define HIDEUI_FLAG_NONE          (0)
 #define HIDEUI_FLAG_BANNER        (1)
@@ -531,6 +537,7 @@ typedef struct {
     UINTN                       RequestedScreenWidth;
     UINTN                       RequestedScreenHeight;
     UINTN                       BannerBottomEdge;
+    UINTN                       DisableBootLogo;
     UINTN                       HideUIFlags;
     UINTN                       SyncTrust;
     UINTN                       MaxTags;

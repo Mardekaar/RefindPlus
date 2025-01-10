@@ -43,7 +43,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  * Portions Copyright (c) 2021 Joe van Tunen (joevt@shaw.ca)
  *
  * Modifications distributed under the preceding terms.
@@ -2362,6 +2362,9 @@ VOID ReadConfig (
     BOOLEAN           GotSyncTrustAll;
     BOOLEAN           GotNoneSyncTrust;
     BOOLEAN           OutLoopSyncTrust;
+    BOOLEAN           GotNoBootLogoAll;
+    BOOLEAN           GotNoneNoBootLogo;
+    BOOLEAN           OutLoopNoBootLogo;
     BOOLEAN           GotGraphicsForAll;
     BOOLEAN           GotNoneGraphicsFor;
     BOOLEAN           OutLoopGraphicsFor;
@@ -2508,6 +2511,7 @@ VOID ReadConfig (
     CheckManual        = DoneManual         = FALSE;
     GotNoneHideui      = OutLoopHideui      = FALSE;
     GotNoneSyncTrust   = OutLoopSyncTrust   = FALSE;
+    GotNoneNoBootLogo  = OutLoopNoBootLogo  = FALSE;
     GotNoneGraphicsFor = OutLoopGraphicsFor = FALSE;
     #if REFIT_DEBUG > 0
     if (!OuterLoop) {
@@ -3744,6 +3748,62 @@ VOID ReadConfig (
             GlobalConfig.DisableCheckAMFI = HandleBoolean (
                 TokenList, TokenCount
             );
+        }
+        else if (MyStriCmp (TokenList[0], L"disable_bootlogo")) {
+            #if REFIT_DEBUG > 0
+            if (!OuterLoop && !OutLoopNoBootLogo) {
+                UpdatedToken = LogUpdate (
+                    TokenList[0], NotRunBefore, TRUE
+                );
+            }
+            #endif
+
+            GotNoBootLogoAll = FALSE;
+            if (!OuterLoop && !OutLoopNoBootLogo) {
+                // DA-TAG: Allows reset/override in 'included' config files
+                OutLoopNoBootLogo            = TRUE;
+                GlobalConfig.DisableBootLogo = DISABLE_BOOTLOGO_OFF;
+            }
+
+            for (i = 1; i < TokenCount; i++) {
+                Flag = TokenList[i];
+                if (MyStrBegins (Flag, L"Off")) {
+                    // DA-TAG: Required despite earlier reset
+                    //         This will always be used if in token list
+                    GotNoneNoBootLogo            = TRUE;
+                    GlobalConfig.DisableBootLogo = DISABLE_BOOTLOGO_OFF;
+                    break;
+                }
+
+                if (!GotNoBootLogoAll) {
+                    // DA-TAG: Arranged as so to prioritise 'Off' above
+                    if (MyStrBegins (Flag, L"All")) {
+                        GotNoBootLogoAll             = TRUE;
+                        GlobalConfig.DisableBootLogo = DISABLE_BOOTLOGO_ALL;
+                    }
+                    else {
+                        if (0);
+                        else if (MyStrBegins (Flag, L"Lin")) GlobalConfig.DisableBootLogo |= DISABLE_BOOTLOGO_LIN;
+                        else if (MyStrBegins (Flag, L"Win")) GlobalConfig.DisableBootLogo |= DISABLE_BOOTLOGO_WIN;
+                        else {
+                            MsgStr = PoolPrint (
+                                L"WARN: Invalid 'disable_bootlogo' Token:- '%s'", Flag
+                            );
+
+                            #if REFIT_DEBUG > 0
+                            if (NotRunBefore) MuteLogger = FALSE;
+                            LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+                            if (NotRunBefore) MuteLogger = TRUE;
+                            #endif
+
+                            SwitchToText (FALSE);
+                            PrintUglyText (MsgStr, NEXTLINE);
+                            PauseForKey();
+                            MY_FREE_POOL(MsgStr);
+                        }
+                    }
+                }
+            } // for
         }
         else if (MyStriCmp (TokenList[0], L"supply_nvme")) {
             #if REFIT_DEBUG > 0

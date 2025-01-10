@@ -41,7 +41,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  * Portions Copyright (c) 2021 Joe van Tunen (joevt@shaw.ca)
  *
  * Modifications distributed under the preceding terms.
@@ -79,7 +79,6 @@ EG_PIXEL   BlackPixel             = { 0x00, 0x00, 0x00, 0 };
 EG_PIXEL   GrayPixel              = { 0xBF, 0xBF, 0xBF, 0 };
 EG_PIXEL   WhitePixel             = { 0xFF, 0xFF, 0xFF, 0 };
 
-EG_PIXEL   StdBackgroundPixel     = { 0xBF, 0xBF, 0xBF, 0 };
 EG_PIXEL   MenuBackgroundPixel    = { 0xBF, 0xBF, 0xBF, 0 };
 EG_PIXEL   DarkBackgroundPixel    = { 0x00, 0x00, 0x00, 0 };
 

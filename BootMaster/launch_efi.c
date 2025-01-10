@@ -41,7 +41,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -53,6 +53,7 @@
 #include "icns.h"
 #include "menu.h"
 #include "apple.h"
+#include "linux.h"
 #include "install.h"
 #include "mystrings.h"
 #include "screenmgt.h"
@@ -570,12 +571,16 @@ EFI_STATUS StartEFIImage (
     EFI_STATUS                           Status;
     EFI_STATUS                           ReturnStatus;
     EFI_GUID                             SystemdGuid = SYSTEMD_GUID_VALUE;
+    CHAR16                              *FullLoadOptions;
     CHAR16                              *MsgStrTmp;
     CHAR16                              *MsgStrEx;
     CHAR16                              *MsgStr;
+    CHAR16                              *TmpStr;
     CHAR16                              *EspGUID;
-    CHAR16                              *FullLoadOptions;
+    UINTN                                ScaleLogo;
+    UINTN                                OrigIconBig;
     BOOLEAN                              LoaderValid;
+    EG_IMAGE                            *BootLogoImage;
     EFI_HANDLE                           ChildImageHandle;
     EFI_HANDLE                           TempImageHandle;
     EFI_DEVICE_PATH_PROTOCOL            *DevicePath;
@@ -783,43 +788,112 @@ EFI_STATUS StartEFIImage (
 
             // DA-TAG: Investigate This
             //         Re-enable the EFI watchdog timer (optionally)
-            //
-            // Turn control over to the image
             if (IsBoot &&
-                OSType == 'L' &&
-                GlobalConfig.WriteSystemdVars
+                (
+                    (
+                        OSType == 'L' &&
+                        !(GlobalConfig.DisableBootLogo & DISABLE_BOOTLOGO_LIN)
+                    ) || (
+                        OSType == 'W' &&
+                        !(GlobalConfig.DisableBootLogo & DISABLE_BOOTLOGO_WIN)
+                    )
+                )
             ) {
-                // Inform SystemD of RefindPlus ESP
-                EspGUID = GuidAsString (&(SelfVolume->PartGuid));
+                if (!Verbose) {
+                    if (ScreenW > 1024 && ScreenH > 1024) {
+                        // Stash current size
+                        OrigIconBig = GlobalConfig.IconSizes[ICON_SIZE_BIG];
 
-                #if REFIT_DEBUG > 0
-                MsgStr = PoolPrint (
-                    L"LoaderDevicePartUUID Value for SystemD:- '%s'",
-                    EspGUID
-                );
-                ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
-                MY_FREE_POOL(MsgStr);
-                #endif
+                        // Set scale factor
+                        if (0);
+                        else if (OrigIconBig >= 256) ScaleLogo = 1;
+                        else if (OrigIconBig >= 128) ScaleLogo = 2;
+                        else if (OrigIconBig >=  64) ScaleLogo = 4;
+                        else                         ScaleLogo = 8;
 
-                Status = EfivarSetRaw (
-                    &SystemdGuid, L"LoaderDevicePartUUID",
-                    EspGUID, StrLen (EspGUID) * 2 + 2, FALSE
-                );
-                #if REFIT_DEBUG > 0
-                if (EFI_ERROR(Status)) {
+                        // Apply scale factor
+                        GlobalConfig.IconSizes[ICON_SIZE_BIG] *= ScaleLogo;
+                    }
+
+                    BootLogoImage = LoadOSIcon (NULL, EXIT_SPLASH, TRUE);
+                    if (BootLogoImage == NULL) {
+                        TmpStr = NULL;
+
+                        if (OSType == 'L') {
+                            GuessLinuxDistribution (&TmpStr, Volume, Filename, FALSE);
+                        }
+
+                        if (TmpStr == NULL) {
+                            TmpStr = StrDuplicate (Volume->OSIconName);
+                        }
+
+                        ToLower (TmpStr);
+
+                        BootLogoImage = LoadOSIcon (
+                            TmpStr,
+                            (OSType == 'L') ? L"linux" : L"windows",
+                            TRUE
+                        );
+
+                        MY_FREE_POOL(TmpStr);
+                    }
+
+                    if (BootLogoImage != NULL) {
+                        BltImageAlpha (
+                            BootLogoImage,
+                            (ScreenW - BootLogoImage->Width ) >> 1,
+                            (ScreenH - BootLogoImage->Height) >> 1,
+                            &(GlobalConfig.ScreenBackground->PixelData[0])
+                        );
+
+                        // Avoid mere flash
+                        //
+                        // Wait 0.75 seconds
+                        // DA-TAG: 100 Loops == 1 Sec
+                        RefitStall (75);
+                    }
+
+                    if (ScreenW > 1024 && ScreenH > 1024) {
+                        // Reset to stashed size
+                        GlobalConfig.IconSizes[ICON_SIZE_BIG] = OrigIconBig;
+                    }
+
+                    MY_FREE_IMAGE(BootLogoImage);
+                } // if !Verbose
+
+                if (OSType == 'L' && GlobalConfig.WriteSystemdVars) {
+                    // Inform SystemD of RefindPlus ESP
+                    EspGUID = GuidAsString (&(SelfVolume->PartGuid));
+
+                    #if REFIT_DEBUG > 0
                     MsgStr = PoolPrint (
-                        L"'%r' When Setting 'LoaderDevicePartUUID' UEFI Variable",
-                        Status
+                        L"LoaderDevicePartUUID:- '%s'",
+                        EspGUID
                     );
-                    ALT_LOG(1, LOG_STAR_SEPARATOR, L"WARN: '%s'", MsgStr);
-                    LOG_MSG("\n\n");
-                    LOG_MSG("WARN: %s", MsgStr);
+                    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
                     MY_FREE_POOL(MsgStr);
-                }
-                #endif
+                    #endif
 
-                MY_FREE_POOL(EspGUID);
-            } // if GlobalConfig.WriteSystemdVars
+                    Status = EfivarSetRaw (
+                        &SystemdGuid, L"LoaderDevicePartUUID",
+                        EspGUID, StrLen (EspGUID) * 2 + 2, FALSE
+                    );
+                    #if REFIT_DEBUG > 0
+                    if (EFI_ERROR(Status)) {
+                        MsgStr = PoolPrint (
+                            L"'%r' When Setting 'LoaderDevicePartUUID' UEFI Variable",
+                            Status
+                        );
+                        ALT_LOG(1, LOG_STAR_SEPARATOR, L"WARN: '%s'", MsgStr);
+                        LOG_MSG("\n\n");
+                        LOG_MSG("WARN: %s", MsgStr);
+                        MY_FREE_POOL(MsgStr);
+                    }
+                    #endif
+
+                    MY_FREE_POOL(EspGUID);
+                } // if GlobalConfig.WriteSystemdVars
+            } // if IsBoot && OSType
 
             // Store loader name if booting and set to do so
             if (BootSelection != NULL) {

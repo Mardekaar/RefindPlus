@@ -42,7 +42,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  * Portions Copyright (c) 2021 Joe van Tunen (joevt@shaw.ca)
  *
  * Modifications distributed under the preceding terms.
@@ -489,6 +489,12 @@ VOID GuessLinuxDistribution (
     CHAR16        *LoaderPath,
     BOOLEAN        FirstOnly
 ) {
+    UINTN          i;
+    CHAR16        *LinuxName;
+    CHAR16        *ShowName;  // *DO NOT* Free
+    BOOLEAN        Found;
+
+
     LOG_SEP(L"X");
     LOG_INCREMENT();
     BREAD_CRUMB(L"%a:  1 - START", __func__);
@@ -504,6 +510,7 @@ VOID GuessLinuxDistribution (
     if (!FirstOnly || *OSIconName == NULL) {
         BREAD_CRUMB(L"%a:  4a 1", __func__);
         ParseReleaseFile (OSIconName, Volume, L"etc\\lsb-release", FirstOnly);
+        BREAD_CRUMB(L"%a:  4a 2", __func__);
     }
 
     // DA-TAG: Strip out misc unwanted
@@ -511,33 +518,81 @@ VOID GuessLinuxDistribution (
     DeleteItemFromCsvList (L"gnu",   OSIconName);
     DeleteItemFromCsvList (L"linux", OSIconName);
 
+    BREAD_CRUMB(L"%a:  6", __func__);
+    if (FirstOnly && *OSIconName != NULL) {
+        BREAD_CRUMB(L"%a:  6a 1 - END:- OSIconNameList = %s", __func__, *OSIconName);
+        LOG_DECREMENT();
+        LOG_SEP(L"X");
+
+        return;
+    }
+
     // Search for clues in kernel filename
+    BREAD_CRUMB(L"%a:  7", __func__);
     if (FindSubStr (LoaderPath, L".fc")) {
-        BREAD_CRUMB(L"%a:  5a 1 - Fedora Loader", __func__);
-        if (FirstOnly && *OSIconName == NULL) {
-            BREAD_CRUMB(L"%a:  5a 1a 1", __func__);
+        BREAD_CRUMB(L"%a:  7a 1 - Fedora Loader", __func__);
+        if (FirstOnly) {
+            BREAD_CRUMB(L"%a:  7a 1a 1", __func__);
             *OSIconName = StrDuplicate (L"Fedora");
         }
         else {
-            BREAD_CRUMB(L"%a:  5a 1b 1", __func__);
+            BREAD_CRUMB(L"%a:  7a 1b 1", __func__);
             MergeUniqueStrings (OSIconName, L"fedora", L',');
+            BREAD_CRUMB(L"%a:  7a 1b 2", __func__);
         }
-        BREAD_CRUMB(L"%a:  5a 2", __func__);
+        BREAD_CRUMB(L"%a:  7a 2", __func__);
     }
     else if (FindSubStr (LoaderPath, L".el")) {
-        BREAD_CRUMB(L"%a:  5b 1 - RedHat Loader", __func__);
-        if (FirstOnly && *OSIconName == NULL) {
-            BREAD_CRUMB(L"%a:  5b 1a 1", __func__);
+        BREAD_CRUMB(L"%a:  7b 1 - RedHat Loader", __func__);
+        if (FirstOnly) {
+            BREAD_CRUMB(L"%a:  7b 1a 1", __func__);
             *OSIconName = StrDuplicate (L"RedHat");
         }
         else {
-            BREAD_CRUMB(L"%a:  5b 1b 1", __func__);
+            BREAD_CRUMB(L"%a:  7b 1b 1", __func__);
             MergeUniqueStrings (OSIconName, L"redhat", L',');
+            BREAD_CRUMB(L"%a:  7b 1b 2", __func__);
         }
-        BREAD_CRUMB(L"%a:  5b 2", __func__);
+        BREAD_CRUMB(L"%a:  7b 2", __func__);
+    }
+    else {
+        BREAD_CRUMB(L"%a:  7c 1 - General Check", __func__);
+        Found = FALSE;
+
+        i = 0;
+        while (
+            !Found &&
+            (LinuxName = FindCommaDelimited (MAIN_LINUX_DISTROS, i++)) != NULL
+        ) {
+            ShowName = GetShowName (LinuxName);
+            if (FindSubStr (LoaderPath, ShowName)) {
+                Found = TRUE;
+
+                if (FirstOnly) {
+                    *OSIconName = StrDuplicate (ShowName);
+                }
+                else {
+                    MergeUniqueStrings (OSIconName, ShowName, L',');
+                }
+            }
+
+            if (!Found && FindSubStr (LoaderPath, LinuxName)) {
+                Found = TRUE;
+
+                if (FirstOnly) {
+                    *OSIconName = StrDuplicate (LinuxName);
+                }
+                else {
+                    MergeUniqueStrings (OSIconName, LinuxName, L',');
+                }
+            }
+
+            MY_FREE_POOL(LinuxName);
+        } // while
+        BREAD_CRUMB(L"%a:  7c 2", __func__);
     }
 
-    BREAD_CRUMB(L"%a:  6 - END:- VOID - Output OSIconNameList = %s", __func__,
+    BREAD_CRUMB(L"%a:  8 - END:- OSIconNameList = %s", __func__,
         (*OSIconName) ? *OSIconName : L"NULL"
     );
     LOG_DECREMENT();

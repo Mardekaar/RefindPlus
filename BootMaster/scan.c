@@ -41,7 +41,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -180,9 +180,8 @@ VOID VetCSR (VOID) {
     #endif
 } // static VOID VetCSR()
 
-static
 CHAR16 * GetShowName (
-    CHAR16 *LinuxName
+    IN CHAR16 *LinuxName
 ) {
     CHAR16 *ShowName;
 
@@ -196,7 +195,7 @@ CHAR16 * GetShowName (
     else                                           ShowName = LinuxName;
 
     return ShowName;
-} // static CHAR16 * GetShowName()
+} // CHAR16 * GetShowName()
 
 // Creates a copy of a menu screen.
 // Returns a pointer to the copy of the menu screen.

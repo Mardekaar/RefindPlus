@@ -133,6 +133,27 @@
 #
 #disable_apfs_sync
 
+# RefindPlus defaults to displaying a "boot logo" icon before loading instances
+# of Windows or Linux to mimic a BGRT. This feature can be leveraged to define
+# custom exit splash screens by taking advantage of the following behaviour:
+#   - 'boot_outlogo' file will be used if present
+#   - 'boot_distroname' will be used if present otherwise
+#   - 'os_distroname' will be used if present otherwise
+#
+# The options below are available:
+#   Win   - Disable Bootlogo for Windows Loaders
+#   Lin   - Disable Bootlogo for Linux Stub Loaders
+#   All   - Disable Bootlogo for Every Type of Loader
+#   Off   - Disable Bootlogo for None of the Above (Default)
+#
+# NOTES:
+# 1. The 'All' option takes precedence over others apart from 'Off'
+# 2. The 'Off' option takes precedence over every other setting
+#
+# Inactive when commented out or set to 'Off' (Does not disable boot logos)
+#
+#disable_bootlogo Win
+
 # Disable Apple Mobile File Integrity (AMFI) checks on booting MacOS. Whenever
 # this token is active, RefindPlus will add a "amfi_get_out_of_my_way=1" boot
 # argument which, along with System Integrity Protection (SIP), restricts

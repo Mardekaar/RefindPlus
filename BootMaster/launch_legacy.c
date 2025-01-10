@@ -42,7 +42,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -63,7 +63,6 @@
 
 extern BOOLEAN            IsBoot;
 extern BOOLEAN            DisplayLoader;
-extern EG_PIXEL           StdBackgroundPixel;
 extern REFIT_MENU_SCREEN *MainMenu;
 
 #ifndef __MAKEWITH_GNUEFI
@@ -515,6 +514,88 @@ bailout_unload:
     return Status;
 } // static EFI_STATUS StartLegacyImageList()
 
+static
+EG_IMAGE * LegacyHelper (
+    IN LEGACY_ENTRY *Entry,
+    IN CHAR16       *SelectionName,
+    IN BOOLEAN       TypeMac
+) {
+    CHAR16          *MsgStrA;
+    EG_IMAGE        *BootLogoImage; // Must be freed by Caller
+
+
+    LOG_SEP(L"X");
+    LOG_INCREMENT();
+    BREAD_CRUMB(L"%a:  1 - START", __func__);
+    if (TypeMac) {
+        MsgStrA = L"Load Legacy Bootcode:- 'Mac-Style'";
+    }
+    else {
+        MsgStrA = L"Load Legacy Bootcode:- 'UEFI-Style'";
+    }
+    BeginExternalScreen (TRUE, MsgStrA);
+
+    BREAD_CRUMB(L"%a:  2", __func__);
+    if ((MyStrStr (Entry->Volume->OSName, L"Windows") && !(GlobalConfig.DisableBootLogo & DISABLE_BOOTLOGO_WIN)) ||
+        (MyStrStr (Entry->Volume->OSName, L"Linux"  ) && !(GlobalConfig.DisableBootLogo & DISABLE_BOOTLOGO_LIN))
+    ) {
+        BREAD_CRUMB(L"%a:  2a 1", __func__);
+        BootLogoImage = LoadOSIcon (NULL, EXIT_SPLASH, TRUE);
+
+        BREAD_CRUMB(L"%a:  2a 2", __func__);
+        if (BootLogoImage == NULL) {
+            BREAD_CRUMB(L"%a:  2a 2a 1", __func__);
+            BootLogoImage = LoadOSIcon (
+                Entry->Volume->OSIconName,
+                L"legacy", TRUE
+            );
+            BREAD_CRUMB(L"%a:  2a 2a 2", __func__);
+        }
+        BREAD_CRUMB(L"%a:  2a 3", __func__);
+    }
+    else {
+        BREAD_CRUMB(L"%a:  2b 1", __func__);
+        BootLogoImage = NULL;
+    }
+
+    BREAD_CRUMB(L"%a:  3", __func__);
+    if (BootLogoImage != NULL) {
+        BREAD_CRUMB(L"%a:  3a 1", __func__);
+        BltImageAlpha (
+            BootLogoImage,
+            (ScreenW - BootLogoImage->Width ) >> 1,
+            (ScreenH - BootLogoImage->Height) >> 1,
+            &(GlobalConfig.ScreenBackground->PixelData[0])
+        );
+
+        BREAD_CRUMB(L"%a:  3a 2", __func__);
+        // Avoid mere flash
+        //
+        // Wait 0.75 seconds
+        // DA-TAG: 100 Loops == 1 Sec
+        RefitStall (75);
+    }
+
+    BREAD_CRUMB(L"%a:  4", __func__);
+    if (IsBoot) {
+        BREAD_CRUMB(L"%a:  4a 1", __func__);
+        StoreLoaderName (SelectionName);
+    }
+
+    #if REFIT_DEBUG > 0
+    ALT_LOG(1, LOG_LINE_NORMAL,
+        L"%s for '%s'",
+        MsgStrA, SelectionName
+    );
+    #endif
+
+    BREAD_CRUMB(L"%a:  5 - END:- VOID", __func__);
+    LOG_DECREMENT();
+    LOG_SEP(L"X");
+
+    return BootLogoImage; // Must be freed by Caller
+} // static EG_IMAGE * LegacyHelper()
+
 VOID StartLegacy (
     IN LEGACY_ENTRY *Entry,
     IN CHAR16       *SelectionName
@@ -532,101 +613,72 @@ VOID StartLegacy (
     IsBoot = TRUE;
 
     BREAD_CRUMB(L"%a:  2", __func__);
-    MsgStrA = L"Load 'Mac-Style' Legacy Bootcode";
-    BeginExternalScreen (TRUE, MsgStrA);
+    BootLogoImage = LegacyHelper (Entry, SelectionName, TRUE);
 
     BREAD_CRUMB(L"%a:  3", __func__);
-    BootLogoImage = LoadOSIcon (
-        Entry->Volume->OSIconName,
-        L"legacy", TRUE
-    );
-
-    BREAD_CRUMB(L"%a:  4", __func__);
-    if (BootLogoImage != NULL) {
-        BREAD_CRUMB(L"%a:  4a 1", __func__);
-        BltImageAlpha (
-            BootLogoImage,
-            (ScreenW - BootLogoImage->Width ) >> 1,
-            (ScreenH - BootLogoImage->Height) >> 1,
-            &StdBackgroundPixel
-        );
-        BREAD_CRUMB(L"%a:  4a 2", __func__);
-    }
-
-    BREAD_CRUMB(L"%a:  5", __func__);
     if (Entry->Volume->IsMbrPartition) {
-        BREAD_CRUMB(L"%a:  5a 1", __func__);
+        BREAD_CRUMB(L"%a:  3a 1", __func__);
         ActivateMbrPartition (
             Entry->Volume->WholeDiskBlockIO,
             Entry->Volume->MbrPartitionIndex
         );
-        BREAD_CRUMB(L"%a:  5a 2", __func__);
+        BREAD_CRUMB(L"%a:  3a 2", __func__);
     }
 
-    BREAD_CRUMB(L"%a:  6", __func__);
+    BREAD_CRUMB(L"%a:  4", __func__);
     if (Entry->Volume->WholeDiskDevicePath != NULL &&
         Entry->Volume->DiskKind != DISK_KIND_OPTICAL
     ) {
-        BREAD_CRUMB(L"%a:  6a 1", __func__);
+        BREAD_CRUMB(L"%a:  4a 1", __func__);
         WriteBootDiskHint (Entry->Volume->WholeDiskDevicePath);
-        BREAD_CRUMB(L"%a:  6a 2", __func__);
+        BREAD_CRUMB(L"%a:  4a 2", __func__);
     }
 
-    BREAD_CRUMB(L"%a:  7", __func__);
+    BREAD_CRUMB(L"%a:  5", __func__);
     ExtractLegacyLoaderPaths (
         DiscoveredPathList,
         MAX_DISCOVERED_PATHS,
         LegacyLoaderList
     );
 
-    BREAD_CRUMB(L"%a:  8", __func__);
-    StoreLoaderName (SelectionName);
-
-    #if REFIT_DEBUG > 0
-    LOG_MSG("%s for '%s'", MsgStrA, SelectionName);
-    ALT_LOG(1, LOG_LINE_NORMAL,
-        L"%s for '%s'",
-        MsgStrA, SelectionName
-    );
-    #endif
-
-    BREAD_CRUMB(L"%a:  9", __func__);
+    BREAD_CRUMB(L"%a:  6", __func__);
     ErrorInStep = 0;
+    MY_FREE_IMAGE(BootLogoImage);
     Status = StartLegacyImageList (
         DiscoveredPathList,
         Entry->LoadOptions,
         &ErrorInStep
     );
 
-    BREAD_CRUMB(L"%a:  10", __func__);
+    BREAD_CRUMB(L"%a:  7", __func__);
     if (Status == EFI_NOT_FOUND) {
-        BREAD_CRUMB(L"%a:  10a 1", __func__);
+        BREAD_CRUMB(L"%a:  7a 1", __func__);
         if (ErrorInStep == 1) {
-            BREAD_CRUMB(L"%a:  10a 1a 1", __func__);
+            BREAD_CRUMB(L"%a:  7a 1a 1", __func__);
             SwitchToText (FALSE);
 
-            BREAD_CRUMB(L"%a:  10a 1a 2", __func__);
+            BREAD_CRUMB(L"%a:  7a 1a 2", __func__);
             MsgStrA = L"Ensure Latest Firmware Updates Are Installed";
             REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_ERROR);
             PrintUglyText (MsgStrA, NEXTLINE);
             REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
-            BREAD_CRUMB(L"%a:  10a 1a 3", __func__);
+            BREAD_CRUMB(L"%a:  7a 1a 3", __func__);
 
             #if REFIT_DEBUG > 0
             LOG_MSG("** WARN: %s", MsgStrA);
             LOG_MSG("\n\n");
             #endif
 
-            BREAD_CRUMB(L"%a:  10a 1a 4", __func__);
+            BREAD_CRUMB(L"%a:  7a 1a 4", __func__);
             PauseForKey();
-            BREAD_CRUMB(L"%a:  10a 1a 5", __func__);
+            BREAD_CRUMB(L"%a:  7a 1a 5", __func__);
             SwitchToGraphics();
         }
         else if (ErrorInStep == 3) {
-            BREAD_CRUMB(L"%a:  10a 1b 1", __func__);
+            BREAD_CRUMB(L"%a:  7a 1b 1", __func__);
             SwitchToText (FALSE);
 
-            BREAD_CRUMB(L"%a:  10a 1b 2", __func__);
+            BREAD_CRUMB(L"%a:  7a 1b 2", __func__);
             MsgStrA = L"Firmware Refused to Boot from Selected Volume";
             REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_ERROR);
             PrintUglyText (MsgStrA, NEXTLINE);
@@ -640,7 +692,7 @@ VOID StartLegacy (
                 #if REFIT_DEBUG > 0
                 LOG_MSG("\n");
                 #endif
-                BREAD_CRUMB(L"%a:  10a 1b 2a 1", __func__);
+                BREAD_CRUMB(L"%a:  7a 1b 2a 1", __func__);
                 MsgStrA = L"Legacy Boot from External Drive *IS NOT* Well Supported by Apple Firmware";
                 PrintUglyText (MsgStrA, NEXTLINE);
                 #if REFIT_DEBUG > 0
@@ -652,18 +704,18 @@ VOID StartLegacy (
             LOG_MSG("\n\n");
             #endif
 
-            BREAD_CRUMB(L"%a:  10a 1b 3", __func__);
+            BREAD_CRUMB(L"%a:  7a 1b 3", __func__);
             PauseForKey();
 
-            BREAD_CRUMB(L"%a:  10a 1b 4", __func__);
+            BREAD_CRUMB(L"%a:  7a 1b 4", __func__);
             SwitchToGraphics();
         } // if/else ErrorInStep
     } // if Status == EFI_NOT_FOUND
 
-    BREAD_CRUMB(L"%a:  11", __func__);
+    BREAD_CRUMB(L"%a:  8", __func__);
     FinishExternalScreen();
 
-    BREAD_CRUMB(L"%a:  12 - END:- VOID", __func__);
+    BREAD_CRUMB(L"%a:  9 - END:- VOID", __func__);
     LOG_DECREMENT();
     LOG_SEP(L"X");
 } // VOID StartLegacy()
@@ -674,25 +726,15 @@ VOID StartLegacyUEFI (
     CHAR16       *SelectionName
 ) {
     CHAR16       *MsgStrA;
-    CHAR16       *MsgStrB;
+    EG_IMAGE     *BootLogoImage;
 
 
     IsBoot = TRUE;
-
-    MsgStrA = L"Load 'UEFI-Style' Legacy Bootcode";
-    BeginExternalScreen (TRUE, MsgStrA);
-    StoreLoaderName (SelectionName);
-
-    #if REFIT_DEBUG > 0
-    LOG_MSG("%s for '%s'", MsgStrA, SelectionName);
-    ALT_LOG(1, LOG_LINE_NORMAL,
-        L"%s for '%s'",
-        MsgStrA, SelectionName
-    );
-    #endif
+    BootLogoImage = LegacyHelper (Entry, SelectionName, FALSE);
 
     UninitRefitLib();
     BdsLibConnectDevicePath (Entry->BdsOption->DevicePath);
+    MY_FREE_IMAGE(BootLogoImage);
     BdsLibDoLegacyBoot (Entry->BdsOption);
 
     // There was a failure if we get here.
@@ -701,16 +743,14 @@ VOID StartLegacyUEFI (
     #endif
     ReinitRefitLib();
 
-    MsgStrB = PoolPrint (L"Failure on \"%s\"", MsgStrA);
+    MsgStrA = L"Failure on Loading 'UEFI-Style' Legacy Bootcode";
 
     #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStrB);
+    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStrA);
     #endif
 
-    Print(L"%s", MsgStrB);
+    Print(L"%s", MsgStrA);
     PauseForKey();
-
-    MY_FREE_POOL(MsgStrB);
 
     FinishExternalScreen();
 } // static VOID StartLegacyUEFI()
@@ -917,7 +957,7 @@ VOID AddLegacyEntryUEFI (
     }
     if (Entry->me.Image == NULL) {
         Entry->me.Image  = LoadOSIcon (
-            L"legacy", L"legacy", TRUE
+            L"legacy", L"legacy", FALSE
         );
     }
     Entry->LoadOptions   = (DiskType == BBS_CDROM)

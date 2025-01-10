@@ -56,7 +56,7 @@
  */
  /*
   * Modified for RefindPlus
-  * Copyright (c) 2021-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+  * Copyright (c) 2021-2025 Dayo Akanji (sf.net/u/dakanji/profile)
   *
   * Modifications distributed under the preceding terms.
   */
@@ -177,6 +177,7 @@ VOID ScanFirmwareDefined (
     IN UINTN     TypeTag
 );
 
+CHAR16 * GetShowName (IN CHAR16 *LinuxName);
 CHAR16 * SetVolJoin (
     IN CHAR16  *InstanceName,
     IN BOOLEAN  ForBoot

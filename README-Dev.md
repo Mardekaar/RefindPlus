@@ -94,6 +94,7 @@ decline_help_text     |Disables feature that sets screen text to complementary c
 decouple_key_f10      |Unmaps the `F10` key from native screenshots (the `\` key remains mapped)
 disable_apfs_load     |Disables inbuilt provision of APFS filesystem capability
 disable_apfs_sync     |Disables feature allowing direct APFS/FileVault boot (Without "PreBoot")
+disable_bootlogo      |Disables display of boot logos on loading some items if required
 disable_check_amfi    |Disables AMFI Checks on Mac OS if required
 disable_check_compat  |Disables Mac version compatibility checks if required
 disable_pass_gop_thru |Disables feature that provides GOP instance on UGA for some loading screens
