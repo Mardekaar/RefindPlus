@@ -183,10 +183,9 @@ VOID VetCSR (VOID) {
 CHAR16 * GetShowName (
     IN CHAR16 *LinuxName
 ) {
-    CHAR16 *ShowName;
+    CHAR16 *ShowName;      // Do *NOT* Free
 
 
-    // DA-TAG: *DO NOT* Free 'ShowName'
     if (0);
     else if (MyStriCmp (LinuxName, L"LinuxMint" )) ShowName = L"Mint";
     else if (MyStriCmp (LinuxName, L"Zorin"     )) ShowName = L"ZorinOS";
@@ -350,11 +349,11 @@ REFIT_MENU_SCREEN * InitializeSubScreen (
     IN LOADER_ENTRY *Entry
 ) {
     UINTN                   i;
-    CHAR16                 *NameOS;
+    CHAR16                 *NameOS;        // Do *NOT* Free
     CHAR16                 *TmpStr;
     CHAR16                 *TmpName;
     CHAR16                 *FileName;
-    CHAR16                 *ShowName;
+    CHAR16                 *ShowName;      // Do *NOT* Free
     CHAR16                 *LinuxName;
     CHAR16                 *SearchName;
     CHAR16                 *DisplayName;
@@ -419,7 +418,6 @@ REFIT_MENU_SCREEN * InitializeSubScreen (
 
         NameOS = NULL;
 
-        // DA-TAG: Do not free 'NameOS'
         if (0);
         else if (Entry->OSType == 'M') {
             NameOS = (IsInstallerMac (Entry->Volume))
@@ -458,7 +456,6 @@ REFIT_MENU_SCREEN * InitializeSubScreen (
                     !Found &&
                     (LinuxName = FindCommaDelimited (MAIN_LINUX_DISTROS, i++)) != NULL
                 ) {
-                    // DA-TAG: *DO NOT* Free 'ShowName'
                     ShowName = GetShowName (LinuxName);
 
                     SearchName = PoolPrint (L"- %s", ShowName);
@@ -739,7 +736,10 @@ VOID GenerateSubScreen (
                 InitrdName = FindInitrd (Entry->LoaderPath, Volume);
 
                 BREAD_CRUMB(L"%a:  2a 7", __func__);
-                while ((TokenCount = ReadTokenLine (File, &TokenList)) > 1) {
+                while (
+                    InitrdName != NULL &&
+                    (TokenCount = ReadTokenLine (File, &TokenList)) > 1
+                ) {
                     LOG_SEP(L"X");
                     BREAD_CRUMB(L"%a:  2a 7a 1 - WHILE LOOP:- START", __func__);
                     ReplaceSubstring (
@@ -902,7 +902,7 @@ VOID SetLoaderDefaults (
     CHAR16          *OSIconName;
     CHAR16          *TmpIconName;
     CHAR16          *ThisIconName;
-    CHAR16          *TargetName; // *DO NOT* Free
+    CHAR16          *TargetName;      // Do *NOT* Free
     CHAR16          *DisplayName;
     CHAR16          *NoExtension;
     CHAR16          *VentoyName;
@@ -1487,10 +1487,10 @@ VOID SetLoaderDefaults (
                 MY_FREE_POOL(Temp);
                 BREAD_CRUMB(L"%a:  5c 2a 2", __func__);
             }
-            GotFlag       = TRUE;
-            Entry->OSType =  'L';
 
             BREAD_CRUMB(L"%a:  5c 3", __func__);
+            GotFlag = TRUE;
+            Entry->OSType = 'L';
             Entry->UseGraphicsMode = GlobalConfig.GraphicsFor & GRAPHICS_FOR_LINUX;
         }
         else if (IsStriStr (NameClues, L"grub")) {
@@ -1913,7 +1913,7 @@ LOADER_ENTRY * AddLoaderEntry (
     CHAR16                 *SearchName;
     CHAR16                 *LinuxName;
     CHAR16                 *NameClues;
-    CHAR16                 *ShowName;
+    CHAR16                 *ShowName;      // Do *NOT* Free
     CHAR16                 *TmpName;
     BOOLEAN                 Found;
     BOOLEAN                 IsStub;
@@ -1984,7 +1984,6 @@ LOADER_ENTRY * AddLoaderEntry (
                     if (FindSubStr (LoaderPath, SearchName)) {
                         Found = TRUE;
 
-                        // DA-TAG: *DO NOT* Free 'ShowName'
                         ShowName = GetShowName (LinuxName);
 
                         LoaderEntry->Title = (!GotGrub && !GotSysD && !GotElilo)
@@ -2012,7 +2011,6 @@ LOADER_ENTRY * AddLoaderEntry (
                     if (LinuxName != NULL) {
                         Found = TRUE;
 
-                        // DA-TAG: *DO NOT* Free 'ShowName'
                         ShowName = GetShowName (LinuxName);
 
                         LoaderEntry->Title = (IsStub)
@@ -3819,7 +3817,7 @@ BOOLEAN FindToolEx (
     CHAR16       *ToolStr;
     #endif
 
-    CHAR16       *TypeString;
+    CHAR16       *TypeString;   // Do *NOT* Free
     LOADER_ENTRY *MenuEntry;
 
 
@@ -3832,7 +3830,6 @@ BOOLEAN FindToolEx (
     }
     #endif
 
-    // *DO NOT* Free 'TypeString'
     TypeString = PoolPrint (
         L"%s from %s%s via %s",
         Description,
@@ -4046,7 +4043,7 @@ BOOLEAN FindTool (
                         !FileExists (Volumes[Index]->RootDir, DirName) ||
                         !IsValidTool (Volumes[Index], PathName)
                     ) {
-                        // Do *NOT* Free Items Here
+                        // No Free Here
                         continue;
                     }
 
@@ -4055,7 +4052,7 @@ BOOLEAN FindTool (
                     }
                     else {
                         if (IsListItem (PathName, PrevFind)) {
-                            // Do *NOT* Free Items Here
+                            // No Free Here
                             continue;
                         }
 
@@ -4433,14 +4430,13 @@ VOID ScanForBootloaders (VOID) {
 
     OrigDontScanFiles = OrigDontScanVolumes = NULL;
     if (GlobalConfig.HiddenTags) {
-        // We temporarily modify GlobalConfig.DontScanFiles and GlobalConfig.DontScanVolumes
-        // to include contents of EFI HiddenTags and HiddenLegacy variables so that we do not
-        // have to re-load these UEFI variables in several functions called from this one. To
-        // do this, we must be able to restore the original contents, so back them up first.
-        // We *DO NOT* do this with the GlobalConfig.DontScanFirmware and
-        // GlobalConfig.DontScanTools variables because they are used in only one function
-        // each, so it is easier to create a temporary variable for the merged contents
-        // there and not modify the global variable.
+        // Temporarily add the contents of the HiddenTags and HiddenLegacy variables
+        // to GlobalConfig.DontScanFiles and GlobalConfig.DontScanVolumes to avoid
+        // reloading these variables in several functions called from this one.
+        // Back the original contents up first to allow them to be restored later.
+        // Not applied to GlobalConfig.DontScanFirmware and GlobalConfig.DontScanTools
+        // as they only used in one function each. It is therefore easier to create
+        // temporary variables for the merged contents there instead.
         OrigDontScanFiles   = StrDuplicate (GlobalConfig.DontScanFiles);
         OrigDontScanVolumes = StrDuplicate (GlobalConfig.DontScanVolumes);
 
@@ -4505,7 +4501,7 @@ VOID ScanForBootloaders (VOID) {
         #if REFIT_DEBUG > 0
         if (AmendedDontScan) {
             ALT_LOG(1, LOG_STAR_SEPARATOR,
-                L"Sync PreBoot Volumes in 'Dont Scan' Lists ... Config Setting is *NOT* Active:- 'disable_apfs_sync'"
+                L"Sync PreBoot Volumes in 'Dont Scan' Lists ... Config Setting *IS NOT* Active:- 'disable_apfs_sync'"
             );
         }
         #endif
@@ -4663,7 +4659,9 @@ VOID ScanForBootloaders (VOID) {
     do { // Nested Level 1
         if (MainMenu->EntryCount == 0) {
             #if REFIT_DEBUG > 0
-            MsgStr = StrDuplicate (L"Could *NOT* Locate Valid Instance Loaders");
+            MsgStr = StrDuplicate (
+                L"Could *NOT* Locate Valid Instance Loaders"
+            );
             TmpLevel = (GlobalConfig.LogLevel == 0) ? TRUE : FALSE;
             if (TmpLevel) {
                 GlobalConfig.LogLevel = 1;
@@ -4691,18 +4689,21 @@ VOID ScanForBootloaders (VOID) {
         ALT_LOG(1, LOG_LINE_SEPARATOR, L"%s", LogSection);
         LOG_MSG("\n\n");
         LOG_MSG("%s", LogSection);
+        LOG_MSG("\n");
 
         if (GlobalConfig.DirectBoot) {
-            MsgStr = StrDuplicate (L"Skip Shortcut Key Setup ... 'DirectBoot' is Active");
-            LOG_MSG("%s", MsgStr); // MsgStr is freed later
+            MsgStr = StrDuplicate (
+                L"Skip Shortcut Key Setup ... 'DirectBoot' is Active"
+            );
+            LOG_MSG("INFO: %s", MsgStr);
         }
         else {
             MsgStr = StrDuplicate (L"Set Shortcuts");
-            ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
-            LOG_MSG("\n");
             LOG_MSG("%s:", MsgStr);
-            MY_FREE_POOL(MsgStr);
         }
+
+        ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+        MY_FREE_POOL(MsgStr);
         #endif
 
         do { // Nested Level 2
@@ -4791,7 +4792,7 @@ VOID ScanForBootloaders (VOID) {
                         continue;
                     }
 
-                    if (KeyNum > 22) {
+                    if (KeyNum > 30) {
                         // Hit limit for loader shortcuts
                         break;
                     }
@@ -4878,7 +4879,6 @@ VOID ScanForTools (VOID) {
     UINT64            osind     ;
     UINT32            CsrValue  ;
     CHAR16           *ToolName  ;
-    CHAR16           *VolumeTag ;
     BOOLEAN           FoundTool ;
 
     REFIT_MENU_ENTRY *MenuEntryHiddenTags;
@@ -4983,7 +4983,6 @@ VOID ScanForTools (VOID) {
     #endif
 
     ToolTotal = 0;
-    VolumeTag = NULL;
     for (i = 0; i < NUM_TOOLS; i++) {
         switch (GlobalConfig.ShowTools[i]) {
             case TAG_ABOUT:         ToolName = LABEL_ABOUT       ;    break;

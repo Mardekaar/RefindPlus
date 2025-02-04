@@ -16,7 +16,7 @@
  */
 /**
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
 **/
@@ -544,21 +544,24 @@ VOID GroupMultipleLegacyBootOption4SameType (
         }
 
         if (MappingIndex == mBootOptionBbsMappingCount) {
-            // Is not a legacy boot option
+            // Not a legacy boot option
             continue;
         }
 
         TempSizeVal = sizeof (DeviceTypeIndex) / sizeof (DeviceTypeIndex[0]);
-        ASSERT ((mBootOptionBbsMapping[MappingIndex].BbsType & 0xF) < TempSizeVal);
+        if (TempSizeVal > (mBootOptionBbsMapping[MappingIndex].BbsType & 0xF)) {
+            return;
+        }
 
         NextIndex = &DeviceTypeIndex[mBootOptionBbsMapping[MappingIndex].BbsType & 0xF];
 
         if (*NextIndex == (UINTN) -1) {
-            // *NextIndex is the index in BootOption to put the next Option Number for the same type
+            // *NextIndex is index in BootOption for next Option Number of same type
             *NextIndex = Index + 1;
         }
         else {
-            // insert the current boot option before *NextIndex, causing [*Next .. Index] shift right one position
+            // Insert the current boot option before *NextIndex.
+            // Makes [*Next .. Index] shift right by one position.
             OptionNumber = BootOption[Index];
             REFIT_CALL_3_WRAPPER(
                 gBS->CopyMem, &BootOption[*NextIndex + 1],
@@ -599,7 +602,7 @@ VOID * EfiLibGetVariable (
 Function deletes the variable specified by VarName and VarGuid.
 
 @param VarName           A Null-terminated Unicode string that is
-the name of the vendor's variable.
+                         the name of the vendor's variable.
 
 @param VarGuid           A unique identifier for the vendor.
 
@@ -638,7 +641,7 @@ EFI_STATUS EfiLibDeleteVariable (
 Add the legacy boot options from BBS table if they do not exist.
 
 @retval EFI_SUCCESS          The boot options are added successfully
-or they are already in boot options.
+                             or they are already in boot options.
 @retval EFI_NOT_FOUND        No legacy boot options is found.
 @retval EFI_OUT_OF_RESOURCE  No enough memory.
 @return Other value          LegacyBoot options are not added.
@@ -772,8 +775,8 @@ EFI_STATUS BdsAddNonExistingLegacyBootOptions (VOID) {
 } // EFI_STATUS BdsAddNonExistingLegacyBootOptions()
 
 /**
-Deletete the Boot Option from UEFI Variable. The BootOrder Arrray
-is also updated.
+Deletete the Boot Option from UEFI Variable.
+The BootOrder Array is also updated.
 
 @param OptionNumber    The number of Boot option want to be deleted.
 @param BootOrder       The BootOrder array.

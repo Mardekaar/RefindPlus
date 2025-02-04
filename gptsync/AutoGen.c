@@ -154,35 +154,35 @@ extern const  UINT32  _gPcd_FixedAtBuild_PcdUefiLibMaxPrintBufferSize;
 EFI_STATUS
 EFIAPI
 UefiBootServicesTableLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
+  IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 EFI_STATUS
 EFIAPI
 UefiRuntimeServicesTableLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
+  IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 EFI_STATUS
 EFIAPI
 UefiLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
+  IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 EFI_STATUS
 EFIAPI
 DxeServicesTableLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
+  IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 EFI_STATUS
 EFIAPI
 HobLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
+  IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
@@ -190,27 +190,27 @@ HobLibConstructor (
 // VOID
 // EFIAPI
 // ProcessLibraryConstructorList (
-//   IN EFI_HANDLE        ImageHandle,
+//   IN EFI_HANDLE         ImageHandle,
 //   IN EFI_SYSTEM_TABLE  *SystemTable
 //   )
 // {
 //   EFI_STATUS  Status;
-// 
+//
 //   Status = UefiBootServicesTableLibConstructor (ImageHandle, SystemTable);
 //   ASSERT_EFI_ERROR (Status);
-// 
+//
 //   Status = UefiRuntimeServicesTableLibConstructor (ImageHandle, SystemTable);
 //   ASSERT_EFI_ERROR (Status);
-// 
+//
 //   Status = UefiLibConstructor (ImageHandle, SystemTable);
 //   ASSERT_EFI_ERROR (Status);
-// 
+//
 //   Status = DxeServicesTableLibConstructor (ImageHandle, SystemTable);
 //   ASSERT_EFI_ERROR (Status);
-// 
+//
 //   Status = HobLibConstructor (ImageHandle, SystemTable);
 //   ASSERT_EFI_ERROR (Status);
-// 
+//
 // }
 
 
@@ -218,7 +218,7 @@ HobLibConstructor (
 // VOID
 // EFIAPI
 // ProcessLibraryDestructorList (
-//   IN EFI_HANDLE        ImageHandle,
+//   IN EFI_HANDLE         ImageHandle,
 //   IN EFI_SYSTEM_TABLE  *SystemTable
 //   )
 // {
@@ -231,10 +231,10 @@ const UINT32 _gUefiDriverRevision = 0x00010000U;
 // EFI_STATUS
 // EFIAPI
 // ProcessModuleEntryPointList (
-//   IN EFI_HANDLE        ImageHandle,
+//   IN EFI_HANDLE         ImageHandle,
 //   IN EFI_SYSTEM_TABLE  *SystemTable
 //   )
-// 
+//
 // {
 //   return efi_main (ImageHandle, SystemTable);
 // }
@@ -284,4 +284,3 @@ GLOBAL_REMOVE_IF_UNREFERENCED const UINT32 _gPcd_FixedAtBuild_PcdDebugPrintError
 extern const  UINT32  _gPcd_FixedAtBuild_PcdDebugPrintErrorLevel;
 #define _PCD_GET_MODE_32_PcdDebugPrintErrorLevel  _gPcd_FixedAtBuild_PcdDebugPrintErrorLevel
 //#define _PCD_SET_MODE_32_PcdDebugPrintErrorLevel  ASSERT(FALSE)  // It is not allowed to set value for a FIXED_AT_BUILD PCD
-

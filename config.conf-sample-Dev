@@ -277,8 +277,8 @@
 #
 #disable_set_consolegop
 
-# Scans of ESPs for kernels and loaders, apart from the ESP
-# with RefindPlus, are disallowed when this option is active.
+# Scans of ESPs for kernels and loaders are limited to the
+# ESP containing RefindPlus whenever this option is active.
 #
 # Scans of all ESPs are allowed when commented out
 #
@@ -810,11 +810,11 @@
 #showtools shell,bootorder,gdisk,memtest,mok_tool,apple_recovery,windows_recovery,about,hidden_tags,reboot,exit
 
 # Stub support for gzipped loaders. Linux kernels are self-decompressing on x86
-# and on x86-64 platforms while on ARM64, Linux kernel files, including the EFI
+# and on x86_64 platforms while on ARM64, Linux kernel files, including the EFI
 # stub loader are typically compressed with gzip. This prevents them from being
 # loaded by tools such as RefindPlus unless the tool uncompresses them itself.
 # This option was added upstream to do this but as it cannot be fully compiled
-# into RefindPlus and is unnecessary on x86 and on x86-64 systems, only a stub
+# into RefindPlus and is unnecessary on x86 and on x86_64 systems, only a stub
 # implementation that logs the situation is currently provided by RefindPlus.
 #
 # Inactive when commented out (The "GZippedLoaders" Feature is disabled)
@@ -900,7 +900,7 @@
 # to scan the "somedir" directory only on the filesystem named "myvol". If
 # a specified directory does not exist, it is ignored (no error message).
 #
-# Scans "boot" and "@/boot" when commented out
+# Additionally scans "boot" and "@\boot" when commented out
 #
 #also_scan_dirs ESP2:EFI/linux/kernels
 #also_scan_dirs @/kernels,@/root/boot

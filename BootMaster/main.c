@@ -276,7 +276,7 @@ extern VOID              InitBooterLog (VOID);
 extern EFI_STATUS        AmendSysTable (VOID);
 extern EFI_STATUS        RefitApfsConnectDevices (VOID);
 extern EFI_STATUS EFIAPI NvmExpressLoad (
-    IN EFI_HANDLE        ImageHandle,
+    IN EFI_HANDLE         ImageHandle,
     IN EFI_SYSTEM_TABLE  *SystemTable
 );
 
@@ -469,7 +469,7 @@ EFI_STATUS EFIAPI gRTSetVariableEx (
     #if REFIT_DEBUG > 0
     CHAR16         *MsgStr;
     CHAR16         *LogStatus;
-    CHAR16         *LogNameTmp;
+    CHAR16         *LogNameTmp;   // Do *NOT* Free
     CHAR16         *LogNameFull;
     BOOLEAN         ForceNative = FALSE;
     static BOOLEAN  FirstTimeLog = TRUE;
@@ -579,7 +579,6 @@ EFI_STATUS EFIAPI gRTSetVariableEx (
     MY_NATIVELOGGER_SET;
 
     if (!gKernelStarted) {
-        // Do not free LogNameTmp
         LogNameTmp = NULL;
         if (GuidsAreEqual (VendorGuid, &gEfiImageSecurityDatabaseGuid)) {
             if (0);
@@ -636,7 +635,7 @@ EFI_STATUS EFIAPI gRTSetVariableEx (
     MY_NATIVELOGGER_OFF;
     #endif
 
-    // DA-TAG: *DO NOT* remove existing OEM "CurrentPolicy" (As per OpenCore).
+    // DA-TAG: Do *NOT* remove existing OEM "CurrentPolicy" (As per OpenCore).
     //         ProtectNvram limited to Apple firmware, so not strictly needed.
     //         However, best to add filter now in case that changes in future.
     //         NB: Apple firmware excluded when defining CurPolicyOEM earlier.
@@ -882,7 +881,7 @@ VOID AlignCSR (VOID) {
             Status = EFI_ALREADY_STARTED;
             #endif
 
-            // Break Early ... *DO NOT* Rotate
+            // Break Early ... Do *NOT* Rotate
             break;
         }
 
@@ -1907,7 +1906,7 @@ BOOLEAN ShowInfoRecoveryMac (
     UINTN                     MenuExit;
     UINTN                     TempSize;
     UINTN                     VolumeIndex;
-    CHAR16                   *RecoverVol; // *DO NOT* Free
+    CHAR16                   *RecoverVol; // Do *NOT* Free
     CHAR16                   *FileName;
     BOOLEAN                   RetVal;
     REFIT_FILE               *TempFile;
@@ -2082,8 +2081,8 @@ BOOLEAN ShowInfoRecoveryMac (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2225,8 +2224,8 @@ BOOLEAN ShowInfoRecoveryWin (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2341,8 +2340,8 @@ BOOLEAN ShowInfoMemTest (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2457,8 +2456,8 @@ BOOLEAN ShowInfoShell (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2557,8 +2556,8 @@ BOOLEAN ShowInfoGPTSync (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2657,8 +2656,8 @@ BOOLEAN ShowInfoGDisk (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2757,8 +2756,8 @@ BOOLEAN ShowInfoMOK (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2857,8 +2856,8 @@ BOOLEAN ShowInfoFwUpdate (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -2957,8 +2956,8 @@ BOOLEAN ShowInfoNetBoot (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("\n\n");
         LOG_MSG("Received User Input:");
@@ -3065,8 +3064,8 @@ BOOLEAN ShowInfoCleanNvram (
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-            MenuExit, MenuExitInfo (MenuExit), __func__, ChosenOption->Title
+            L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+            MenuExit, MenuExitInfo (MenuExit), ChosenOption->Title, __func__
         );
         LOG_MSG("Received User Input:");
         LOG_MSG("%s  - %s", OffsetNext, ChosenOption->Title);
@@ -3490,9 +3489,9 @@ VOID RescanAll (
     // with defective filesystem drivers, so only do it if necessary.
     if (Reconnect) {
         // Always rescan for DXE drivers when connecting drivers here
-        ForceRescanDXE =                     TRUE;
-        ConnectAllDriversToAllControllers (FALSE);
-        ForceRescanDXE =   GlobalConfig.RescanDXE;
+        ForceRescanDXE = TRUE;
+        ConnectAllDriversToAllControllers();
+        ForceRescanDXE = GlobalConfig.RescanDXE;
 
         ScanVolumes();
     }
@@ -4888,7 +4887,7 @@ EFI_STATUS EFIAPI efi_main (
         #endif
         REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_ERROR);
         PrintUglyText (L"                                                          ", NEXTLINE);
-        PrintUglyText (L"                Secure Boot Config Failure                ", NEXTLINE);
+        PrintUglyText (L"            Secure Boot Configuration Failure             ", NEXTLINE);
         PrintUglyText (L"                                                          ", NEXTLINE);
 
         REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);

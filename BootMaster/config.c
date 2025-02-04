@@ -80,6 +80,7 @@ BOOLEAN                OuterLoop       =  TRUE;
 BOOLEAN                SetShowTools    = FALSE;
 BOOLEAN                ManualInclude   = FALSE;
 BOOLEAN                ForceTextOnly   = FALSE;
+BOOLEAN                BaseRescanDXE   = FALSE;
 BOOLEAN                UserDefinedRez  = FALSE;
 
 
@@ -1036,7 +1037,7 @@ LOADER_ENTRY * InitializeStanza (
     StanzaEntry->DiscoveryType = DISCOVERY_TYPE_MANUAL;
 
     LoaderToken    = LoadOptions = BootNumber =  NULL;
-    AddedSubmenu   = SeekSubmenu = DoneLoader = FALSE;
+    AddedSubmenu   = DoneLoader               = FALSE;
     GotFirmwareTag = DefaultsSet = DoneIcon   = FALSE;
 
     for (;;) {
@@ -1632,33 +1633,35 @@ VOID ExitOuter (
     SyncLinuxPrefixes();
 
     // Forced Default Settings
-    if (GlobalConfig.EnableTouch) {
-        GlobalConfig.EnableMouse = FALSE;
-
-        if (!AppleFirmware) {
-            // DA-TAG: Force 'RescanDXE' on UEFI-PC
-            //         Update other instances if changing
-            GlobalConfig.RescanDXE = TRUE;
-        }
-    }
     if (AppleFirmware) {
-        GlobalConfig.RescanDXE    = FALSE;
         GlobalConfig.RansomDrives = FALSE;
+
+        // Disable RescanDXE on Mac
+        // unless forced on by user
+        GlobalConfig.RescanDXE = BaseRescanDXE;
     }
     else {
         GlobalConfig.SetAppleFB     = FALSE;
         GlobalConfig.NvramProtect   = FALSE;
         GlobalConfig.NvramProtectEx = FALSE;
+    }
 
-        if (GlobalConfig.EnableMouse) {
-            // DA-TAG: Force 'RescanDXE' on UEFI-PC
-            //         Update other instances if changing
-            GlobalConfig.RescanDXE = TRUE;
+    if (GlobalConfig.EnableMouse ||
+        GlobalConfig.EnableTouch
+    ) {
+        // Force 'RescanDXE' for these
+        // Override Previous Outcomes
+        GlobalConfig.RescanDXE = TRUE;
+
+        if (GlobalConfig.EnableTouch) {
+            // Disable Mouse if Touch Active
+            GlobalConfig.EnableMouse = FALSE;
         }
     }
-    if (GlobalConfig.SyncTrust != ENFORCE_TRUST_NONE) {
-        GlobalConfig.DirectBoot = FALSE;
-        GlobalConfig.Timeout    =     0;
+
+    if (GlobalConfig.SyncTrust  != ENFORCE_TRUST_NONE) {
+        GlobalConfig.DirectBoot  = FALSE;
+        GlobalConfig.Timeout     =     0;
     }
 
     #if REFIT_DEBUG > 0
@@ -1694,7 +1697,35 @@ VOID ExitOuter (
     LOG_MSG("Process Configuration Options ... %r", Status);
     LOG_MSG("\n\n");
     #endif
+
+    BaseRescanDXE = FALSE;
 } // static VOID ExitOuter()
+
+static
+VOID BadFlag (
+    CHAR16   *Flag,
+    CHAR16   *TokenName,
+    BOOLEAN   NotRunBefore
+) {
+    CHAR16   *MsgStr;
+
+
+    MsgStr = PoolPrint (
+        L"WARN: Invalid '%s' Token:- '%s'",
+        TokenName, Flag
+    );
+
+    #if REFIT_DEBUG > 0
+    if (NotRunBefore) MuteLogger = FALSE;
+    LOG_MSG("%s  - %s", OffsetNext, MsgStr);
+    if (NotRunBefore) MuteLogger = TRUE;
+    #endif
+
+    SwitchToText (FALSE);
+    PrintUglyText (MsgStr, NEXTLINE);
+    PauseForKey();
+    MY_FREE_POOL(MsgStr);
+} // static VOID BadFlag()
 
 // Get a single line of text from a file
 CHAR16 * ReadLine (
@@ -2346,9 +2377,8 @@ VOID ReadConfig (
     INTN             HighLogLevel;
     BOOLEAN          UpdatedToken;
 
-    static BOOLEAN   NotRunBefore = TRUE;
-    static BOOLEAN   ValidInclude = TRUE;
-    static BOOLEAN   FirstInclude = TRUE;
+    static BOOLEAN    ValidInclude = TRUE;
+    static BOOLEAN    FirstInclude = TRUE;
     #endif
 
     EFI_STATUS        Status;
@@ -2370,14 +2400,61 @@ VOID ReadConfig (
     BOOLEAN           OutLoopGraphicsFor;
     BOOLEAN           DeclineSetting;
     CHAR16          **TokenList;
-    CHAR16           *MsgStr;
-    CHAR16           *Flag; // Do Not Free
+    CHAR16           *Flag; // Do *NOT* Free
     UINTN             i, j;
     UINTN             TokenCount;
     UINTN             InvalidEntries;
     INTN              MaxLogLevel;
 
     static UINTN      ReadLoops = 0;
+    static BOOLEAN    NotRunBefore = TRUE;
+
+
+// Macros to update some static variables
+#if REFIT_DEBUG < 1
+#   define UPDATE_SOME_VARIABLES(                          \
+        CurrentReadLoop, NewNotRunBefore,                  \
+        NewValidInclude, NewFirstInclude                   \
+    )                                                      \
+        do {                                               \
+            if (!OuterLoop) {                              \
+                ReadLoops = (CurrentReadLoop) - 1;         \
+            }                                              \
+            else {                                         \
+                ExitOuter();                               \
+                ReadLoops = 0;                             \
+            }                                              \
+        } while (0)
+#else
+#   define RESET_MISC(                                     \
+        NewNotRunBefore, NewValidInclude, NewFirstInclude  \
+    )                                                      \
+        do {                                               \
+            NotRunBefore = (NewNotRunBefore);              \
+            ValidInclude = (NewValidInclude);              \
+            FirstInclude = (NewFirstInclude);              \
+        } while (0)
+#   define UPDATE_SOME_VARIABLES(                          \
+        CurrentReadLoop, NewNotRunBefore,                  \
+        NewValidInclude, NewFirstInclude                   \
+    )                                                      \
+        do {                                               \
+            if (!OuterLoop) {                              \
+                ReadLoops = (CurrentReadLoop) - 1;         \
+            }                                              \
+            else {                                         \
+                LOG_MSG(" ... Use Default Settings ***");  \
+                LOG_MSG("\n\n");                           \
+                ExitOuter (ValidInclude, NotRunBefore);    \
+                ReadLoops = 0;                             \
+                RESET_MISC(                                \
+                    (NewNotRunBefore),                     \
+                    (NewValidInclude),                     \
+                    (NewFirstInclude)                      \
+                );                                         \
+            }                                              \
+        } while (0)
+#endif
 
 
     // Control 'Include' Depth
@@ -2429,31 +2506,9 @@ VOID ReadConfig (
             Flag = L"Configuration";
         }
         LOG_MSG("WARN: %sFile *NOT* Found", Flag);
-        // DA-TAG: No 'TRUE' Flag
         #endif
 
-        if (!OuterLoop) {
-            ReadLoops = ReadLoops - 1;
-        }
-        else {
-            #if REFIT_DEBUG > 0
-            LOG_MSG(" ... Use Default Settings ***");
-            LOG_MSG("\n\n");
-            #endif
-
-            ExitOuter (
-                #if REFIT_DEBUG > 0
-                ValidInclude, NotRunBefore
-                #endif
-            );
-            ReadLoops = 0;
-
-            #if REFIT_DEBUG > 0
-            // Reset Misc Flags
-            NotRunBefore =                FALSE;
-            FirstInclude = ValidInclude =  TRUE;
-            #endif
-        }
+        UPDATE_SOME_VARIABLES(ReadLoops, FALSE, TRUE, TRUE);
 
         return;
     }
@@ -2479,31 +2534,9 @@ VOID ReadConfig (
             "WARN: Invalid Configuration File ... Abort File Load",
             OffsetNext
         );
-        // DA-TAG: No 'TRUE' Flag
         #endif
 
-        if (!OuterLoop) {
-            ReadLoops = ReadLoops - 1;
-        }
-        else {
-            #if REFIT_DEBUG > 0
-            LOG_MSG(" ... Use Default Settings ***");
-            LOG_MSG("\n\n");
-            #endif
-
-            ExitOuter (
-                #if REFIT_DEBUG > 0
-                ValidInclude, NotRunBefore
-                #endif
-            );
-            ReadLoops = 0;
-
-            #if REFIT_DEBUG > 0
-            // Reset Misc Flags
-            NotRunBefore =                FALSE;
-            FirstInclude = ValidInclude =  TRUE;
-            #endif
-        }
+        UPDATE_SOME_VARIABLES(ReadLoops, FALSE, TRUE, TRUE);
 
         return;
     }
@@ -2589,22 +2622,7 @@ VOID ReadConfig (
                         else if (MyStriCmp (Flag, L"badges"    )) GlobalConfig.HideUIFlags |= HIDEUI_FLAG_BADGES;
                         else if (MyStriCmp (Flag, L"safemode"  )) GlobalConfig.HideUIFlags |= HIDEUI_FLAG_SAFEMODE;
                         else if (MyStriCmp (Flag, L"singleuser")) GlobalConfig.HideUIFlags |= HIDEUI_FLAG_SINGLEUSER;
-                        else {
-                            MsgStr = PoolPrint (
-                                L"WARN: Invalid 'hideui' Token:- '%s'", Flag
-                            );
-
-                            #if REFIT_DEBUG > 0
-                            if (NotRunBefore) MuteLogger = FALSE;
-                            LOG_MSG("%s  - %s", OffsetNext, MsgStr);
-                            if (NotRunBefore) MuteLogger = TRUE;
-                            #endif
-
-                            SwitchToText (FALSE);
-                            PrintUglyText (MsgStr, NEXTLINE);
-                            PauseForKey();
-                            MY_FREE_POOL(MsgStr);
-                        }
+                        else BadFlag (Flag, TokenList[0], NotRunBefore);
                     }
                 }
             } // for
@@ -2719,22 +2737,7 @@ VOID ReadConfig (
                         else if (MyStriCmp (Flag, L"clover"  )) GlobalConfig.SyncTrust |= ENFORCE_TRUST_CLOVER;
                         else if (MyStriCmp (Flag, L"similar" )) GlobalConfig.SyncTrust |= ENFORCE_TRUST_OTHERS;
                         else if (MyStriCmp (Flag, L"verify"  )) GlobalConfig.SyncTrust |= REQUIRE_TRUST_VERIFY;
-                        else {
-                            MsgStr = PoolPrint (
-                                L"WARN: Invalid 'sync_trust' Token:- '%s'", Flag
-                            );
-
-                            #if REFIT_DEBUG > 0
-                            if (NotRunBefore) MuteLogger = FALSE;
-                            LOG_MSG("%s  - %s", OffsetNext, MsgStr);
-                            if (NotRunBefore) MuteLogger = TRUE;
-                            #endif
-
-                            SwitchToText (FALSE);
-                            PrintUglyText (MsgStr, NEXTLINE);
-                            PauseForKey();
-                            MY_FREE_POOL(MsgStr);
-                        }
+                        else BadFlag (Flag, TokenList[0], NotRunBefore);
                     }
                 }
             } // for
@@ -2934,6 +2937,11 @@ VOID ReadConfig (
 
             DeclineSetting = HandleBoolean (TokenList, TokenCount);
             GlobalConfig.RescanDXE = (DeclineSetting) ? FALSE : TRUE;
+
+            if (AppleFirmware) {
+                // Override default disabled setting on Mac
+                BaseRescanDXE = GlobalConfig.RescanDXE;
+            }
         }
         else if (
             TokenCount == 2 &&
@@ -3098,21 +3106,8 @@ VOID ReadConfig (
                 GlobalConfig.BannerScale = BANNER_FILLSCREEN;
             }
             else {
-                MsgStr = PoolPrint (
-                    L"  - WARN: Invalid 'banner_type' Flag:- '%s'",
-                    TokenList[1]
-                );
-                PrintUglyText (MsgStr, NEXTLINE);
-
-                #if REFIT_DEBUG > 0
-                if (NotRunBefore) MuteLogger = FALSE;
-                LOG_MSG("%s%s", OffsetNext, MsgStr);
-                if (NotRunBefore) MuteLogger = TRUE;
-                #endif
-
-                PauseForKey();
-                MY_FREE_POOL(MsgStr);
-            } // if/else MyStriCmp TokenList[0]
+                BadFlag (Flag, TokenList[0], NotRunBefore);
+            }
         }
         else if (
             TokenCount == 2 &&
@@ -3749,7 +3744,10 @@ VOID ReadConfig (
                 TokenList, TokenCount
             );
         }
-        else if (MyStriCmp (TokenList[0], L"disable_bootlogo")) {
+        else if (
+            !GotNoneNoBootLogo &&
+            MyStriCmp (TokenList[0], L"disable_bootlogo")
+        ) {
             #if REFIT_DEBUG > 0
             if (!OuterLoop && !OutLoopNoBootLogo) {
                 UpdatedToken = LogUpdate (
@@ -3785,22 +3783,7 @@ VOID ReadConfig (
                         if (0);
                         else if (MyStrBegins (Flag, L"Lin")) GlobalConfig.DisableBootLogo |= DISABLE_BOOTLOGO_LIN;
                         else if (MyStrBegins (Flag, L"Win")) GlobalConfig.DisableBootLogo |= DISABLE_BOOTLOGO_WIN;
-                        else {
-                            MsgStr = PoolPrint (
-                                L"WARN: Invalid 'disable_bootlogo' Token:- '%s'", Flag
-                            );
-
-                            #if REFIT_DEBUG > 0
-                            if (NotRunBefore) MuteLogger = FALSE;
-                            LOG_MSG("%s  - %s", OffsetNext, MsgStr);
-                            if (NotRunBefore) MuteLogger = TRUE;
-                            #endif
-
-                            SwitchToText (FALSE);
-                            PrintUglyText (MsgStr, NEXTLINE);
-                            PauseForKey();
-                            MY_FREE_POOL(MsgStr);
-                        }
+                        else BadFlag (Flag, TokenList[0], NotRunBefore);
                     }
                 }
             } // for
@@ -3870,15 +3853,6 @@ VOID ReadConfig (
                 TokenList, TokenCount,
                 &(GlobalConfig.ScaleUI)
             );
-        }
-        else if (
-            CheckManual    &&
-            !DoneManual    &&
-            TokenCount > 1 &&
-            MyStriCmp (TokenList[0], L"menuentry")
-        ) {
-            // DA-TAG: Do not log this or set 'UpdatedToken'
-            DoneManual = TRUE;
         }
         else if (
             MyStriCmp (TokenList[0], L"disable_nvram_protect") ||
@@ -4292,6 +4266,15 @@ VOID ReadConfig (
             );
         }
         else if (
+            CheckManual    &&
+            !DoneManual    &&
+            TokenCount > 1 &&
+            MyStriCmp (TokenList[0], L"menuentry")
+        ) {
+            // DA-TAG: Do not log this or set 'UpdatedToken'
+            DoneManual = TRUE;
+        }
+        else if (
             OuterLoop                                     &&
             TokenCount == 2                               &&
             MyStriCmp (TokenList[0], L"include")          &&
@@ -4355,8 +4338,7 @@ VOID ReadConfig (
 
         #if REFIT_DEBUG > 0
         // Reset Misc Flags
-        NotRunBefore =                FALSE;
-        FirstInclude = ValidInclude =  TRUE;
+        RESET_MISC(FALSE, TRUE, TRUE);
         #endif
     }
     else {

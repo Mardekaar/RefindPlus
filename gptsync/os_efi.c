@@ -35,7 +35,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2023 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -195,8 +195,8 @@ UINTN input_boolean (
 // Minimal initialization function
 static
 VOID InitializeLib (
-    IN EFI_HANDLE        ImageHandle,
-    IN EFI_SYSTEM_TABLE *SystemTable
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
 ) {
     //gImageHandle   = ImageHandle;
     gST            = SystemTable;

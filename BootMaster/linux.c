@@ -73,6 +73,10 @@ CHAR16 * FindInitrd (
     IN CHAR16       *LoaderPath,
     IN REFIT_VOLUME *Volume
 ) {
+    #if REFIT_DEBUG > 0
+    CHAR16              *VolName; // Do *NOT* Free
+    #endif
+
     UINTN                SharedChars;
     UINTN                MaxSharedChars;
     CHAR16              *Path;
@@ -92,8 +96,8 @@ CHAR16 * FindInitrd (
 
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Search for Initrd Matching '%s' in '%s'",
-        LoaderPath, Volume->VolName
+        L"Locate/Match Linux Initrd File:- '%s'",
+        LoaderPath
     );
     #endif
 
@@ -107,11 +111,11 @@ CHAR16 * FindInitrd (
     KernelVersion = FindNumbers (FileName);
 
     BREAD_CRUMB(L"%a:  4", __func__);
-    Path  = FindPath (LoaderPath);
+    Path = FindPath (LoaderPath);
 
-    // Add trailing backslash for root directory; necessary on some systems, but must
-    // NOT be added to all directories, since on other systems, a trailing backslash on
-    // anything but the root directory causes them to flake out!
+    // Add trailing backslash to root directory (necessary on some systems).
+    // NB: Limit to the root directory as on some systems, trailing backslashes
+    // on anything else apart from the root directory may result in issues.
     if (StrLen (Path) == 0) {
         BREAD_CRUMB(L"%a:  4a 1", __func__);
         MergeStrings (&Path, L"\\", 0);
@@ -119,7 +123,9 @@ CHAR16 * FindInitrd (
 
     BREAD_CRUMB(L"%a:  5", __func__);
     #if REFIT_DEBUG > 0
+    VolName = Volume->VolName;
     ALT_LOG(1, LOG_THREE_STAR_MID, L"Path                  : %s", (Path          != NULL) ? Path          : L"NULL");
+    ALT_LOG(1, LOG_THREE_STAR_MID, L"Volume                : %s", (VolName       != NULL) ? VolName       : L"NULL");
     ALT_LOG(1, LOG_THREE_STAR_MID, L"FileName              : %s", (FileName      != NULL) ? FileName      : L"NULL");
     ALT_LOG(1, LOG_THREE_STAR_MID, L"Kernel Version String : %s", (KernelVersion != NULL) ? KernelVersion : L"NULL");
     #endif
@@ -127,8 +133,8 @@ CHAR16 * FindInitrd (
     BREAD_CRUMB(L"%a:  6", __func__);
     DirIterOpen (Volume->RootDir, Path, &DirIter);
 
-    // Now add a trailing backslash if it was NOT added earlier, for consistency in
-    // building the InitrdName later
+    // Add trailing backslash now if not added earlier.
+    // For consistency in building 'InitrdName' later.
     BREAD_CRUMB(L"%a:  7", __func__);
     if ((StrLen (Path) > 0) && (Path[StrLen (Path) - 1] != L'\\')) {
         BREAD_CRUMB(L"%a:  7a 1", __func__);
@@ -152,7 +158,6 @@ CHAR16 * FindInitrd (
 
         LOG_SEP(L"X");
         BREAD_CRUMB(L"%a:  8a 1 - WHILE LOOP:- START", __func__);
-
 
         BREAD_CRUMB(L"%a:  8a 2", __func__);
         if (((KernelVersion != NULL) && (MyStriCmp (InitrdVersion, KernelVersion))) ||
@@ -258,7 +263,10 @@ CHAR16 * FindInitrd (
     MY_FREE_POOL(KernelVersion);
 
     #if REFIT_DEBUG > 0
-    ALT_LOG(1, LOG_THREE_STAR_MID, L"Located Initrd:- '%s'", (InitrdName != NULL) ? InitrdName : L"NULL");
+    ALT_LOG(1, LOG_THREE_STAR_MID,
+        L"Identified Linux Initrd File:- '%s'",
+        (InitrdName != NULL) ? InitrdName : L"NULL"
+    );
     #endif
 
     BREAD_CRUMB(L"%a:  12 - END:- return CHAR16 *InitrdName = '%s'", __func__,
@@ -338,10 +346,14 @@ CHAR16 * GetMainLinuxOptions (
     IN CHAR16       *LoaderPath,
     IN REFIT_VOLUME *Volume
 ) {
-    CHAR16 *Options;
-    CHAR16 *InitrdName;
-    CHAR16 *FullOptions;
-    CHAR16 *KernelVersion;
+    #if REFIT_DEBUG > 0
+    BOOLEAN  CheckMute = FALSE;
+    #endif
+
+    CHAR16  *Options;
+    CHAR16  *InitrdName;
+    CHAR16  *FullOptions;
+    CHAR16  *KernelVersion;
 
 
     LOG_SEP(L"X");
@@ -350,7 +362,13 @@ CHAR16 * GetMainLinuxOptions (
     Options = GetFirstOptionsFromFile (LoaderPath, Volume);
 
     BREAD_CRUMB(L"%a:  2", __func__);
+    #if REFIT_DEBUG > 0
+    MY_MUTELOGGER_SET;
+    #endif
     InitrdName = FindInitrd (LoaderPath, Volume);
+    #if REFIT_DEBUG > 0
+    MY_MUTELOGGER_OFF;
+    #endif
 
     BREAD_CRUMB(L"%a:  3", __func__);
     if (InitrdName != NULL) {
@@ -491,7 +509,7 @@ VOID GuessLinuxDistribution (
 ) {
     UINTN          i;
     CHAR16        *LinuxName;
-    CHAR16        *ShowName;  // *DO NOT* Free
+    CHAR16        *ShowName;  // Do *NOT* Free
     BOOLEAN        Found;
 
 

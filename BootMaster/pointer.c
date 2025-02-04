@@ -20,7 +20,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -280,9 +280,9 @@ VOID pdCleanup (VOID) {
     UINTN   Index;
 
     #if REFIT_DEBUG > 0
-    MsgStr = L"Deconfigure Pointer Scenarios";
-    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
-    LOG_MSG("%s:", MsgStr);
+    MsgStr = L"Pointer Scenarios";
+    ALT_LOG(1, LOG_LINE_NORMAL, L"Dismantle %s", MsgStr);
+    LOG_MSG("Deconfigure %s:", MsgStr);
     #endif
 
     PointerAvailable = FALSE;

@@ -11,7 +11,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -31,7 +31,7 @@
 // A linked-list data structure intended to hold a list of all the ESPs
 // on the computer.
 typedef struct _esp_list {
-    REFIT_VOLUME     *Volume;  // Holds pointer to existing volume structure; DO NOT FREE!
+    REFIT_VOLUME     *Volume;   // Do *NOT* Free ... Pointer to existing volume structure
     struct _esp_list *NextESP;
 } ESP_LIST;
 
@@ -699,7 +699,7 @@ EFI_STATUS CopyFiles (
 
 
     SourceFile   = NULL;
-    SourceVolume = NULL; // Do not free
+    SourceVolume = NULL; // Do *NOT* Free
 
     FindVolumeAndFilename (
         GlobalConfig.SelfDevicePath,
@@ -1136,7 +1136,7 @@ EFI_STATUS CreateNvramEntry (
     return Status;
 } // static EFI_STATUS CreateNvramEntry()
 
-// Construct an NVRAM entry but *DO NOT* write it to NVRAM.
+// Construct an NVRAM entry but do *NOT* write it to NVRAM.
 // The entry consists of:
 //   - A 32-bit options flag, which holds the LOAD_OPTION_ACTIVE value
 //   - A 16-bit number specifying the size of the device path
@@ -1208,62 +1208,72 @@ EFI_STATUS ConstructBootEntry (
 // that installation, and set it as the default boot option.
 VOID InstallRefindPlus (VOID) {
     EFI_STATUS     Status;
+    BOOLEAN        BadTag;
     CHAR16        *MsgStr;
     CHAR16        *ProgName;
     ESP_LIST      *AllESPs;
-    REFIT_VOLUME  *SelectedESP; // Do not free
+    REFIT_VOLUME  *SelectedESP;    // Do *NOT* Free
 
-
-    AllESPs = FindAllESPs();
-    if (AllESPs == NULL) {
-        return;
-    }
-
-    SelectedESP = PickOneESP (AllESPs);
-    if (SelectedESP == NULL) {
-        return;
-    }
 
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_LINE_NORMAL, L"Install RefindPlus to an ESP");
     #endif
 
-    Status = CopyRefindPlusFiles (SelectedESP->RootDir);
-    if (!EFI_ERROR(Status)) {
-        ProgName = PoolPrint (L"\\EFI\\refindplus\\%s", INST_REFINDPLUS_NAME);
-        Status = CreateNvramEntry (
-            SelectedESP->DeviceHandle,
-            L"RefindPlus Boot Manager",
-            ProgName, TRUE
-        );
-        MY_FREE_POOL(ProgName);
-    }
+
+
+    do {
+        AllESPs = FindAllESPs();
+        if (AllESPs == NULL) {
+            BadTag = TRUE;
+        }
+        else {
+            SelectedESP = PickOneESP (AllESPs);
+            BadTag = (SelectedESP == NULL);
+        }
+
+        if (BadTag) {
+            Status = EFI_NOT_READY;
+
+            break;
+        }
+
+        Status = CopyRefindPlusFiles (SelectedESP->RootDir);
+        if (!EFI_ERROR(Status)) {
+            ProgName = PoolPrint (L"\\EFI\\refindplus\\%s", INST_REFINDPLUS_NAME);
+            Status = CreateNvramEntry (
+                SelectedESP->DeviceHandle,
+                L"RefindPlus Boot Manager",
+                ProgName, TRUE
+            );
+
+            MY_FREE_POOL(ProgName);
+        }
+    } while (0); // This 'loop' only runs once
+
+
 
     if (EFI_ERROR(Status)) {
         MsgStr = L"Problems Encountered During Installation!!";
-        DisplaySimpleMessage (
-            L"Warning", MsgStr
-        );
-
-        #if REFIT_DEBUG > 0
-        ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
-        LOG_MSG("%s    ** %s", OffsetNext, MsgStr);
-        LOG_MSG("\n\n");
-        #endif
-
-        return;
+        DisplaySimpleMessage (L"Warning", MsgStr);
     }
-
-    MsgStr = L"RefindPlus Successfully Installed";
-    DisplaySimpleMessage (MsgStr, NULL);
+    else {
+        MsgStr = L"RefindPlus Successfully Installed";
+        DisplaySimpleMessage (MsgStr, NULL);
+    }
 
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
-    LOG_MSG("%s    * %s", OffsetNext, MsgStr);
+    if (!EFI_ERROR(Status)) {
+        LOG_MSG("%s    * %s", OffsetNext, MsgStr);
+    }
+    else {
+        LOG_MSG("\n\n");
+        LOG_MSG("WARN: %s", MsgStr);
+    }
     LOG_MSG("\n\n");
     #endif
 
-    DeleteESPList (AllESPs);
+    DeleteESPList (AllESPs); // Function checks for NULL status
 } // VOID InstallRefindPlus()
 
 /***********************
@@ -1528,8 +1538,7 @@ UINTN PickOneBootOption (
         MenuEntryItem->Row = Entries->BootEntry.BootNum;
         AddMenuEntry (PickBootOptionMenu, MenuEntryItem);
 
-        // DA-TAG: Dereference 'Volume' ... Do not free
-        MY_SOFT_FREE(Volume);
+        MY_SOFT_FREE(Volume);    // Do *NOT* Free ... Just dereferenced
         MY_FREE_POOL(Filename);
 
         Entries = Entries->NextBootEntry;

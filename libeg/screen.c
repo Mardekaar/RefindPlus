@@ -42,7 +42,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -140,7 +140,7 @@ EFI_STATUS ForceVideoMode (
 
     ScanlineScale = 1;
     while ((MinPixelsLine * ScanlineScale) < TargetWidth) {
-        ScanlineScale++;
+        ScanlineScale += 1;
     }
 
     TargetPixelsLine  =  MinPixelsLine;
@@ -195,15 +195,15 @@ VOID ReconnectTextOut (VOID) {
         return;
     }
 
-    for (Index = 0; Index < HandleCount; ++Index) {
-        Status = REFIT_CALL_3_WRAPPER(
+    for (Index = 0; Index < HandleCount; Index++) {
+        REFIT_CALL_3_WRAPPER(
             gBS->DisconnectController, HandleBuffer[Index],
             NULL, NULL
         );
     }
 
-    for (Index = 0; Index < HandleCount; ++Index) {
-        Status = REFIT_CALL_4_WRAPPER(
+    for (Index = 0; Index < HandleCount; Index++) {
+        REFIT_CALL_4_WRAPPER(
             gBS->ConnectController, HandleBuffer[Index],
             NULL, NULL, TRUE
         );
@@ -269,7 +269,7 @@ EFI_STATUS RefitSetConsoleResolutionForProtocol (
     // Find required resolution
     ModeNumber = -1;
     MaxMode    = GraphicsOutput->Mode->MaxMode;
-    for (ModeIndex = 0; ModeIndex < MaxMode; ++ModeIndex) {
+    for (ModeIndex = 0; ModeIndex < MaxMode; ModeIndex++) {
         Status = GraphicsOutput->QueryMode (
             GraphicsOutput, ModeIndex,
             &SizeOfInfo, &Info
@@ -440,7 +440,7 @@ EFI_STATUS RefitPassUgaThrough (VOID) {
     UINTN                           Index;
     EFI_HANDLE                     *HandleBuffer;
     RP_UGA_PROTOCOL                *Refit_UGA;
-    EFI_UGA_DRAW_PROTOCOL          *UgaDraw;
+    EFI_UGA_DRAW_PROTOCOL          *TmpUGA;
     EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
 
     // DA-TAG: UGAPassThru is currently only for Mac OS 10.4
@@ -457,11 +457,12 @@ EFI_STATUS RefitPassUgaThrough (VOID) {
     );
     if (EFI_ERROR (Status)) {
         // Early Return ... No GOP handles to process
-        return EFI_NOT_READY;
+        return EFI_NO_MAPPING;
     }
 
     ReturnStatus = EFI_LOAD_ERROR;
-    for (Index = 0; Index < HandleCount; ++Index) {
+    for (Index = 0; Index < HandleCount; Index++) {
+        GraphicsOutput = NULL;
         Status = REFIT_CALL_3_WRAPPER(
             gBS->HandleProtocol, HandleBuffer[Index],
             &gEfiGraphicsOutputProtocolGuid, (VOID **) &GraphicsOutput
@@ -474,15 +475,16 @@ EFI_STATUS RefitPassUgaThrough (VOID) {
             continue;
         }
 
+        TmpUGA = NULL;
         Status = REFIT_CALL_3_WRAPPER(
             gBS->HandleProtocol, HandleBuffer[Index],
-            &gEfiUgaDrawProtocolGuid, (VOID **) &UgaDraw
+            &gEfiUgaDrawProtocolGuid, (VOID **) &TmpUGA
         );
         if (!EFI_ERROR (Status)) {
             if (ReturnStatus == EFI_LOAD_ERROR ||
                 ReturnStatus == EFI_NOT_FOUND
             ) {
-                ReturnStatus = EFI_UNSUPPORTED;
+                ReturnStatus = EFI_NOT_READY;
             }
 
             continue;
@@ -501,8 +503,7 @@ EFI_STATUS RefitPassUgaThrough (VOID) {
 
         Status = REFIT_CALL_4_WRAPPER(
             gBS->InstallMultipleProtocolInterfaces, &HandleBuffer[Index],
-            &gEfiUgaDrawProtocolGuid, &Refit_UGA->Uga,
-            NULL
+            &gEfiUgaDrawProtocolGuid, &Refit_UGA->Uga, NULL
         );
         if (EFI_ERROR (ReturnStatus)) {
             ReturnStatus = Status;
@@ -614,7 +615,7 @@ EFI_STATUS RefitProvideGopPassThrough (
     EFI_HANDLE                       *HandleBuffer;
     UINTN                             Index;
     EFI_GRAPHICS_OUTPUT_PROTOCOL     *GraphicsOutput;
-    EFI_UGA_DRAW_PROTOCOL            *UgaDraw;
+    EFI_UGA_DRAW_PROTOCOL            *TmpUGA;
     RP_GOP_PROTOCOL                  *OcGopDraw;
     APPLE_FRAMEBUFFER_INFO_PROTOCOL  *FramebufferInfo;
     EFI_PHYSICAL_ADDRESS              FramebufferBase;
@@ -648,10 +649,11 @@ EFI_STATUS RefitProvideGopPassThrough (
         return Status;
     }
 
-    for (Index = 0; Index < HandleCount; ++Index) {
+    for (Index = 0; Index < HandleCount; Index++) {
+        TmpUGA = NULL;
         Status = REFIT_CALL_3_WRAPPER(
             gBS->HandleProtocol, HandleBuffer[Index],
-            &gEfiUgaDrawProtocolGuid, (VOID **)&UgaDraw
+            &gEfiUgaDrawProtocolGuid, (VOID **) &TmpUGA
         );
         if (EFI_ERROR (Status)) {
             continue;
@@ -697,7 +699,7 @@ EFI_STATUS RefitProvideGopPassThrough (
         }
 
         Status = REFIT_CALL_5_WRAPPER(
-            UgaDraw->GetMode, UgaDraw,
+            TmpUGA->GetMode, TmpUGA,
             &HorizontalResolution, &VerticalResolution,
             &ColorDepth, &RefreshRate
         );
@@ -710,7 +712,7 @@ EFI_STATUS RefitProvideGopPassThrough (
             continue;
         }
 
-        OcGopDraw->Uga                      = UgaDraw;
+        OcGopDraw->Uga                      = TmpUGA;
         OcGopDraw->GraphicsOutput.QueryMode = RefitGopDrawQueryMode;
         OcGopDraw->GraphicsOutput.SetMode   = OcGopDrawSetMode;
         OcGopDraw->GraphicsOutput.Blt       = RefitGopDrawBlt;
@@ -792,7 +794,7 @@ EFI_STATUS EncodeAsPNG (
 } // static EFI_STATUS EncodeAsPNG()
 
 static
-EFI_STATUS RefitCheckGOP (
+EFI_STATUS RefitVetGOP (
     BOOLEAN FixGOP
 ) {
     #if REFIT_DEBUG > 0
@@ -971,7 +973,7 @@ EFI_STATUS RefitCheckGOP (
 
     // Return 'Success' to trigger provision
     return EFI_SUCCESS;
-} // static EFI_STATUS RefitCheckGOP()
+} // static EFI_STATUS RefitVetGOP()
 
 static
 BOOLEAN SupplyConsoleGop (
@@ -986,7 +988,7 @@ BOOLEAN SupplyConsoleGop (
 #else
     ValueValidGOP = GotGoodGOP = FALSE;
     if (GlobalConfig.SetConsoleGOP) {
-        Status = RefitCheckGOP (FixGOP);
+        Status = RefitVetGOP (FixGOP);
         if (Status == EFI_ALREADY_STARTED) {
             GotGoodGOP = TRUE;
 
@@ -995,7 +997,7 @@ BOOLEAN SupplyConsoleGop (
 
         #if REFIT_DEBUG > 0
         LOG_MSG("%s ConOut GOP:", (FixGOP) ? L"Replace" : L"Provide");
-        LOG_MSG("%s       RefitVetGOP:- '%r'", OffsetNext, Status);
+        LOG_MSG("%s     Refit Vet GOP:- '%r'", OffsetNext, Status);
         #endif
 
         if (!EFI_ERROR(Status)) {
@@ -1003,7 +1005,7 @@ BOOLEAN SupplyConsoleGop (
             Status = OcProvideConsoleGop (TRUE);
 
             #if REFIT_DEBUG > 0
-            LOG_MSG("%s      GetConOutGOP:- '%r'", OffsetNext, Status);
+            LOG_MSG("%s    ConOut Put GOP:- '%r'", OffsetNext, Status);
             #endif
 
             if (!EFI_ERROR(Status)) {
@@ -1011,14 +1013,13 @@ BOOLEAN SupplyConsoleGop (
                     gBS->HandleProtocol, gST->ConsoleOutHandle,
                     &GOPDrawProtocolGuid, (VOID **) &GOPDraw
                 );
-
-                #if REFIT_DEBUG > 0
-                LOG_MSG("%s     CheckStartGOP:- '%r'", OffsetNext, Status);
-                #endif
-
                 if (!EFI_ERROR(Status)) {
                     ValueValidGOP = TRUE;
                 }
+
+                #if REFIT_DEBUG > 0
+                LOG_MSG("%s   Perform Set GOP:- '%r'", OffsetNext, Status);
+                #endif
             }
         }
     }
@@ -1098,7 +1099,7 @@ EFI_STATUS egDumpGOPVideoModes (VOID) {
     IncrementLoop = OurValidGOP = FALSE;
     for (Mode = 0; Mode <= MaxMode; Mode++) {
         if (IncrementLoop) {
-            LoopCount++;
+            LoopCount += 1;
         }
         else {
             IncrementLoop = TRUE;
@@ -1269,7 +1270,7 @@ EFI_STATUS egSetGopMode (
                 }
             }
 
-            i++;
+            i += 1;
         } // while
 
         #if REFIT_DEBUG > 0
@@ -2244,6 +2245,7 @@ VOID egInitScreen (VOID) {
                 Status = RefitPassUgaThrough();
             }
             #endif
+
             if (EFI_ERROR(Status)) {
                 // Prefer GOP ... Discard UGA
                 UGADraw =  NULL;
@@ -2378,8 +2380,8 @@ VOID egInitScreen (VOID) {
         // Prime Status for Text Renderer
         Status = EFI_NOT_STARTED;
 
-        #ifdef __MAKEWITH_TIANO
         // DA-TAG: Limit to TianoCore
+        #ifdef __MAKEWITH_TIANO
         if ((GlobalConfig.UseTextRenderer) ||
             (AppleFirmware && GlobalConfig.TextOnly)
         ) {
@@ -2650,7 +2652,7 @@ BOOLEAN egSetScreenSize (
 
             MY_FREE_POOL(Info);
 
-            ModeNum++;
+            ModeNum += 1;
         } // while
     } // if/else *ScreenHeight == 0
 
@@ -2764,7 +2766,7 @@ BOOLEAN egSetScreenSize (
         MY_FREE_POOL(MsgStr);
         #endif
 
-        ModeNum++;
+        ModeNum += 1;
     } // while
 
 ExitFunc:
@@ -2847,7 +2849,9 @@ BOOLEAN egSetTextMode (
             LOG_MSG("%s  - %s", OffsetNext, MsgStr);
             MY_FREE_POOL(MsgStr);
         }
-    } while (++i < gST->ConOut->Mode->MaxMode);
+
+        i += 1;
+    } while (i < gST->ConOut->Mode->MaxMode);
 
     if (!GotOne) {
         MsgStr = StrDuplicate (L"No Valid Mode Found!!'");
@@ -3401,7 +3405,7 @@ VOID egScreenShot (VOID) {
 
     // Fix pixels
     FilePixelSize = Image->Width * Image->Height;
-    for (i = 0; i < FilePixelSize; ++i) {
+    for (i = 0; i < FilePixelSize; i++) {
         Temp                   = Image->PixelData[i].b;
         Image->PixelData[i].b  = Image->PixelData[i].r;
         Image->PixelData[i].r  = Temp;
@@ -3513,7 +3517,10 @@ VOID egScreenShot (VOID) {
     }
     else {
         // Save to file on the ESP
-        Status = egSaveFile (BaseDir, FileName, (UINT8 *) FileData, FileDataSize);
+        Status = egSaveFile (
+            BaseDir, FileName,
+            (UINT8 *) FileData, FileDataSize
+        );
         if (EFI_ERROR(Status)) {
             CheckError (Status, L"on 'egSaveFile' call in 'egScreenShot'");
             MsgStr = L"Error on 'egSaveFile' call in 'egScreenShot'";
@@ -3546,5 +3553,3 @@ VOID egScreenShot (VOID) {
     MY_FREE_POOL(FileName);
     MY_FREE_POOL(FileData);
 } // VOID egScreenShot()
-
-/* EOF */

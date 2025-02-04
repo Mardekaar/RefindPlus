@@ -3,8 +3,8 @@
 - Fixes `CleanNVram` Handling
   * Invalid path to external binary was defined
     - Effectively disabled the feature on UEFI-PC
-    - Forced garbage collection worked on Apple Macs worked as fallback
-      * Errors messages were still shown and logged
+    - Forced garbage collection worked as fallback on Apple Macs
+      * Error messages were still shown and logged
   * This bug was introduced in v0.14.0.AA (Commit c0906f1)
 - Improves `BootLogo` Handling
   * Misc optimisation and extension added
@@ -28,12 +28,6 @@
     - Key `0` is an internally reserved key
     - Keys `A` and `Z` are used for tools
     - Keys `I` and `O` are not used
-- Improves `Mac Recovery` Handling
-  * Now labels HFS Recovery instances with the Mac OS version
-  * Activates previously disabled implementation for APFS
-    - Attempts restart into APFS Recovery via `BootNext`
-    - **IMPORTANT**:
-      * This implementation is still a work in progress ... feedback required/welcome
 - Improves `Tool` Handling
   * Now only displays one representative entity per tool type
     - Allows for uncluttered and aesthetically pleasing interfaces
@@ -45,6 +39,12 @@
   * Removes requirement for the `volume` token to be set before some other tokens
     - Volumes can now be defined anywhere in a stanza without issue
   * Improves handling of `disabled` tokens
+- Improves `Mac Recovery` Handling
+  * Now labels HFS Recovery instances with the Mac OS version
+  * Activates previously disabled implementation for APFS
+    - Attempts restart into APFS Recovery via `BootNext`
+    - **IMPORTANT**:
+        * This implementation is still a work in progress ... feedback required/welcome
 - Amends `Misc` Handling
   * Applies multiple sundry optimisations and standardisation
     - Includes introduction of an `os_windows` icon to be used for Windows when available
@@ -52,6 +52,7 @@
       * The existing arrangement is maintained
     - Adds `os_ventoy` icon
     - Now uses upstream emulated storage location if present
+    - Amends misc misaligned indices
   * The `use_graphics_for` token now defaults to `osx linux windows`
   * Addressed static analysis flags
     - Drops inherited unused `filesystems/test` folder and contents
@@ -181,7 +182,7 @@
 - Improves `SyncNVram` Handling
   * Now also clears the `opencore-version` variable, if present, when booting into Mac OS directly
     - This variable is effectively an `OpenCore Present` flag that is checked by the Mac OS kernel
-    - This variable removal only applies when RefindPlus is *NOT* chain-loaded via OpenCore
+    - This variable removal only applies when RefindPlus *IS NOT* chain-loaded via OpenCore
     - This variable removal also applies to Mac OS installers
   * Separately, the implementation of the base feature was not functional on Mac OS boots and was fixed
 - Improves `HelpIcon` Handling

@@ -43,7 +43,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2022 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  * Portions Copyright (c) 2021 Joe van Tunen (joevt@shaw.ca)
  *
  * Modifications distributed under the preceding terms.
@@ -149,10 +149,6 @@ VOID LoadVolumeIcon (
 VOID FreeList (
     IN OUT VOID ***ListPtr,
     IN OUT UINTN  *ElementCount
-);
-VOID FreeVolumes (
-    IN OUT REFIT_VOLUME ***ListVolumes,
-    IN OUT UINTN          *ListCount
 );
 VOID AddListElement (
     IN OUT VOID  ***ListPtr,

@@ -39,7 +39,7 @@ extern const UINT8 _gPcd_FixedAtBuild_PcdUefiVariableDefaultPlatformLang[7];
 EFI_STATUS
 EFIAPI
 fsw_efi_main (
-  IN EFI_HANDLE        ImageHandle,
+  IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE  *SystemTable
   );
 

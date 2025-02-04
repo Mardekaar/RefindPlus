@@ -16,6 +16,12 @@
  * WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
  *
  */
+/*
+ * Modified for RefindPlus
+ * Copyright (c) 2025 Dayo Akanji (sf.net/u/dakanji/profile)
+ *
+ * Modifications distributed under the preceding terms.
+ */
 
 #ifndef _DRIVER_SUPPORT
 #define _DRIVER_SUPPORT
@@ -52,7 +58,9 @@ LibScanHandleDatabase (
   EFI_HANDLE  **HandleBuffer,
   UINT32      **HandleType
   );
-EFI_STATUS ConnectAllDriversToAllControllers(IN BOOLEAN ResetGOP);
+
+VOID ConnectAllDriversToAllControllers(VOID);
+
 // DA-TAG: Exclude TianoCore - START
 #ifndef __MAKEWITH_TIANO
 VOID ConnectFilesystemDriver(EFI_HANDLE DriverHandle);

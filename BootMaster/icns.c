@@ -252,6 +252,31 @@ EG_IMAGE * LoadIndexedIcon (
     return TableBuiltinIconOS[Id].Image;
 } // static EG_IMAGE * LoadIndexedIcon()
 
+static
+INTN CheckTheCache (
+    IN     CHAR16    *BaseName,
+    IN OUT EG_IMAGE **Image
+) {
+    UINTN             Index;
+    INTN              RetId;
+
+
+    RetId = -1;
+    if (GlobalConfig.HelpIcon) {
+        for (Index = 0; Index < BASE_OS_ICON_COUNT; Index++) {
+            *Image = LoadIndexedIcon (BaseName, Index);
+            if (*Image != NULL) {
+                RetId = (Index < BASE_OS_ICON_COUNT)
+                    ? Index : (BASE_OS_ICON_COUNT - 1);
+
+                break;
+            }
+        } // for
+    }
+
+    return RetId;
+} // static INTN CheckTheCache()
+
 // Load an OS icon from among the comma-delimited list provided in OSIconName.
 // Searches for icons with extensions in 'ICON_EXTENSIONS' via egFindIcon().
 // Returns image data ... An ugly "dummy" icon on failure.
@@ -265,7 +290,6 @@ EG_IMAGE * LoadOSIcon (
     BOOLEAN          LoadCustom;
     CHAR16          *CutoutName;
     CHAR16          *BaseName;
-    UINTN            Index2;
     UINTN            Index;
     INTN             OurId; // DA-TAG: 'INTN' is important
 
@@ -281,203 +305,154 @@ EG_IMAGE * LoadOSIcon (
     LoadCustom = MyStriCmp (FallbackIconName, EXIT_SPLASH);
     WinAltIcon = MyStriCmp (FallbackIconName, L"windows");
 
-    // Try to find an icon from the OSIconName list.
-    Index =    0;
-    OurId =   -1;
-    Image = NULL;
-    while (
-        Image == NULL &&
-        (CutoutName = FindCommaDelimited (OSIconName, Index++)) != NULL
-    ) {
-        BaseName = PoolPrint (
-            L"%s_%s",
-            (BootLogo) ? L"boot" : L"os",
-            CutoutName
-        );
+    do {
+        /* Try to find icon from 'OSIconName' list. */
+        Index =    0;
+        OurId =   -1;
+        Image = NULL;
+        do {
+            CutoutName = FindCommaDelimited (OSIconName, Index++);
+            if (CutoutName == NULL) break;
 
-        // Skip cache check if BootLogo is set.
-        // BootLogo is not cached.
-        if (GlobalConfig.HelpIcon && !BootLogo) {
-            for (Index2 = 0; Index2 < BASE_OS_ICON_COUNT; Index2++) {
-                Image = LoadIndexedIcon (BaseName, Index2);
-                if (Image != NULL) {
-                    OurId = (Index2 < BASE_OS_ICON_COUNT)
-                        ? Index2 : (BASE_OS_ICON_COUNT - 1);
-
-                    break;
-                }
-            } // for
-        }
-
-        UpdateBaseIcon (BaseName, &Image);
-
-        MY_FREE_POOL(BaseName);
-        MY_FREE_POOL(CutoutName);
-    } // while
-
-    // Try again with 'os_' if that fails,
-    // BootLogo was set, but not 'LoadCustom'.
-    if (!LoadCustom && BootLogo && Image == NULL) {
-        Index =  0;
-        OurId = -1;
-        while (
-            Image == NULL &&
-            (CutoutName = FindCommaDelimited (OSIconName, Index++)) != NULL
-        ) {
             BaseName = PoolPrint (
-                L"os_%s",
+                L"%s_%s",
+                (BootLogo) ? L"boot" : L"os",
                 CutoutName
             );
 
-            // No cache check as BootLogo is set.
+            // Skip cache check if BootLogo is set.
             // BootLogo is not cached.
+            if (!BootLogo) {
+                OurId = CheckTheCache (BaseName, &Image);
+            }
+
             UpdateBaseIcon (BaseName, &Image);
 
             MY_FREE_POOL(BaseName);
             MY_FREE_POOL(CutoutName);
-        } // while
-    }
+        } while (Image == NULL);
+        if (Image != NULL) break;
 
-    // Try again using 'FallbackIconName' if that fails.
-    if (Image == NULL) {
+        /* Try with 'os_' if BootLogo was set but not 'LoadCustom'. */
+        if (!LoadCustom && BootLogo) {
+            Index = 0;
+            do {
+                CutoutName = FindCommaDelimited (OSIconName, Index++);
+                if (CutoutName == NULL) break;
+
+                BaseName = PoolPrint (
+                    L"os_%s",
+                    CutoutName
+                );
+                // No cache check as BootLogo is set.
+                // BootLogo is not cached.
+                UpdateBaseIcon (BaseName, &Image);
+
+                MY_FREE_POOL(BaseName);
+                MY_FREE_POOL(CutoutName);
+            } while (Image == NULL);
+            if (Image != NULL) break;
+        }
+
+        /* Try with 'FallbackIconName'. */
         BaseName = PoolPrint (
             L"%s_%s",
             (BootLogo) ? L"boot" : L"os",
             FallbackIconName
         );
-
-        // Skip cache check if BootLogo is set.
         // BootLogo is not cached.
-        if (GlobalConfig.HelpIcon && !BootLogo) {
-            for (Index2 = 0; Index2 < BASE_OS_ICON_COUNT; Index2++) {
-                Image = LoadIndexedIcon (BaseName, Index2);
-                if (Image != NULL) {
-                    OurId = (Index2 < BASE_OS_ICON_COUNT)
-                        ? Index2 : (BASE_OS_ICON_COUNT - 1);
-
-                    break;
-                }
-            } // for
+        // Skip cache check if BootLogo is set.
+        if (!BootLogo) {
+            OurId = CheckTheCache (BaseName, &Image);
         }
-
         UpdateBaseIcon (BaseName, &Image);
         MY_FREE_POOL(BaseName);
+        if (Image != NULL) break;
 
-        // If that fails and 'WinAltIcon' is set,
-        // try with 'win' as 'FallbackIconName'.
-        if (Image == NULL && WinAltIcon) {
+        /* Try with 'win' as 'FallbackIconName' if 'WinAltIcon' is set. */
+        if (WinAltIcon) {
             BaseName = PoolPrint (
                 L"%s_%s",
                 (BootLogo) ? L"boot" : L"os",
                 L"win"
             );
-
-            // Skip cache check if BootLogo is set.
             // BootLogo is not cached.
-            if (GlobalConfig.HelpIcon && !BootLogo) {
-                for (Index2 = 0; Index2 < BASE_OS_ICON_COUNT; Index2++) {
-                    Image = LoadIndexedIcon (BaseName, Index2);
-                    if (Image != NULL) {
-                        OurId = (Index2 < BASE_OS_ICON_COUNT)
-                            ? Index2 : (BASE_OS_ICON_COUNT - 1);
+            // Skip cache check if BootLogo is set.
+            if (!BootLogo) {
+                OurId = CheckTheCache (BaseName, &Image);
+            }
+            UpdateBaseIcon (BaseName, &Image);
+            MY_FREE_POOL(BaseName);
+            if (Image != NULL) break;
+        }
 
-                        break;
-                    }
-                } // for
+        if (BootLogo) {
+            /* Try with 'os_' if BootLogo was set but not 'LoadCustom'. */
+            if (!LoadCustom) {
+                BaseName = PoolPrint (L"os_%s", FallbackIconName);
+                UpdateBaseIcon (BaseName, &Image);
+                MY_FREE_POOL(BaseName);
+
+                if (Image == NULL && WinAltIcon) {
+                    // Try 'os_win' if 'WinAltIcon' is set.
+                    UpdateBaseIcon (L"os_win", &Image);
+                }
+            }
+
+            // BootLogo is set ... End of road
+            break;
+        }
+
+        /* Try the "unknown" icon specifically */
+        if (!MyStriCmp (FallbackIconName, L"unknown")) {
+            BaseName = StrDuplicate (L"os_unknown");
+
+            if (GlobalConfig.HelpIcon) {
+                Image = LoadIndexedIcon (
+                    BaseName, BASE_OS_ICON_UNKNOWN
+                );
             }
 
             UpdateBaseIcon (BaseName, &Image);
             MY_FREE_POOL(BaseName);
-        }
-    }
 
-    // Try again with 'os_' if that fails,
-    // BootLogo was set, but not 'LoadCustom'.
-    if (!LoadCustom && BootLogo && Image == NULL) {
-        BaseName = PoolPrint (L"os_%s", FallbackIconName);
+            if (Image != NULL) {
+                OurId = BASE_OS_ICON_UNKNOWN;
 
-        if (GlobalConfig.HelpIcon) {
-            for (Index2 = 0; Index2 < BASE_OS_ICON_COUNT; Index2++) {
-                Image = LoadIndexedIcon (BaseName, Index2);
-                if (Image != NULL) {
-                    OurId = (Index2 < BASE_OS_ICON_COUNT)
-                        ? Index2 : (BASE_OS_ICON_COUNT - 1);
-
-                    break;
-                }
-            } // for
-        }
-
-        UpdateBaseIcon (BaseName, &Image);
-        MY_FREE_POOL(BaseName);
-
-        // Try 'os_win' if that fails and 'WinAltIcon' is set.
-        if (Image == NULL && WinAltIcon) {
-            if (GlobalConfig.HelpIcon) {
-                for (Index2 = 0; Index2 < BASE_OS_ICON_COUNT; Index2++) {
-                    Image = LoadIndexedIcon (L"os_win", Index2);
-                    if (Image != NULL) {
-                        OurId = (Index2 < BASE_OS_ICON_COUNT)
-                            ? Index2 : (BASE_OS_ICON_COUNT - 1);
-
-                        break;
-                    }
-                } // for
+                break;
             }
-
-            UpdateBaseIcon (L"os_win", &Image);
-        }
-    }
-
-    // Try again with the "unknown" icon specifically if that fails.
-    // Only if BootLogo is *NOT* set ... No "unknown" BootLogo icon.
-    if (!BootLogo     &&
-        Image == NULL &&
-        !MyStriCmp (FallbackIconName, L"unknown")
-    ) {
-        BaseName = StrDuplicate (L"os_unknown");
-
-        if (GlobalConfig.HelpIcon) {
-            Image = LoadIndexedIcon (BaseName, BASE_OS_ICON_UNKNOWN);
         }
 
-        UpdateBaseIcon (BaseName, &Image);
-        MY_FREE_POOL(BaseName);
-
-        if (Image != NULL) {
-            OurId = BASE_OS_ICON_UNKNOWN;
-        }
-    }
-
-    // Use the "dummy" image if still fails and BootLogo is *NOT* set.
-    if (!BootLogo && Image == NULL) {
+        /* Use "dummy" image. */
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_LINE_NORMAL, L"Set Dummy Image");
         #endif
 
         if (GlobalConfig.HelpIcon) {
-            Image = LoadIndexedIcon (NULL, BASE_OS_ICON_DUMMY);
+            Image = LoadIndexedIcon (
+                NULL, BASE_OS_ICON_DUMMY
+            );
         }
 
         if (Image == NULL) {
-            Image = DummyImageEx (GlobalConfig.IconSizes[ICON_SIZE_BIG]);
+            Image = DummyImageEx (
+                GlobalConfig.IconSizes[ICON_SIZE_BIG]
+            );
         }
 
         if (Image != NULL) {
             OurId = BASE_OS_ICON_DUMMY;
         }
-    }
+    } while (0); // This 'loop' only runs once
 
-    // Return NULL if all failed.
-    if (Image == NULL) {
-        return NULL;
-    }
-
-    // Cache the image if appropriate and not BootLogo.
-    if (GlobalConfig.HelpIcon && !BootLogo) {
-        if (OurId >= 0 && TableBuiltinIconOS[OurId].Image == NULL) {
-            TableBuiltinIconOS[OurId].Image = Image;
-        }
+    // Cache the image if appropriate.
+    if (!BootLogo             &&
+        OurId >= 0            &&
+        Image != NULL         &&
+        GlobalConfig.HelpIcon &&
+        TableBuiltinIconOS[OurId].Image == NULL
+    ) {
+        TableBuiltinIconOS[OurId].Image = Image;
     }
 
     return egCopyImage (Image);

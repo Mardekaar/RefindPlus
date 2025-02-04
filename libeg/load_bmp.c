@@ -33,48 +33,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+ * Modified for RefindPlus
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
+ *
+ * Modifications distributed under the MIT License.
+ */
 
 #include "libegint.h"
 
 // BMP structures
-
 #ifdef __MAKEWITH_GNUEFI
-#pragma pack(1)
-
-typedef struct {
-    UINT8   Blue;
-    UINT8   Green;
-    UINT8   Red;
-    UINT8   Reserved;
-} BMP_COLOR_MAP;
-
-typedef struct {
-    CHAR8         CharB;
-    CHAR8         CharM;
-    UINT32        Size;
-    UINT16        Reserved[2];
-    UINT32        ImageOffset;
-    UINT32        HeaderSize;
-    UINT32        PixelWidth;
-    UINT32        PixelHeight;
-    UINT16        Planes;       // Must be 1
-    UINT16        BitPerPixel;  // 1, 4, 8, or 24
-    UINT32        CompressionType;
-    UINT32        ImageSize;    // Compressed image size in bytes
-    UINT32        XPixelsPerMeter;
-    UINT32        YPixelsPerMeter;
-    UINT32        NumberOfColors;
-    UINT32        ImportantColors;
-} BMP_IMAGE_HEADER;
-
-#pragma pack()
+#include "../include/Bmp.h"
 #endif
 
-//
-// Load BMP image
-//
-
-EG_IMAGE * egDecodeBMP(
+/* Load BMP image */
+EG_IMAGE * egDecodeBMP (
     IN UINT8   *FileData,
     IN UINTN    FileDataLength,
     IN UINTN    IconSize,
@@ -92,19 +66,31 @@ EG_IMAGE * egDecodeBMP(
     BMP_COLOR_MAP       *BmpColorMap;
     BMP_IMAGE_HEADER    *BmpHeader;
 
-    // read and check header
-    if (FileDataLength < sizeof (BMP_IMAGE_HEADER) || FileData == NULL)
+    // Read and check header
+    if (FileData == NULL ||
+        FileDataLength < sizeof (BMP_IMAGE_HEADER)
+    ) {
         return NULL;
-    BmpHeader = (BMP_IMAGE_HEADER *) FileData;
-    if (BmpHeader->CharB != 'B' || BmpHeader->CharM != 'M')
-        return NULL;
-    if (BmpHeader->CompressionType != 0)
-        return NULL;
-    if (BmpHeader->BitPerPixel != 1 && BmpHeader->BitPerPixel != 4 &&
-        BmpHeader->BitPerPixel != 8 && BmpHeader->BitPerPixel != 24)
-        return NULL;
+    }
 
-    // calculate parameters
+    BmpHeader = (BMP_IMAGE_HEADER *) FileData;
+    if (BmpHeader->CharB != 'B' ||
+        BmpHeader->CharM != 'M'
+    ) {
+        return NULL;
+    }
+
+    if (BmpHeader->CompressionType != 0) {
+        return NULL;
+    }
+
+    if (BmpHeader->BitPerPixel != 1 && BmpHeader->BitPerPixel != 4 &&
+        BmpHeader->BitPerPixel != 8 && BmpHeader->BitPerPixel != 24
+    ) {
+        return NULL;
+    }
+
+    // Calculate parameters
     ImageLineOffset = BmpHeader->PixelWidth;
     if (BmpHeader->BitPerPixel == 24) {
         ImageLineOffset *= 3;
@@ -120,21 +106,21 @@ EG_IMAGE * egDecodeBMP(
         ImageLineOffset = ImageLineOffset + (4 - (ImageLineOffset % 4));
     }
 
-    // check bounds
+    // Check bounds
     if (BmpHeader->ImageOffset + ImageLineOffset * BmpHeader->PixelHeight > FileDataLength) {
         return NULL;
     }
 
-    // allocate image structure and buffer
+    // Allocate image structure and buffer
     NewImage = egCreateImage(BmpHeader->PixelWidth, BmpHeader->PixelHeight, WantAlpha);
     if (NewImage == NULL) {
         return NULL;
     }
-    AlphaValue = WantAlpha ? 255 : 0;
 
     ImageValue = 0;
+    AlphaValue = WantAlpha ? 255 : 0;
 
-    // convert image
+    // Convert image
     BmpColorMap = (BMP_COLOR_MAP *)(FileData + sizeof (BMP_IMAGE_HEADER));
     ImagePtrBase = FileData + BmpHeader->ImageOffset;
     for (y = 0; y < BmpHeader->PixelHeight; y++) {
@@ -143,7 +129,6 @@ EG_IMAGE * egDecodeBMP(
         PixelPtr = NewImage->PixelData + (BmpHeader->PixelHeight - 1 - y) * BmpHeader->PixelWidth;
 
         switch (BmpHeader->BitPerPixel) {
-
             case 1:
                 for (x = 0; x < BmpHeader->PixelWidth; x++) {
                     BitIndex = x & 0x07;
@@ -157,7 +142,7 @@ EG_IMAGE * egDecodeBMP(
                     PixelPtr->r = BmpColorMap[Index].Red;
                     PixelPtr->a = AlphaValue;
                     PixelPtr++;
-                }
+                } // for
                 break;
 
             case 4:
@@ -177,7 +162,7 @@ EG_IMAGE * egDecodeBMP(
                     PixelPtr->r = BmpColorMap[Index].Red;
                     PixelPtr->a = AlphaValue;
                     PixelPtr++;
-                }
+                } // for
                 if (x < BmpHeader->PixelWidth) {
                     ImageValue = *ImagePtr++;
 
@@ -198,7 +183,7 @@ EG_IMAGE * egDecodeBMP(
                     PixelPtr->r = BmpColorMap[Index].Red;
                     PixelPtr->a = AlphaValue;
                     PixelPtr++;
-                }
+                } // for
                 break;
 
             case 24:
@@ -208,20 +193,16 @@ EG_IMAGE * egDecodeBMP(
                     PixelPtr->r = *ImagePtr++;
                     PixelPtr->a = AlphaValue;
                     PixelPtr++;
-                }
+                } // for
                 break;
-
         }
     }
 
     return NewImage;
-}
+} // EG_IMAGE * egDecodeBMP()
 
-//
-// Save BMP image
-//
-
-VOID egEncodeBMP(
+/* Save BMP image */
+VOID egEncodeBMP (
     IN EG_IMAGE  *Image,
     OUT UINT8   **FileDataReturn,
     OUT UINTN    *FileDataLengthReturn
@@ -239,7 +220,7 @@ VOID egEncodeBMP(
     if ((ImageLineOffset % 4) != 0)
         ImageLineOffset = ImageLineOffset + (4 - (ImageLineOffset % 4));
 
-    // allocate buffer for file data
+    // Allocate buffer for file data
     FileDataLength = sizeof (BMP_IMAGE_HEADER) + Image->Height * ImageLineOffset;
     FileData = AllocateZeroPool(FileDataLength);
     if (FileData == NULL) {
@@ -249,14 +230,14 @@ VOID egEncodeBMP(
         return;
     }
 
-    // fill header
+    // Fill header
     BmpHeader = (BMP_IMAGE_HEADER *) FileData;
     BmpHeader->CharB = 'B';
     BmpHeader->CharM = 'M';
-    BmpHeader->Size = FileDataLength;
+    BmpHeader->Size  = FileDataLength;
     BmpHeader->ImageOffset = sizeof (BMP_IMAGE_HEADER);
-    BmpHeader->HeaderSize = 40;
-    BmpHeader->PixelWidth = Image->Width;
+    BmpHeader->HeaderSize  = 40;
+    BmpHeader->PixelWidth  = Image->Width;
     BmpHeader->PixelHeight = Image->Height;
     BmpHeader->Planes = 1;
     BmpHeader->BitPerPixel = 24;
@@ -264,7 +245,7 @@ VOID egEncodeBMP(
     BmpHeader->XPixelsPerMeter = 0xb13;
     BmpHeader->YPixelsPerMeter = 0xb13;
 
-    // fill pixel buffer
+    // Fill pixel buffer
     ImagePtrBase = FileData + BmpHeader->ImageOffset;
     for (y = 0; y < Image->Height; y++) {
         ImagePtr = ImagePtrBase;
@@ -281,6 +262,4 @@ VOID egEncodeBMP(
 
     *FileDataReturn = FileData;
     *FileDataLengthReturn = FileDataLength;
-}
-
-/* EOF */
+} // VOID egEncodeBMP()

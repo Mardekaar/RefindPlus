@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 /**
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
 **/
@@ -50,103 +50,87 @@ EFI_STATUS BdsLibConnectDevicePath (
     IN EFI_DEVICE_PATH_PROTOCOL  *DevicePathToConnect
 ) {
     EFI_STATUS                 Status;
-    EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-    EFI_DEVICE_PATH_PROTOCOL  *CopyOfDevicePath;
+    UINTN                      Size;
     EFI_DEVICE_PATH_PROTOCOL  *Instance;
     EFI_DEVICE_PATH_PROTOCOL  *RemainingDevicePath;
+    EFI_DEVICE_PATH_PROTOCOL  *CopyOfDevicePath;
+    EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
     EFI_DEVICE_PATH_PROTOCOL  *Next;
     EFI_HANDLE                 Handle;
     EFI_HANDLE                 PreviousHandle;
-    UINTN                      Size;
+
 
     if (DevicePathToConnect == NULL) {
         return EFI_SUCCESS;
     }
 
+    // Freed later via CopyOfDevicePath if not NULL
     DevicePath = DuplicateDevicePath (DevicePathToConnect);
-
+    CopyOfDevicePath = DevicePath;
     if (DevicePath == NULL) {
         return EFI_OUT_OF_RESOURCES;
     }
 
-    CopyOfDevicePath = DevicePath;
-
     do {
-        // The outer loop handles multi instance device paths.
-        // Only console variables contain multiple instance device paths.
+        // The outer loop handles multi-instance device paths.
+        // Only console variables contain multi-instance paths.
         //
-        // After this call DevicePath points to the next Instance
-        Instance  = GetNextDevicePathInstance (&DevicePath, &Size);
-
+        // After this call, DevicePath points to the next instance
+        Instance = GetNextDevicePathInstance (&DevicePath, &Size);
         if (Instance == NULL) {
-            MY_FREE_POOL(CopyOfDevicePath);
+            Status = EFI_OUT_OF_RESOURCES;
 
-            return EFI_OUT_OF_RESOURCES;
+            break;
         }
 
         Next = Instance;
-
         while (!IsDevicePathEndType (Next)) {
             Next = NextDevicePathNode (Next);
         }
-
         SetDevicePathEndNode (Next);
 
-        // Start the real work of connect with RemainingDevicePath
         PreviousHandle = NULL;
-
-        do {
-            // Find the handle that best matches the Device Path. If it is only a
-            // partial match the remaining part of the device path is returned in
-            // RemainingDevicePath.
+        while (!IsDevicePathEnd (RemainingDevicePath)) {
+            // Loops until RemainingDevicePath is an empty device path
+            //
+            // Find the handle that best matches the device path.
+            // If only partial match, the remaining part of the
+            // device path is returned in RemainingDevicePath.
             RemainingDevicePath = Instance;
 
             Status = REFIT_CALL_3_WRAPPER(
                 gBS->LocateDevicePath, &EfiDevicePathProtocolGuid,
                 &RemainingDevicePath, &Handle
             );
-            if (!EFI_ERROR(Status)) {
-#ifdef __MAKEWITH_TIANO
-                if (Handle == PreviousHandle) {
-                    // If no forward progress is made try invoking the Dispatcher.
-                    // A new FV may have been added to the system an new drivers
-                    // may now be found.
-                    // EFI_SUCCESS means a driver was dispatched
-                    // EFI_NOT_FOUND means no new drivers were dispatched
-                    Status = (gDS != NULL) ? gDS->Dispatch() : EFI_NOT_FOUND;
-                }
-#endif
+            if (EFI_ERROR(Status)) continue;
 
-                if (!EFI_ERROR(Status)) {
-                    PreviousHandle = Handle;
-                    // Connect all drivers that apply to Handle and RemainingDevicePath,
-                    // the Recursive flag is FALSE so only one level will be expanded.
-                    //
-                    // Do not check the connect status here, if the connect controller fail,
-                    // then still give the chance to do dispatch, because partial
-                    // RemainingDevicepath may be in the new FV
-                    //
-                    // 1. If the connect fails, RemainingDevicepath and handle will not
-                    //    change, so next time,  do the dispatch, then the dispatch's status
-                    //    will take effect
-                    // 2. If the connect succeds, the RemainingDevicepath and handle will
-                    //    change, then avoid the dispatch, and we have a chance to continue the
-                    //    next connection
-                    REFIT_CALL_4_WRAPPER(
-                        gBS->ConnectController, Handle,
-                        NULL, RemainingDevicePath, FALSE
-                    );
-                }
+            if (Handle == PreviousHandle) {
+                // If no forward progress is made, try invoking the Dispatcher.
+                // A new FV may have been added and new drivers may be found.
+                // EFI_SUCCESS status if drivers were dispatched.
+                // EFI_NOT_FOUND status if drivers were not dispatched.
+                Status = (gDS != NULL) ? gDS->Dispatch() : EFI_NOT_FOUND;
+                if (EFI_ERROR(Status)) continue;
             }
-            // Loop until RemainingDevicePath is an empty device path
-        } while (!EFI_ERROR(Status) && !IsDevicePathEnd (RemainingDevicePath));
+
+            // Connect all drivers that apply to Handle and RemainingDevicePath,
+            // the "Recursive" flag is FALSE so only one level will be expanded.
+            //
+            // Do not check the connect status here.
+            // 1. If connection fails, "RemainingDevicepath" and "Handle" will
+            //    not change. Run Dispatcher and adopt dispatch status.
+            // 2. If connection works, "RemainingDevicepath" and "Handle" will
+            //    change. Avoid dispatch and continue to next connection.
+            PreviousHandle = Handle;
+            REFIT_CALL_4_WRAPPER(
+                gBS->ConnectController, Handle,
+                NULL, RemainingDevicePath, FALSE
+            );
+        } // while
     } while (DevicePath != NULL);
 
-    if (CopyOfDevicePath != NULL) {
-        MY_FREE_POOL(CopyOfDevicePath);
-    }
+    MY_FREE_POOL(CopyOfDevicePath);
 
-    // All handles with DevicePath exists in the handle database
     return Status;
 } // EFI_STATUS BdsLibConnectDevicePath()
 

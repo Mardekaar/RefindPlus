@@ -6,7 +6,7 @@
  */
  /**
   * Modified for RefindPlus
-  * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+  * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
   *
   * THIS PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
   * WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
@@ -66,7 +66,7 @@ CHAR16 * GetAltMonth (VOID) {
     } // switch
 
     return AltMonth;
-} // CHAR16 * GetAltMonth()
+} // static CHAR16 * GetAltMonth()
 
 static
 CHAR16 * GetAltHour (VOID) {
@@ -100,7 +100,7 @@ CHAR16 * GetAltHour (VOID) {
     } // switch
 
     return AltHour;
-} // CHAR16 * GetAltHour()
+} // static CHAR16 * GetAltHour()
 
 static
 CHAR16 * GetDateString (VOID) {
@@ -126,29 +126,14 @@ CHAR16 * GetDateString (VOID) {
     );
 
     return DateStr;
-} // CHAR16 * GetDateString()
+} // static CHAR16 * GetDateString()
 
 static
-EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
+EFI_FILE_PROTOCOL * OpenLogFile (VOID) {
     EFI_STATUS                    Status;
     CHAR16                       *DateStr;
     EFI_FILE_PROTOCOL            *LogProtocol;
-    EFI_LOADED_IMAGE_PROTOCOL    *LoadedImage;
 
-    // DA-TAG: Always get 'LoadedImage->DeviceHandle' each time
-    //         That is, do not use static
-    Status = REFIT_CALL_3_WRAPPER(
-        gBS->HandleProtocol, gImageHandle,
-        &gEfiLoadedImageProtocolGuid, (VOID **) &LoadedImage
-    );
-    if (EFI_ERROR(Status) || LoadedImage->DeviceHandle == NULL) {
-        return NULL;
-    }
-
-    // DA-TAG: Always get 'mRootDir' each time
-    //
-    // Get mRootDir from the device we are loaded from
-    mRootDir = EfiLibOpenRoot (LoadedImage->DeviceHandle);
     if (mRootDir == NULL) {
         return NULL;
     }
@@ -174,28 +159,40 @@ EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
         );
     }
 
+    // DA-TAG: Do not set 'mRootDir' to NULL here
+    //         May be used in caller when 'LogProtocol' is not NULL
+    return LogProtocol;
+} // static EFI_FILE_PROTOCOL * OpenLogFile()
+
+static
+EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
+    EFI_STATUS                    Status;
+    EFI_FILE_PROTOCOL            *LogProtocol;
+    EFI_LOADED_IMAGE_PROTOCOL    *LoadedImage;
+
+    // DA-TAG: Always get 'LoadedImage->DeviceHandle' each time
+    //         That is, do not use static
+    Status = REFIT_CALL_3_WRAPPER(
+        gBS->HandleProtocol, gImageHandle,
+        &gEfiLoadedImageProtocolGuid, (VOID **) &LoadedImage
+    );
+    if (EFI_ERROR(Status) || LoadedImage->DeviceHandle == NULL) {
+        return NULL;
+    }
+
+    // DA-TAG: Always get 'mRootDir' each time
+    //
+    // Get mRootDir from the device we are loaded from
+    mRootDir = EfiLibOpenRoot (LoadedImage->DeviceHandle);
+
+    LogProtocol = OpenLogFile();
     Status = REFIT_CALL_1_WRAPPER(mRootDir->Close, mRootDir);
     if (EFI_ERROR(Status)) {
         // Try on first EFI partition
         mRootDir = NULL;
         Status = egFindESP (&mRootDir);
         if (!EFI_ERROR(Status)) {
-            // Try to locate log file
-            Status = REFIT_CALL_5_WRAPPER(
-                mRootDir->Open, mRootDir,
-                &LogProtocol, mDebugLog,
-                RefitReadWrite, 0
-            );
-
-            // Try to create log file if not found
-            if (Status == EFI_NOT_FOUND) {
-                REFIT_CALL_5_WRAPPER(
-                    mRootDir->Open, mRootDir,
-                    &LogProtocol, mDebugLog,
-                    RefitReadWriteCreate, 0
-                );
-            }
-
+            LogProtocol = OpenLogFile();
             Status = REFIT_CALL_1_WRAPPER(mRootDir->Close, mRootDir);
         }
 

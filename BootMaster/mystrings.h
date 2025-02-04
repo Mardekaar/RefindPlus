@@ -24,7 +24,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -87,7 +87,6 @@ BOOLEAN IsStriStr (
     IN CHAR16 *SmallStr
 );
 
-CHAR16 * GetTimeString (VOID);
 CHAR16 * FindNumbers (IN CHAR16 *InString);
 CHAR16 * GuidAsString (EFI_GUID *GuidData);
 CHAR16 * SanitiseString (CHAR16 *InString);

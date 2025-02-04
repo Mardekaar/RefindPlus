@@ -41,7 +41,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  * Portions Copyright (c) 2021 Joe van Tunen (joevt@shaw.ca)
  *
  * Modifications distributed under the preceding terms.
@@ -136,8 +136,8 @@ VOID LogExit (
     IN  CHAR16     *ChosenOptionTitle
 ) {
     ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Returned '%d' (%s) in '%a' Function from the \"%s\" Option in Menu Screen",
-        MenuExit, MenuExitInfo (MenuExit), FunctionName, ChosenOptionTitle
+        L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+        MenuExit, MenuExitInfo (MenuExit), ChosenOptionTitle, FunctionName
     );
 }
 #endif
@@ -1705,7 +1705,10 @@ static
 VOID HideTag (
     REFIT_MENU_ENTRY *ChosenOption
 ) {
+    #if REFIT_DEBUG > 0
     CHAR16            *NoChanges;
+    #endif
+
     UINTN              TagFlag;
     LOADER_ENTRY      *Loader;
     LEGACY_ENTRY      *LegacyLoader;
@@ -1728,7 +1731,6 @@ VOID HideTag (
     HideTagMenu->Hint2 = StrDuplicate (RETURN_MAIN_SCREEN_HINT);
 
     TagFlag      = 0;
-    NoChanges    = L"No Changes Made on Hide Entry Call";
     LegacyLoader = (LEGACY_ENTRY *) ChosenOption;
     Loader       = (LOADER_ENTRY *) ChosenOption;
 
@@ -1859,6 +1861,7 @@ VOID HideTag (
     }
     else if (TagFlag == 2) {
         #if REFIT_DEBUG > 0
+        NoChanges = L"No Changes Made on Hide Entry Call";
         LOG_MSG("INFO: %s:- '%s'", NoChanges, HideTagMenu->Title);
         LOG_MSG("\n\n");
         ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", NoChanges);
@@ -1927,7 +1930,7 @@ VOID FreeLoaderEntry (
     LOG_SEP(L"X");
 } // static VOID FreeLoaderEntry()
 
-// Returns a constant ... do not free
+// Returns a constant ... Do *NOT* Free
 CHAR16 * MenuExitInfo (
     IN UINTN MenuExit
 ) {
@@ -4124,8 +4127,8 @@ UINTN RunMainMenu (
                 BREAD_CRUMB(L"%a:  9a 3a 1b 2", __func__);
                 #if REFIT_DEBUG > 0
                 ALT_LOG(1, LOG_LINE_NORMAL,
-                    L"Returned '%d' (%s) in '%a' Function from DrawMenuScreen Call on SubScreen",
-                    MenuExit, MenuExitInfo (MenuExit), __func__
+                    L"Returned '%d' (%s) from Sub Screen \"%s\" Option in Function:- '%a'",
+                    MenuExit, MenuExitInfo (MenuExit), TempChosenOption->Title, __func__
                 );
                 #endif
 

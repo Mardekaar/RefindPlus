@@ -143,43 +143,42 @@ extern const  UINT32  _gPcd_FixedAtBuild_PcdUefiLibMaxPrintBufferSize;
 EFI_STATUS
 EFIAPI
 UefiBootServicesTableLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  );
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
+);
 
 EFI_STATUS
 EFIAPI
 UefiRuntimeServicesTableLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  );
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
+);
 
 EFI_STATUS
 EFIAPI
 UefiLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  );
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
+);
 
 
 VOID
 EFIAPI
 ProcessLibraryConstructorList (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
-{
-  EFI_STATUS  Status;
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
+) {
+    ASSERT_EFI_ERROR (
+        UefiBootServicesTableLibConstructor (ImageHandle, SystemTable)
+    );
 
-  Status = UefiBootServicesTableLibConstructor (ImageHandle, SystemTable);
-  ASSERT_EFI_ERROR (Status);
+    ASSERT_EFI_ERROR (
+        UefiRuntimeServicesTableLibConstructor (ImageHandle, SystemTable)
+    );
 
-  Status = UefiRuntimeServicesTableLibConstructor (ImageHandle, SystemTable);
-  ASSERT_EFI_ERROR (Status);
-
-  Status = UefiLibConstructor (ImageHandle, SystemTable);
-  ASSERT_EFI_ERROR (Status);
-
+    ASSERT_EFI_ERROR (
+        UefiLibConstructor (ImageHandle, SystemTable)
+    );
 }
 
 
@@ -187,10 +186,9 @@ ProcessLibraryConstructorList (
 VOID
 EFIAPI
 ProcessLibraryDestructorList (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
-{
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
+) {
 
 }
 
@@ -202,24 +200,21 @@ const UINT32 _gDxeRevision = 0x00000000U;
 EFI_STATUS
 EFIAPI
 ProcessModuleEntryPointList (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
-
-{
-  return fsw_efi_main (ImageHandle, SystemTable);
+    IN EFI_HANDLE         ImageHandle,
+    IN EFI_SYSTEM_TABLE  *SystemTable
+) {
+    return fsw_efi_main (ImageHandle, SystemTable);
 }
 
 VOID
 EFIAPI
 ExitDriver (
-  IN EFI_STATUS  Status
-  )
-{
-  if (EFI_ERROR (Status)) {
-    ProcessLibraryDestructorList (gImageHandle, gST);
-  }
-  gBS->Exit (gImageHandle, Status, 0, NULL);
+    IN EFI_STATUS  Status
+) {
+    if (EFI_ERROR (Status)) {
+        ProcessLibraryDestructorList (gImageHandle, gST);
+    }
+    gBS->Exit (gImageHandle, Status, 0, NULL);
 }
 
 GLOBAL_REMOVE_IF_UNREFERENCED const UINT8 _gDriverUnloadImageCount = 0U;
@@ -227,8 +222,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED const UINT8 _gDriverUnloadImageCount = 0U;
 EFI_STATUS
 EFIAPI
 ProcessModuleUnloadList (
-  IN EFI_HANDLE        ImageHandle
-  )
-{
-  return EFI_SUCCESS;
+    IN EFI_HANDLE        ImageHandle
+) {
+    return EFI_SUCCESS;
 }

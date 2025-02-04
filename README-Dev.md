@@ -18,16 +18,17 @@ A Boot Manager for Mac and PC
 
 ## Overview
 
-RefindPlus builds on _`rEFInd`_ to extend its functionality with enhancements and fixes that include several Apple Mac and UEFI-PC related items that may be of interest to anyone requiring a capable and flexible boot manager.
+RefindPlus builds on _`rEFInd`_ to extend its functionality with enhancements and fixes that include several Apple Mac and UEFI-PC related items that may be of interest to anyone requiring a capable boot manager.
 
 RefindPlus is particularly useful for those with additional configuration needs or that require advanced or otherwise non-typical options for running operating systems and uEFI utilities on Mac and PC.
 
 Some features:
 - Maintains feature and configuration parity with `Upstream v0.14.2` base.
+- Provides options to flag faulty RAM regions as unusable to extend useful life.
 - Provides protection against damage to vulnerable Mac nvRAM by UEFI Windows boot.
 - Provides mitigation against boot failures and related issues on T2/TPM chipped units.
-- Provides Pre-Boot Configuration Screen on units running GPUs without native EFI on Macs.
 - Emulates UEFI 2.x on EFI 1.x units to permit running UEFI 2.x utilities on such units.
+- Provides Pre-Boot Configuration Screen on units running GPUs without native EFI on Macs.
 - Extensive memory management improvements with associated speed and stability gains.
 - Provides improved text display support for languages that require unicode text.
 - Identifies and automatically handles `Ventoy` instances if present.
@@ -53,7 +54,7 @@ Some features:
 
 ## Installation
 
-[MyBootMgr](https://www.dakanji.com/creations/index.html) is recommended to automate installing RefindPlus when running Mac OS on Intel-based Macs. Alternatively, as the RefindPlus efi file can function as a drop-in replacement for the upstream efi file, the [rEFInd package](https://www.rodsbooks.com/refind/installing.html) can be installed first and its efi file replaced with the RefindPlus efi file (Ensure the RefindPlus efi file is renamed to match). This manual process allows installing RefindPlus on other operating systems supported upstream.
+[MyBootMgr](https://www.dakanji.com/creations/index.html) is recommended to automate installing RefindPlus when running Mac OS on Intel-based Macs. Alternatively, as the RefindPlus efi file can function as a drop-in replacement for the upstream efi file, the [rEFInd package](https://www.rodsbooks.com/refind/installing.html) can be installed first and its efi file replaced with the RefindPlus efi file (Rename RefindPlus file to match). This allows installing RefindPlus on other compatible operating systems supported upstream. See `UEFI Secure Boot` under the [Divergence Section](https://github.com/dakanji/RefindPlus#divergence) for how to enable this if required.
 
 > [!NOTE]
 >
@@ -69,13 +70,13 @@ RefindPlus will function with the upstream configuration file, `refind.conf`, bu
 
 > [!TIP]
 >
-> RefindPlus-specific options can also be simply added to upstream configuration files.
+> RefindPlus-specific options can also simply be added to upstream configuration files.
 
 When run without activating RefindPlus-specific configuration options, as will be the case with unmodified upstream configuration files, a RefindPlus run will be equivalent to running the upstream version it is based on. That is, the additional options provided in RefindPlus must be actively enabled if they are required.
 
 > [!NOTE]
 >
-> This equivalence is subject to a few divergent items as outlined under the [Divergence Section](https://github.com/dakanji/RefindPlus#divergence) below.
+> This equivalence is subject to some differences such as outlined under the [Divergence Section](https://github.com/dakanji/RefindPlus#divergence) below.
 
 ## Additional Functionality
 
@@ -147,52 +148,58 @@ In addition to the new functionality listed above, the following upstream tokens
 - **"csr_values":** A value of `0` can be set as the `Enabled` value to allow `Over The Air` (OTA) updates when running Mac OS 11.x (Big Sur), or later, with SIP enabled.
   - This is equivalent to activating the `csr_normalise` token.
 - **"log_level":** Controls the native log format and an implementation of the upstream format.
-  - Only active on `DEBUG` and `NOOPT` builds while `RELEASE` builds remain optimised for day-to-day use.
-  - Level 0 does not switch logging off but activates the native summary format.
-  - Levels 1 and 2 output logs similar to the detailed upstream format.
-    - Level 1 is broadly equivalent to upstream Level 4 (upstream Levels 1 to 3 were dispensed with)
+  - Levels 0, 1, or 2 can be specified.
+    - Level 0 activates the native succinct log format.
+    - Level 1 is broadly equivalent to the verbose upstream Level 4 format (Upstream Levels 1 to 3 were dispensed with)
     - Level 2 is only exposed on `NOOPT` builds and outputs logs at a very detailed level
-      - Create `NOOPT` builds by passing `ALL` or `NPT` as a second parameter to the RefindPlus build script
+      - The RefindPlus build script will create `NOOPT` builds when passed `ALL` or `NPT` as a second parameter
         - Setting `ALL` includes an `NPT` build to the standard `REL` and `DBG` builds created
         - Setting `NPT` creates only that build type
           - Applies to setting `REL` or `DBG`
       - The first parameter is the build branch, which also needs to be specified in such instances
     - When Level 2 is not exposed, selected levels above `1` will be capped at Level 1
     - When exposed, selected levels above `2` will be capped at Level 2
-- **"resolution":** The `max` setting is redundant in RefindPlus which always defaults to the maximum available resolution whenever the resolution is not set or is otherwise not available.
+  - Logging is never active on `RELEASE` builds (day-to-day use).
+  - Logging is always active on `DEBUG` and `NOOPT` builds (trouble shooting).
+- **"resolution":** The `max` setting is redundant in RefindPlus, which always defaults to the maximum available resolution when a resolution is not specified or is not available for any other reason.
 - **"screensaver":** The screensaver cycles through a set of colours as opposed to a single grey colour.
 
 ## Divergence
 
 Significant visible implementation differences vis-a-vis the upstream base are:
+- **UEFI Secure Boot:** RefindPlus binaries are currently not signed for secure boot support and do not include the `Secure Boot Advanced Targeting (SBAT)` sections required by Shim v15.3/newer.
+  - > The process [outlined here](https://www.rodsbooks.com/refind/secureboot.html#installation) for signing self built upstream binaries can be followed to enable suport.
+  - > An adaptation of the process for RefindPlus is [provided here](https://github.com/dakanji/RefindPlus/discussions/190#discussioncomment-10130431). Modify for newer releases as required.
+  - > Refer to [this summation](https://forum.manjaro.org/t/howto-enable-secure-boot-with-refind/121403/6) for futher insight.
 - **GZipped Loaders:** RefindPlus only provides stub support for handling GZipped loaders as this is largely only relevant for units on the ARM architecture.
   - > This stub support is only used for debug logging in RefindPlus and can be activated using the same `support_gzipped_loaders` configuration token as upstream.
 - **Screenshots:** These are saved in the PNG format with a significantly smaller file size.
-  - > Additionally, the file naming is slightly different and the files are always saved to the same ESP as the RefindPlus efi file.
+  - > Additionally, the file naming is different and the files are always saved to the same ESP as the RefindPlus efi file.
 - **UI Flags:** RefindPlus requires that any desired previously set `hideui` configuration token options are explicitly defined in supplementary/theme configuration files; as whenever the token is found in such files, the token setting is reset by RefindPlus to the specified option(s). The upstream implementation effectively adds new settings to any previously existing ones for this configuration token instead.
   - > The RefindPlus implementation maintains consistency with how other configuration tokens are handled.
 - **UI Scaling:** WQHD monitors are correctly determined not to be HiDPI monitors and UI elements are not scaled up on such monitors when the RefindPlus-specific `scale_ui` configuration token is set to automatically detect the screen resolution. RefindPlus also takes vertically orientated screens into account and additionally scales UI elements down when low resolution screens (less than 1025px on the longest edge) are detected.
   - > Additionally, UI elements on extremely high resultion screens (greater than 5999px on the longest edge) receive a `4X scaling` as opposed to the `2X scaling` applied for standard HiDPI screens.
-- **Loader Icons:** RefindPlus defaults to preferring generic icons for loaders ahead of the slower to load custom icons where possible. The upstream icon search implementation involves only loading such icons after a search for custom icons has not turned anything up.
+- **Loader Icons:** RefindPlus prefers `os_windows` and `boot_windows` icon files, if present, over `os_win` and `boot_win` and the `win8` variants. Separately, RefindPlus defaults to preferring generic icons for loaders ahead of the slower to load custom icons where possible. The upstream icon search implementation involves only loading such icons after a search for custom icons has not turned anything up.
   - > Activate the RefindPlus-specific `decline_help_icon` configuration token to use the upstream icon search implementation instead of the RefindPlus default.
-- **GOP Driver Provision:** RefindPlus attempts to ensure that UEFI 2.x GOP drivers are available on EFI 1.x units by attempting to reload such drivers when it detects an absence of GOP on such units to permit the use of modern GPUs on legacy units.
+- **GOP Driver Provision:** RefindPlus attempts to ensure that UEFI 2.x GOP drivers are available on EFI 1.x units by attempting to reload such drivers when it detects an absence of GOP on such units to permit the use of modern GPUs on legacy units. This is done using an inbuilt `ReloadGOP` feature.
   - > Activate the RefindPlus-specific `disable_reload_gop` configuration token to switch this feature off.
 - **Apple Framebuffer Provision:** RefindPlus defaults to always providing Apple framebuffers on Macs, when not available under certain circumstances. This is done using an inbuilt `SetAppleFB` feature.
   - > Activate the RefindPlus-specific `disable_set_applefb` configuration token to switch this feature off.
 - **APFS Filesystem Provision:** RefindPlus defaults to always providing APFS Filesystem capability, when not available but is required, without a need to load an APFS driver. This is done using an inbuilt `SupplyAPFS` feature.
   - > Activate the RefindPlus-specific `disable_apfs_load` configuration token to switch this feature off.
-- **APFS PreBoot Volumes:** RefindPlus always synchronises APFS System and PreBoot partitions transparently such that the Preboot partitions of APFS volumes are always used to boot APFS formatted Mac OS. Hence, a single option for booting Mac OS on APFS volumes is presented in RefindPlus to provide maximum APFS compatibility.
+- **APFS PreBoot Volumes:** RefindPlus always synchronises APFS System and PreBoot partitions transparently such that the Preboot partitions of APFS volumes are always used to boot APFS formatted Mac OS. Hence, a single option for booting Mac OS on APFS volumes is presented in RefindPlus to provide maximum APFS compatibility. This is done using an inbuilt `SyncAPFS` feature.
   - > Activate the RefindPlus-specific `disable_apfs_sync` configuration token to switch this feature off.
-- **Mac nvRAM Protection:** RefindPlus always prevents UEFI Windows Secure Boot from saving certificates to Mac nvRAM as this can result in damage and an inability to boot. Blocking these certificates does not impact the operation of UEFI Windows on Macs. This filtering only happens when Mac firmware is detected and is not applied to other types of firmware.
+- **Mac nvRAM Protection:** RefindPlus always prevents UEFI Windows Secure Boot from saving certificates to Mac nvRAM as this can result in damage and, ultimately, an inability to boot anything on some Macs (Typically Pre 2013 Vintage). Blocking these certificates does not impact the operation of UEFI Windows on such Macs. This filtering only happens when Mac firmware is detected and is not applied to other types of firmware. This is done using an inbuilt `ProtectNVRAM` feature.
   - > Activate the RefindPlus-specific `disable_nvram_protect` configuration token to switch this feature off.
 - **Mac Legacy BIOS Boot:** RefindPlus originally assumed all Macs were capable of legacy BIOS boot based on code that went in upstream back in 2012 when this was a reasonable default. However, some later Intel Macs do not support legacy BIOS boot and RefindPlus now attempts to categorise Macs to enable/disable legacy boot accordingly.
   - > Activate the RefindPlus-specific `disable_legacy_sync` configuration token to base legacy BIOS boot availability on the old assumption.
 - **Secondary Configuration Files:** While the upstream documentation prohibits including tertiary configuration files from secondary configuration files, there is no mechanism enforcing this prohibition. Hence, tertiary, quaternary, quinary, and more, configuration files can in fact be included.
   - > The RefindPlus implementation enforces the limitation for inclusion to secondary configuration files.
 - **Shortcut Keys:** RefindPlus does not allocate shortcut keys based on the operating system type/name as there is no way of knowing what would actually be loaded in many cases.
-  - > Tools are not allocated shortcut keys with the exception of `Key A` allocated to `About Refindplus` and `Key Z` allocated to `System Shutdown`.
-  - > For loaders, keys are allocated based on display position in the order of `Key 1` to `Key Y`. Alphabetical Keys `I and O` are not used while Numeric Key `0` is reserved for internal use.
-- **Disabled Manual Stanzas:** The processing of a user configured boot stanza is halted, and the `Entry` object immediately discarded, once a `Disabled` setting is encountered. The outcome is the same as upstream, which always continues to create and return a fully built object in such cases to be discarded later. The approach adopted in RefindPlus allows for an optimised loading process particularly when such `Disabled` tokens are placed immediately after the `menuentry` line (see examples near the bottom of the `config.conf-sample-Dev` file).
+  - > Keys are allocated based on display position in the order of `Key 1` to `Key Z`.
+  - > Alphabetic `Keys I and O` are not used while Numeric `Key 0` is reserved for internal use.
+  - > Keys are not allocated to `Tools` apart from `Key A` for `About Refindplus` and `Key Z` for `System Shutdown`.
+- **Disabled Manual Stanzas:** The processing of a user configured boot stanza is halted, and the `Entry` object immediately discarded, once a `Disabled` setting is encountered. The outcome is the same as upstream, which always continues to create and return a fully built object that is later discarded in such cases. The approach adopted in RefindPlus allows for an optimised loading process particularly when such `Disabled` tokens are placed immediately after the `menuentry` line (see examples near the bottom of the `config.conf-sample` file).
   - > This also applies to `submenuentry` items which can be enabled or disabled separately.
 - **Pointer Device Priority:** The upstream implementation of pointer device priority is based on how the `enable_mouse` and `enable_touch` pointer device control tokens appear in the configuration file(s) when both are active. The last pointer device control token read in the main configuration file and/or any supplementary/override configuration file will be used and the other disregarded. In RefindPlus however, `enable_touch` always takes priority when both tokens are active without regard to the order of appearance in the configuration file(s).
   - > Hence, to use a mouse in RefindPlus, `enable_touch` must be disabled (default) in addition to enabling `enable_mouse`.

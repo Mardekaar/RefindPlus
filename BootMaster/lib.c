@@ -41,7 +41,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  * Portions Copyright (c) 2021 Joe van Tunen (joevt@shaw.ca)
  *
  * Modifications distributed under the preceding terms.
@@ -1090,8 +1090,7 @@ VOID AddListElement (
     }
     else if ((*ElementCount & 15) == 0) {
         if (*ElementCount == 0) {
-            // DA-TAG: Dereference *ListPtr ... Do not free
-            MY_SOFT_FREE(*ListPtr);
+            MY_SOFT_FREE(*ListPtr); // Do *NOT* Free ... Just dereferenced
 
             TmpListPtr = AllocatePool (AllocatePointer);
         }
@@ -1173,37 +1172,6 @@ VOID SanitiseVolumeName (
         (*Volume)->VolName = StrDuplicate (VolumeName);
     }
 } // VOID SanitiseVolumeName()
-
-// DA-TAG: Update UninitVolume() and ReinitVolume() if expanding this
-VOID FreeSyncVolumes (VOID) {
-    if (!GlobalConfig.SyncAPFS) {
-        return;
-    }
-
-    MY_FREE_POOL(RecoveryVolumesAPFS);
-    MY_FREE_POOL(RecoveryVolumesHFS );
-    MY_FREE_POOL(SkipApfsVolumes    );
-    MY_FREE_POOL(PreBootVolumes     );
-    MY_FREE_POOL(SystemVolumes      );
-    MY_FREE_POOL(DataVolumes        );
-
-    RecoveryVolumesAPFSCount      = 0;
-    RecoveryVolumesHFSCount       = 0;
-    SkipApfsVolumesCount          = 0;
-    PreBootVolumesCount           = 0;
-    SystemVolumesCount            = 0;
-    DataVolumesCount              = 0;
-} // VOID FreeSyncVolumes()
-
-VOID FreeVolumes (
-    IN OUT REFIT_VOLUME  ***ListVolumes,
-    IN OUT UINTN           *ListCount
-) {
-    if ((*ListCount > 0) && (**ListVolumes != NULL)) {
-        MY_FREE_POOL(*ListVolumes);
-        *ListCount = 0;
-    }
-} // VOID FreeVolumes()
 
 REFIT_VOLUME * CopyVolume (
     IN REFIT_VOLUME *VolumeToCopy
@@ -1288,6 +1256,40 @@ VOID FreeVolume (
     // Free whole volume
     MY_FREE_POOL(*Volume);
 } // VOID FreeVolume()
+
+// DA-TAG: Update UninitVolume() and ReinitVolume() if expanding this
+VOID FreeSyncVolumes (VOID) {
+    if (!GlobalConfig.SyncAPFS) {
+        return;
+    }
+
+    MY_FREE_POOL(RecoveryVolumesAPFS);
+    MY_FREE_POOL(RecoveryVolumesHFS );
+    MY_FREE_POOL(SkipApfsVolumes    );
+    MY_FREE_POOL(PreBootVolumes     );
+    MY_FREE_POOL(SystemVolumes      );
+    MY_FREE_POOL(DataVolumes        );
+
+    RecoveryVolumesAPFSCount      = 0;
+    RecoveryVolumesHFSCount       = 0;
+    SkipApfsVolumesCount          = 0;
+    PreBootVolumesCount           = 0;
+    SystemVolumesCount            = 0;
+    DataVolumesCount              = 0;
+} // VOID FreeSyncVolumes()
+
+static
+VOID FreeVolumes (VOID) {
+    UINTN i;
+
+
+    for (i = 0; i < VolumesCount; i++) {
+        FreeVolume (&Volumes[i]);
+    }
+
+    MY_FREE_POOL(Volumes);
+    VolumesCount = 0;
+} // static VOID FreeVolumes()
 
 // Return a pointer to a string containing a filesystem type name. If the
 // filesystem type is unknown, a blank (but non-null) string is returned.
@@ -2170,7 +2172,7 @@ CHAR16 * GetVolumeNameEx (
             FoundName = StrDuplicate (L"Unidentified HFS+ Partition");
         }
         else {
-            // 'FSTypeName' returns a constant ... Do not free 'TypeName'!
+            // Do *NOT* Free ... 'FSTypeName' returns a constant
             TypeName = FSTypeName (Volume);
 
             if (MyStriCmp (TypeName, L"APFS")) {
@@ -2846,40 +2848,49 @@ VOID VetSyncAPFS (VOID) {
     } // for
     #endif
 
-    // Filter '- Data' string tag out of Volume Group name if present
+    // Filter '- Data' string tag out of all Volume Group names if present
     for (i = 0; i < DataVolumesCount; i++) {
-        if (MyStrStr (DataVolumes[i]->VolName, L"- Data")) {
-            GotName = FALSE;
+        if (!MyStrEnds (L"- Data", DataVolumes[i]->VolName)) {
+            continue;
+        }
 
-            for (j = 0; j < SystemVolumesCount; j++) {
-                TweakName = SanitiseString (SystemVolumes[j]->VolName);
-                CheckName = PoolPrint (L"%s - Data", TweakName);
+        GotName = FALSE;
+        for (j = 0; j < SystemVolumesCount; j++) {
+            TweakName = SanitiseString (SystemVolumes[j]->VolName);
+            CheckName = PoolPrint (L"%s - Data", TweakName);
 
-                if (MyStriCmp (DataVolumes[i]->VolName, CheckName)) {
-                    GotName = TRUE;
-                    MY_FREE_POOL(DataVolumes[i]->VolName);
-                    DataVolumes[i]->VolName = StrDuplicate (SystemVolumes[j]->VolName);
-                }
-                else if (!MyStriCmp (SystemVolumes[j]->VolName, TweakName)) {
+            if (MyStriCmp (DataVolumes[i]->VolName, CheckName)) {
+                GotName = TRUE;
+            }
+            else {
+                if (!MyStriCmp (SystemVolumes[j]->VolName, TweakName)) {
                     // Check against raw name string if apporpriate
                     MY_FREE_POOL(CheckName);
-                    CheckName = PoolPrint (L"%s - Data", SystemVolumes[j]->VolName);
+                    CheckName = PoolPrint (
+                        L"%s - Data",
+                        SystemVolumes[j]->VolName
+                    );
 
                     if (MyStriCmp (DataVolumes[i]->VolName, CheckName)) {
                         GotName = TRUE;
-                        MY_FREE_POOL(DataVolumes[i]->VolName);
-                        DataVolumes[i]->VolName = StrDuplicate (SystemVolumes[j]->VolName);
                     }
                 }
+            }
 
-                MY_FREE_POOL(TweakName);
-                MY_FREE_POOL(CheckName);
+            MY_FREE_POOL(TweakName);
+            MY_FREE_POOL(CheckName);
 
-                if (GotName) {
-                    break;
-                }
-            } // for j = 0
-        }
+            if (GotName) {
+                MY_FREE_POOL(DataVolumes[i]->VolName);
+                DataVolumes[i]->VolName = StrDuplicate (
+                    SystemVolumes[j]->VolName
+                );
+
+                // DA_TAG: Only break here
+                //         Strip from all
+                break;
+            }
+        } // for j = 0
     } // for i = 0
 
     #if REFIT_DEBUG > 0
@@ -2988,10 +2999,7 @@ VOID ScanVolumes (VOID) {
 
     if (SelfVolRun) {
         // Clear Volume Lists if not scanning for Self Volume
-        FreeVolumes (
-            &Volumes,
-            &VolumesCount
-        );
+        FreeVolumes();
         FreeSyncVolumes();
         ForgetPartitionTables();
     }
@@ -3006,7 +3014,7 @@ VOID ScanVolumes (VOID) {
     if (EFI_ERROR(Status)) {
         #if REFIT_DEBUG > 0
         MsgStr = PoolPrint (
-            L"In ScanVolumes ... '%r' While Listing File Systems (Fatal Error)",
+            L"In ScanVolumes ... '%r' While Listing File Systems (*** FATAL ERROR ***)",
             Status
         );
         ALT_LOG(1, LOG_LINE_THIN_SEP, L"%s!!", MsgStr);
@@ -3221,7 +3229,7 @@ VOID ScanVolumes (VOID) {
         }
         #endif
 
-        // 'FSTypeName' returns a constant ... Do not free 'PartType'!
+        // Do *NOT* Free ... 'FSTypeName' returns a constant
         PartType = FSTypeName (Volume);
         if (MyStrEnds (L"(Assumed)", PartType)) {
             if (0);
@@ -3354,8 +3362,8 @@ VOID ScanVolumes (VOID) {
                 RoleStr = (MyStriCmp (Volume->VolName, L"System Reserved"))
                     ? L" * Part SysReserve (Win)"
                     : (MyStriCmp (Volume->VolName, L"NTFS Volume"))
-                        ? L" * Type Windows (Other)"
-                        : L" * Type Windows (Named)";
+                        ? L" * Type WinDrive (Other)"
+                        : L" * Type WinDrive (Named)";
             }
             else if (Volume->FSType == FS_TYPE_HFSPLUS) {
                 if (GuidsAreEqual (&GuidHFS, &(Volume->PartTypeGuid))) {
@@ -3833,25 +3841,21 @@ EFI_STATUS DirNextEntry (
 
                 break;
             }
-            else {
-                //BREAD_CRUMB(L"%a:  2a 3a 2b 1", __func__);
-                #if REFIT_DEBUG > 0
-                if (!FirstRun) {
-                    //BREAD_CRUMB(L"%a:  2a 3a 2b 1a 1", __func__);
-                    TmpMsg = L"NOT OK!!";
-                    ALT_LOG(1, LOG_LINE_NORMAL, L"%s", TmpMsg);
-                    LOG_MSG(":- '%s'", TmpMsg);
-                }
-                #endif
-                //BREAD_CRUMB(L"%a:  2a 3a 2b 2", __func__);
-            }
 
             //BREAD_CRUMB(L"%a:  2a 3a 3", __func__);
             #if REFIT_DEBUG > 0
+            if (!FirstRun) {
+                //BREAD_CRUMB(L"%a:  2a 3a 3a 1", __func__);
+                TmpMsg = L"NOT OK!!";
+                ALT_LOG(1, LOG_LINE_NORMAL, L"%s", TmpMsg);
+                LOG_MSG(":- '%s'", TmpMsg);
+            }
+
+            //BREAD_CRUMB(L"%a:  2a 3a 4", __func__);
             LOG_MSG("\n");
             #endif
             if (BufferSize <= LastBufferSize) {
-                //BREAD_CRUMB(L"%a:  2a 3a 3a 1", __func__);
+                //BREAD_CRUMB(L"%a:  2a 3a 4a 1", __func__);
                 #if REFIT_DEBUG > 0
                 MsgStr = PoolPrint (
                     L"Bad Filesystem Driver Buffer Size Request %d (was %d) ... Using %d Instead",
@@ -3867,7 +3871,7 @@ EFI_STATUS DirNextEntry (
                 BufferSize = LastBufferSize * 2;
             }
             else {
-                //BREAD_CRUMB(L"%a:  2a 3a 3b 1", __func__);
+                //BREAD_CRUMB(L"%a:  2a 3a 4b 1", __func__);
                 #if REFIT_DEBUG > 0
                 MsgStr = PoolPrint (
                     L"Resizing DirEntry Buffer from %d to %d Bytes",
@@ -3882,13 +3886,13 @@ EFI_STATUS DirNextEntry (
             FirstRun = FALSE;
             #endif
 
-            //BREAD_CRUMB(L"%a:  2a 3a 4", __func__);
+            //BREAD_CRUMB(L"%a:  2a 3a 5", __func__);
             Buffer = EfiReallocatePool (
                 Buffer, LastBufferSize, BufferSize
             );
             LastBufferSize = BufferSize;
 
-            //BREAD_CRUMB(L"%a:  2a 3a 5 - FOR LOOP:- END", __func__);
+            //BREAD_CRUMB(L"%a:  2a 3a 6 - FOR LOOP:- END", __func__);
             //LOG_SEP(L"X");
         } // for IterCount = 0
 
@@ -4547,7 +4551,7 @@ BOOLEAN FilenameIn (
     IN CHAR16       *List
 ) {
     UINTN      i;
-    CHAR16    *AnElement; // *DO NOT* Free
+    CHAR16    *AnElement; // Do *NOT* Free
     CHAR16    *OneElement;
     CHAR16    *TargetPath;
     CHAR16    *TargetVolName;

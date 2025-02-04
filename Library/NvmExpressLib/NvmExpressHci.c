@@ -8,7 +8,7 @@
 **/
 /**
  * Modified for RefindPlus
- * Copyright (c) 2021-2022 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2021-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
 **/
@@ -751,19 +751,19 @@ EFI_STATUS NvmeControllerInit (
         return EFI_UNSUPPORTED;
     }
 
-    Private->Cid[0] = 0;
-    Private->Cid[1] = 0;
-    Private->Cid[2] = 0;
-    Private->Pt[0]  = 0;
-    Private->Pt[1]  = 0;
-    Private->Pt[2]  = 0;
+    Private->Pt[0]         = 0;
+    Private->Pt[1]         = 0;
+    Private->Pt[2]         = 0;
+    Private->Cid[0]        = 0;
+    Private->Cid[1]        = 0;
+    Private->Cid[2]        = 0;
+    Private->AsyncSqHead   = 0;
     Private->SqTdbl[0].Sqt = 0;
     Private->SqTdbl[1].Sqt = 0;
     Private->SqTdbl[2].Sqt = 0;
     Private->CqHdbl[0].Cqh = 0;
     Private->CqHdbl[1].Cqh = 0;
     Private->CqHdbl[2].Cqh = 0;
-    Private->AsyncSqHead   = 0;
 
     Status = NvmeDisableController (Private);
 
@@ -772,10 +772,11 @@ EFI_STATUS NvmeControllerInit (
     }
 
     // set number of entries admin submission & completion queues.
-    Aqa.Asqs  = NVME_ASQ_SIZE;
     Aqa.Rsvd1 = 0;
-    Aqa.Acqs  = NVME_ACQ_SIZE;
     Aqa.Rsvd2 = 0;
+    Aqa.Asqs  = NVME_ASQ_SIZE;
+    Aqa.Acqs  = NVME_ACQ_SIZE;
+
 
     // Address of admin submission queue.
     Asq = (UINT64)(UINTN)(Private->BufferPciAddr) & ~0xFFF;
@@ -786,16 +787,16 @@ EFI_STATUS NvmeControllerInit (
     // Address of I/O submission & completion queue.
     ZeroMem (Private->Buffer, EFI_PAGES_TO_SIZE (6));
     Private->SqBuffer[0]        = (NVME_SQ *) (UINTN)(Private->Buffer);
-    Private->SqBufferPciAddr[0] = (NVME_SQ *) (UINTN)(Private->BufferPciAddr);
-    Private->CqBuffer[0]        = (NVME_CQ *) (UINTN)(Private->Buffer + 1 * EFI_PAGE_SIZE);
-    Private->CqBufferPciAddr[0] = (NVME_CQ *) (UINTN)(Private->BufferPciAddr + 1 * EFI_PAGE_SIZE);
     Private->SqBuffer[1]        = (NVME_SQ *) (UINTN)(Private->Buffer + 2 * EFI_PAGE_SIZE);
-    Private->SqBufferPciAddr[1] = (NVME_SQ *) (UINTN)(Private->BufferPciAddr + 2 * EFI_PAGE_SIZE);
-    Private->CqBuffer[1]        = (NVME_CQ *) (UINTN)(Private->Buffer + 3 * EFI_PAGE_SIZE);
-    Private->CqBufferPciAddr[1] = (NVME_CQ *) (UINTN)(Private->BufferPciAddr + 3 * EFI_PAGE_SIZE);
     Private->SqBuffer[2]        = (NVME_SQ *) (UINTN)(Private->Buffer + 4 * EFI_PAGE_SIZE);
-    Private->SqBufferPciAddr[2] = (NVME_SQ *) (UINTN)(Private->BufferPciAddr + 4 * EFI_PAGE_SIZE);
+    Private->CqBuffer[0]        = (NVME_CQ *) (UINTN)(Private->Buffer + 1 * EFI_PAGE_SIZE);
+    Private->CqBuffer[1]        = (NVME_CQ *) (UINTN)(Private->Buffer + 3 * EFI_PAGE_SIZE);
     Private->CqBuffer[2]        = (NVME_CQ *) (UINTN)(Private->Buffer + 5 * EFI_PAGE_SIZE);
+    Private->SqBufferPciAddr[0] = (NVME_SQ *) (UINTN)(Private->BufferPciAddr);
+    Private->SqBufferPciAddr[1] = (NVME_SQ *) (UINTN)(Private->BufferPciAddr + 2 * EFI_PAGE_SIZE);
+    Private->SqBufferPciAddr[2] = (NVME_SQ *) (UINTN)(Private->BufferPciAddr + 4 * EFI_PAGE_SIZE);
+    Private->CqBufferPciAddr[0] = (NVME_CQ *) (UINTN)(Private->BufferPciAddr + 1 * EFI_PAGE_SIZE);
+    Private->CqBufferPciAddr[1] = (NVME_CQ *) (UINTN)(Private->BufferPciAddr + 3 * EFI_PAGE_SIZE);
     Private->CqBufferPciAddr[2] = (NVME_CQ *) (UINTN)(Private->BufferPciAddr + 5 * EFI_PAGE_SIZE);
 
     // Program admin queue attributes.
@@ -846,12 +847,10 @@ EFI_STATUS NvmeControllerInit (
         gBS->CopyMem, Sn,
         Private->ControllerData->Sn, sizeof (Private->ControllerData->Sn)
     );
-    Sn[20] = 0;
     NVME_CALL_3_WRAPPER(
         gBS->CopyMem, Mn,
         Private->ControllerData->Mn, sizeof (Private->ControllerData->Mn)
     );
-    Mn[40] = 0;
 
     // Create two I/O completion queues.
     // One for blocking I/O, one for non-blocking I/O.

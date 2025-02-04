@@ -9,7 +9,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -23,7 +23,46 @@ BOOLEAN NestedStrStr = FALSE;
 
 
 /*
+ * Routine Description:
  *
+ *  Confirms FirstString is shorter than or equal to SecondString.
+ *
+ * Arguments:
+ *
+ *  String1  - Null-terminated string to check length of.
+ *  String2  - Null-terminated string to check against.
+ *
+ * Returns:
+ *  False if String1 is longer than String2 or
+ *  True if String1 is shorter than or equal to String2.
+ */
+static
+BOOLEAN IsValidStrComp (
+    IN CHAR16  *String1,
+    IN CHAR16  *String2
+) {
+    UINTN  Len1;
+    UINTN  Len2;
+
+    if (String1 == NULL ||
+        String2 == NULL
+    ) {
+        return FALSE;
+    }
+
+    Len1 = StrLen (String1);
+    Len2 = StrLen (String2);
+
+    if (Len1 > Len2) {
+        // String1 is longer than String2
+        return FALSE;
+    }
+
+    // String1 is shorter than or equal to String2
+    return TRUE;
+} // static BOOLEAN IsValidStrComp()
+
+/*
  * Routine Description:
  *
  *  Return the substring after a supplied delimiter.
@@ -76,14 +115,11 @@ CHAR16 * GetSubStrAfter (
     return Substring;
 } // CHAR16 * GetSubStrAfter()
 
-
 /*
- *
  * Routine Description:
  *
  *  Return the substring before a supplied delimiter.
- *  Note that the calling function is responsible for freeing
- *  the memory associated with the returned string pointer.
+ *  The calling function must free any memory allocated.
  *
  * Arguments:
  *
@@ -146,10 +182,10 @@ CHAR16 * GetSubStrBefore (
     return Result;
 } // CHAR16 * GetSubStrBefore()
 
-// Performs a case-insensitive string comparison. This function is necesary
-// because some EFIs have buggy StriCmp() functions that actually perform
-// case-sensitive comparisons.
-// Returns TRUE if strings are identical, FALSE otherwise.
+// Performs a case-insensitive string comparison.
+// This function is needed because some StriCmp()
+// implementations are atually case-sensitive.
+// Returns TRUE if strings are identical or FALSE.
 BOOLEAN MyStriCmp (
     IN CHAR16 *String1,
     IN CHAR16 *String2
@@ -169,82 +205,80 @@ BOOLEAN MyStriCmp (
 } // BOOLEAN MyStriCmp()
 
 // Checks whether String2 starts with String1
-// Returns TRUE on match; FALSE otherwise.
+// Returns TRUE on match or FALSE.
 BOOLEAN MyStrBegins (
     IN CHAR16 *String1,
     IN CHAR16 *String2
 ) {
-    UINTN i;
-    UINTN Len1;
-    UINTN Len2;
+    UINTN        i;
+    UINTN     Len1;
+    BOOLEAN IsGood;
 
-    if (String1 == NULL ||
-        String2 == NULL
-    ) {
+
+    // String1 cannot be longer than String2.
+    // In addition, neither can be NULL.
+    IsGood = IsValidStrComp (String1, String2);
+    if (!IsGood) {
         return FALSE;
     }
 
     Len1 = StrLen (String1);
-    Len2 = StrLen (String2);
 
-    // String1 cannot be longer than String2
-    if (Len1 > Len2) {
-        return FALSE;
-    }
-
+    // Compare from the start of each string
+    // 'IsGood' is curently 'TRUE'
     for (i = 0; i < Len1; i++) {
         if ((String1[i] & ~0x20) !=
             (String2[i] & ~0x20)
         ) {
             // Exit ... Mismatch found
-            return FALSE;
+            IsGood = FALSE;
+
+            break;
         }
     }
 
-    // String2 starts with String1
-    return TRUE;
+    return IsGood;
 } // BOOLEAN MyStrBegins()
 
 // Checks whether String2 ends with String1
-// Returns TRUE on match; FALSE otherwise.
+// Returns TRUE on match or FALSE.
 BOOLEAN MyStrEnds (
     IN CHAR16 *String1,
     IN CHAR16 *String2
 ) {
-    UINTN i;
-    UINTN Len1;
-    UINTN Len2;
+    UINTN        i;
+    UINTN     Len1;
+    UINTN     Len2;
+    BOOLEAN IsGood;
 
-    if (String1 == NULL ||
-        String2 == NULL
-    ) {
+
+    // String1 cannot be longer than String2.
+    // In addition, neither can be NULL.
+    IsGood = IsValidStrComp (String1, String2);
+    if (!IsGood) {
         return FALSE;
     }
 
     Len1 = StrLen (String1);
     Len2 = StrLen (String2);
 
-    // String1 cannot be longer than String2
-    if (Len1 > Len2) {
-        return FALSE;
-    }
-
     // Compare from the end of each string
+    // 'IsGood' is curently 'TRUE'
     for (i = 0; i < Len1; i++) {
         if ((String1[Len1 - 1 - i] & ~0x20) !=
             (String2[Len2 - 1 - i] & ~0x20)
         ) {
             // Exit ... Mismatch found
-            return FALSE;
+            IsGood = FALSE;
+
+            break;
         }
     }
 
-    // String2 ends with String1
-    return TRUE;
+    return IsGood;
 } // BOOLEAN MyStrEnds()
 
 /*
- *
  * Routine Description:
  *
  *  Find a substring (Case Sensitive).
@@ -255,7 +289,7 @@ BOOLEAN MyStrEnds (
  *  StrCharSet  - Null-terminated string to search for.
  *
  * Returns:
- *  The address of the first occurrence of the matching substring if successful, or NULL otherwise.
+ *  Address of first occurrence of the matching substring or NULL.
  */
 CHAR16 * MyStrStr (
     IN CHAR16  *String,
@@ -309,7 +343,6 @@ CHAR16 * MyStrStr (
 } // CHAR16 * MyStrStr()
 
 /*
- *
  * Routine Description:
  *
  *  As 'MyStrStr' but case insensitive and returns a BOOLEAN.
@@ -320,7 +353,7 @@ CHAR16 * MyStrStr (
  *  SmallStr  - Null-terminated string to search for.
  *
  * Returns:
- *  TRUE if successful, or FALSE otherwise.
+ *  TRUE if successful or FALSE.
  */
 BOOLEAN IsStriStr (
     IN CHAR16 *BigStr,
@@ -376,7 +409,6 @@ BOOLEAN StriSubCmp (
 } // BOOLEAN StriSubCmp()
 
 /*
- *
  * Routine Description:
  *
  *  As 'MyStrStr' but case insensitive and returns a BOOLEAN.
@@ -389,7 +421,7 @@ BOOLEAN StriSubCmp (
  *  RawStrCharSet  - Null-terminated string to search for.
  *
  * Returns:
- *  TRUE if successful, or FALSE otherwise.
+ *  TRUE if successful or FALSE.
  */
 BOOLEAN FindSubStr (
     IN CHAR16  *RawString,
@@ -530,111 +562,15 @@ VOID ToUpper (
     } // while
 } // VOID ToUpper()
 
-// Merges two strings, creating a new one and returning a pointer to it.
-// If AddChar != 0, the specified character is placed between the two original
-// strings (unless the first string is NULL or empty). The original input
-// string *First is de-allocated and replaced by the new merged string.
-// This is similar to StrCat, but safer and more flexible because
-// MergeStrings allocates memory that is the correct size for the
-// new merged string, so it can take a NULL *First and it cleans
-// up the old memory. It should *NOT* be used with a constant
-// *First, though.
-VOID MergeStrings (
-    IN OUT CHAR16 **First,
-    IN     CHAR16  *Second,
-    IN     CHAR16   AddChar
+static
+VOID MergeStringsHelper (
+    IN OUT CHAR16  **First,
+    IN     CHAR16   *Second,
+    IN     CHAR16    AddChar,
+    IN     BOOLEAN   UniqueOnly
 ) {
     #if REFIT_DEBUG > 1
     CHAR16         *MsgStr;
-    #endif
-
-    UINTN           Length1;
-    UINTN           Length2;
-    CHAR16         *NewString;
-
-    #if REFIT_DEBUG > 1
-    MsgStr = PoolPrint (
-        L"Add '%s' to the end of '%s' (%s Separator)",
-        Second  ? Second  : L"NULL",
-        *First  ? *First  : L"NULL",
-        AddChar ? L"After a" : L"With no"
-    );
-    LOG_SEP(L"X");
-    LOG_INCREMENT();
-    BREAD_CRUMB(L"%a:  1 - START:- %s", __func__, MsgStr);
-    MY_FREE_POOL(MsgStr);
-    #endif
-
-    if (*First == NULL) {
-        *First = StrDuplicate (Second);
-        BREAD_CRUMB(L"%a:  1a 1 - END:- NULL INPUT - Out String = '%s'", __func__,
-            *First
-        );
-        LOG_DECREMENT();
-        LOG_SEP(L"X");
-
-        return;
-    }
-
-    //BREAD_CRUMB(L"%a:  2", __func__);
-    Length1 = StrLen (*First);
-
-    //BREAD_CRUMB(L"%a:  3", __func__);
-    Length2 = (Second != NULL) ? StrLen (Second) : 0;
-
-    //BREAD_CRUMB(L"%a:  4", __func__);
-    NewString = AllocatePool (sizeof (CHAR16) * (Length1 + Length2 + 2));
-
-    //BREAD_CRUMB(L"%a:  5", __func__);
-    if (NewString) {
-        //BREAD_CRUMB(L"%a:  5a 1", __func__);
-        if (*First != NULL && Length1 == 0) {
-            //BREAD_CRUMB(L"%a:  5a 1a 1", __func__);
-            MY_FREE_POOL(*First);
-        }
-
-        //BREAD_CRUMB(L"%a:  5a 2", __func__);
-        NewString[0] = L'\0';
-
-        //BREAD_CRUMB(L"%a:  5a 3", __func__);
-        if (*First != NULL) {
-            //BREAD_CRUMB(L"%a:  5a 3a 1", __func__);
-            StrCat (NewString, *First);
-
-            //BREAD_CRUMB(L"%a:  5a 3a 2", __func__);
-            if (AddChar) {
-                //BREAD_CRUMB(L"%a:  5a 3a 2a 1", __func__);
-                NewString[Length1] = AddChar;
-                NewString[Length1 + 1] = '\0';
-            }
-            //BREAD_CRUMB(L"%a:  5a 3a 3", __func__);
-        }
-
-        //BREAD_CRUMB(L"%a:  5a 4", __func__);
-        if (Second != NULL) {
-            //BREAD_CRUMB(L"%a:  5a 4a 1", __func__);
-            StrCat (NewString, Second);
-        }
-
-        //BREAD_CRUMB(L"%a:  5a 5", __func__);
-        MY_FREE_POOL(*First);
-        *First = NewString;
-    }
-    BREAD_CRUMB(L"%a:  6 - END:- Out String = '%s'", __func__,
-        *First
-    );
-    LOG_DECREMENT();
-    LOG_SEP(L"X");
-} // VOID MergeStrings()
-
-// As MergeStrings but does not repeat substrings.
-VOID MergeUniqueStrings (
-    IN OUT CHAR16 **First,
-    IN     CHAR16  *Second,
-    IN     CHAR16   AddChar
-) {
-    #if REFIT_DEBUG > 1
-    CHAR16 *MsgStr;
     #endif
 
     UINTN    i;
@@ -646,10 +582,11 @@ VOID MergeUniqueStrings (
 
     #if REFIT_DEBUG > 1
     MsgStr = PoolPrint (
-        L"If not already present as a substring, add '%s' to the end of '%s' (%s Separator)",
-        Second  ? Second  : L"NULL",
-        *First  ? *First  : L"NULL",
-        AddChar ? L"After a" : L"With no"
+        L"Add '%s' to End of '%s' (%s Separator)%s",
+        Second     ? Second  : L"NULL",
+        *First     ? *First  : L"NULL",
+        AddChar    ? L"After a" : L"With no",
+        UniqueOnly ? L" ... If Not Already Present as Substring" : L""
     );
     LOG_SEP(L"X");
     LOG_INCREMENT();
@@ -721,7 +658,7 @@ VOID MergeUniqueStrings (
         SkipMerge = FALSE;
 
         //BREAD_CRUMB(L"%a:  8a 2", __func__);
-        if (AddChar) {
+        if (UniqueOnly && AddChar) {
             //BREAD_CRUMB(L"%a:  8a 2a 1", __func__);
             i = 0;
             TestStr = NULL;
@@ -765,15 +702,56 @@ VOID MergeUniqueStrings (
     );
     LOG_DECREMENT();
     LOG_SEP(L"X");
+} // static VOID MergeStringsHelper()
+
+// Merges two strings, creating a new one and returning a pointer to it.
+// If AddChar != 0, the specified character is placed between the two original
+// strings (unless the first string is NULL or empty). The original input
+// string *First is de-allocated and replaced by the new merged string.
+// This is similar to StrCat, but safer and more flexible because
+// MergeStrings allocates memory that is the correct size for the
+// new merged string, so it can take a NULL *First and it cleans
+// up the old memory. It should *NOT* be used with a constant
+// *First, though.
+VOID MergeStrings (
+    IN OUT CHAR16 **First,
+    IN     CHAR16  *Second,
+    IN     CHAR16   AddChar
+) {
+    LOG_SEP(L"X");
+    LOG_INCREMENT();
+    BREAD_CRUMB(L"%a:  1 - START", __func__);
+
+    MergeStringsHelper (First, Second, AddChar, FALSE);
+
+    BREAD_CRUMB(L"%a:  2 - END", __func__);
+    LOG_DECREMENT();
+    LOG_SEP(L"X");
+} // VOID MergeStrings()
+
+// As MergeStrings but does not repeat substrings.
+VOID MergeUniqueStrings (
+    IN OUT CHAR16 **First,
+    IN     CHAR16  *Second,
+    IN     CHAR16   AddChar
+) {
+    LOG_SEP(L"X");
+    LOG_INCREMENT();
+    BREAD_CRUMB(L"%a:  1 - START", __func__);
+
+    MergeStringsHelper (First, Second, AddChar, TRUE);
+
+    BREAD_CRUMB(L"%a:  2 - END", __func__);
+    LOG_DECREMENT();
+    LOG_SEP(L"X");
 } // VOID MergeUniqueStrings()
 
-// Similar to MergeStrings, but breaks the input string into word chunks and
-// merges each word separately. Words are defined as string fragments separated
-// by ' ', ':', '_', '\', '/', or '-'.
-VOID MergeWords (
-    CHAR16 **MergeTo,
-    CHAR16  *InString,
-    CHAR16   AddChar
+static
+VOID MergeWordsHelper (
+    CHAR16  **MergeTo,
+    CHAR16   *InString,
+    CHAR16    AddChar,
+    BOOLEAN   UniqueOnly
 ) {
     CHAR16  *Temp, *Word, *p;
     BOOLEAN  LineFinished;
@@ -803,7 +781,12 @@ VOID MergeWords (
                 *p = L'\0';
 
                 if (*Word != L'\0') {
-                    MergeStrings (MergeTo, Word, AddChar);
+                    if (UniqueOnly) {
+                        MergeUniqueStrings (MergeTo, Word, AddChar);
+                    }
+                    else {
+                        MergeStrings (MergeTo, Word, AddChar);
+                    }
                 }
 
                 Word = p + 1;
@@ -814,6 +797,17 @@ VOID MergeWords (
 
         MY_FREE_POOL(Temp);
     }
+} // static VOID MergeWordsHelper()
+
+// Similar to MergeStrings, but breaks the input string into word chunks
+// then merges each separately. Words are defined as string fragments
+// separated by ' ', ':', '_', '\', '/', or '-'.
+VOID MergeWords (
+    CHAR16 **MergeTo,
+    CHAR16  *InString,
+    CHAR16   AddChar
+) {
+    MergeWordsHelper (MergeTo, InString, AddChar, FALSE);
 } // VOID MergeWords()
 
 // As MergeWords, but only unique words are merged
@@ -822,45 +816,7 @@ VOID MergeUniqueWords (
     CHAR16  *InString,
     CHAR16   AddChar
 ) {
-    CHAR16 *Temp, *Word, *p;
-    BOOLEAN LineFinished;
-
-
-    if (InString == NULL) {
-        return;
-    }
-
-    Temp = Word = p = StrDuplicate (InString);
-    if (Temp) {
-        LineFinished = FALSE;
-
-        while (!LineFinished) {
-            if ((*p == L' ')  ||
-                (*p == L':')  ||
-                (*p == L'_')  ||
-                (*p == L'-')  ||
-                (*p == L'/')  ||
-                (*p == L'\\') ||
-                (*p == L'\0')
-            ) {
-                if (*p == L'\0') {
-                    LineFinished = TRUE;
-                }
-
-                *p = L'\0';
-
-                if (*Word != L'\0') {
-                    MergeUniqueStrings (MergeTo, Word, AddChar);
-                }
-
-                Word = p + 1;
-            }
-
-            p++;
-        } // while
-
-        MY_FREE_POOL(Temp);
-    }
+    MergeWordsHelper (MergeTo, InString, AddChar, TRUE);
 } // VOID MergeUniqueWords()
 
 // As MergeUniqueWords, but items are separated by ','
@@ -941,7 +897,7 @@ CHAR16 * SanitiseString (
 // Does this in two steps:
 //   - Compresses blocks of two or more spaces down to one.
 //   - Truncates 'TheString' if still longer than 'Limit'.
-// Returns TRUE if changes were made, FALSE otherwise
+// Returns TRUE if changes were made or FALSE.
 BOOLEAN LimitStringLength (
     CHAR16 *TheString,
     UINTN    Limit
@@ -1021,7 +977,7 @@ BOOLEAN LimitStringLength (
 } // BOOLEAN LimitStringLength()
 
 // Truncate 'TheString' to 'Limit' characters if longer.
-// Returns TRUE if truncated or FALSE otherwise
+// Returns TRUE if truncated or FALSE.
 BOOLEAN TruncateString (
     CHAR16 *TheString,
     UINTN   Limit
@@ -1131,9 +1087,8 @@ UINTN NumCharsInCommon (
 } // UINTN NumCharsInCommon()
 
 // Find the #Index element (numbered from 0) in a comma-delimited string.
-// Returns the found element, or NULL if Index is out of range or InString
-// is NULL. Note that the calling function is responsible for freeing the
-// memory associated with the returned string pointer.
+// The calling function must free any memory allocated.
+// Returns the found element or NULL.
 //
 // DA-TAG: Updated for 'ABC, 123, XYZ, 456'
 //         That is, ignores leading spaces
@@ -1214,8 +1169,8 @@ BOOLEAN DeleteItemFromCsvList (
 ) {
     CHAR16  *Found;
     CHAR16  *Comma;
-    CHAR16  *PartA;   // *DO NOT* Free
-    CHAR16  *PartB;   // *DO NOT* Free
+    CHAR16  *PartA;   // Do *NOT* Free
+    CHAR16  *PartB;   // Do *NOT* Free
     CHAR16  *TmpStr;
     BOOLEAN  Retval;
 
@@ -1371,7 +1326,7 @@ BOOLEAN IsListItem (
 } // BOOLEAN IsListItem()
 
 // Returns TRUE if any element of List can be found as a substring of
-// BigString, FALSE otherwise. Performs comparisons case-insensitively.
+// BigString or FALSE. Performs comparisons case-insensitively.
 BOOLEAN IsListItemSubstringIn (
     IN CHAR16 *BigString,
     IN CHAR16 *List
@@ -1414,7 +1369,7 @@ BOOLEAN IsListItemSubstringIn (
 
 // Replace *SearchString in **MainString with *ReplString -- but if *SearchString
 // is preceded by "%", instead remove that character.
-// Returns TRUE if replacement was done, FALSE otherwise.
+// Returns TRUE if replacement was done or FALSE.
 BOOLEAN ReplaceSubstring (
     IN OUT CHAR16 **MainString,
     IN     CHAR16  *SearchString,
@@ -1500,7 +1455,8 @@ BOOLEAN ReplaceSubstring (
 } // BOOLEAN ReplaceSubstring()
 
 // Returns TRUE if *Input contains nothing but valid hexadecimal characters,
-// FALSE otherwise. Note that a leading "0x" is NOT acceptable in the input!
+// FALSE otherwise.
+// NB: Exclude leading "0x" from input!
 BOOLEAN IsValidHex (
     CHAR16 *Input
 ) {
@@ -1542,7 +1498,7 @@ UINT64 StrToHex (
     UINTN   InputLength;
     UINTN   NumDone;
     UINT64  retval;
-    CHAR16 *Input;   // *DO NOT* Free
+    CHAR16 *Input;   // Do *NOT* Free
     CHAR16  a;
 
 
@@ -1586,7 +1542,7 @@ UINT64 StrToHex (
     return retval;
 } // StrToHex()
 
-// Returns TRUE if UnknownString can be interpreted as a GUID, FALSE otherwise.
+// Returns TRUE if UnknownString can be interpreted as a GUID or FALSE.
 // Note that the input string must have no extraneous spaces and must be
 // conventionally formatted as a 36-character GUID, complete with dashes in
 // appropriate places.
@@ -1636,8 +1592,8 @@ BOOLEAN IsGuid (
     return retval;
 } // BOOLEAN IsGuid()
 
-// Return the GUID as a string, suitable for display to the user. Note that the calling
-// function is responsible for freeing the allocated memory.
+// Return the GUID as a string, suitable for display to the user.
+// The calling function must free any allocated memory.
 CHAR16 * GuidAsString (
     EFI_GUID *GuidData
 ) {
@@ -1699,28 +1655,6 @@ EFI_GUID StringAsGuid (
 
     return Guid;
 } // EFI_GUID StringAsGuid()
-
-// Returns the current time as a string in 24-hour format; e.g., 14:03:17.
-// Discards date portion, since for our purposes, we really do not care.
-// Calling function is responsible for releasing returned string.
-CHAR16 * GetTimeString (VOID) {
-    EFI_STATUS  Status;
-    EFI_TIME    CurrentTime;
-    CHAR16     *TimeStr;
-
-
-    Status  = REFIT_CALL_2_WRAPPER(gST->RuntimeServices->GetTime, &CurrentTime, NULL);
-    TimeStr = EFI_ERROR(Status)
-        ? StrDuplicate (L"Unknown Time")
-        : PoolPrint (
-            L"%02d:%02d:%02d",
-            CurrentTime.Hour,
-            CurrentTime.Minute,
-            CurrentTime.Second
-        );
-
-    return TimeStr;
-} // CHAR16 *GetTimeString()
 
 // Delete the STRING_LIST pointed to by *StringList.
 VOID DeleteStringList (

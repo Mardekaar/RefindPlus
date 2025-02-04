@@ -283,47 +283,47 @@ EFI\\OEM\\Boot\\bootmgfw.efi"
 #define SYNC_TRUST_SKIP           (2) // User prefers direct boot
 #define SYNC_TRUST_BOOT           (3) // User prefers native boot
 
-// Bit codes (Actual Decimal) ... Used in GlobalConfig.SyncTrust
-#define ENFORCE_TRUST_NONE        (0)
-#define ENFORCE_TRUST_MACOS       (1)
-#define ENFORCE_TRUST_LINUX       (2)
-#define ENFORCE_TRUST_WINDOWS     (4)
-#define ENFORCE_TRUST_OPENCORE    (8)
-#define ENFORCE_TRUST_CLOVER     (16)
-#define ENFORCE_TRUST_OTHERS     (32)
-#define REQUIRE_TRUST_VERIFY     (64)
-#define ENFORCE_TRUST_EVERY     (127) // 1 + 2 + 4 + 8 + 16 + 32 + 64
-
 // Bit codes (Actual Decimal) ... Used in GlobalConfig.DisableBootLogo
 #define DISABLE_BOOTLOGO_OFF      (0) // Binary: 0000 0000 0000
 #define DISABLE_BOOTLOGO_LIN      (1) // Binary: 0000 0000 0001
 #define DISABLE_BOOTLOGO_WIN      (2) // Binary: 0000 0000 0010
 #define DISABLE_BOOTLOGO_ALL      (3) // Binary: 0000 0000 0011 (1 + 2)
 
-// Bit codes (Actual Decimal) ... Used in GlobalConfig.HideUIFlags
-#define HIDEUI_FLAG_NONE          (0)
-#define HIDEUI_FLAG_BANNER        (1)
-#define HIDEUI_FLAG_LABEL         (2)
-#define HIDEUI_FLAG_SINGLEUSER    (4)
-#define HIDEUI_FLAG_HWTEST        (8)
-#define HIDEUI_FLAG_ARROWS       (16)
-#define HIDEUI_FLAG_HINTS        (32)
-#define HIDEUI_FLAG_EDITOR       (64)
-#define HIDEUI_FLAG_SAFEMODE    (128)
-#define HIDEUI_FLAG_BADGES      (256)
-#define HIDEUI_FLAG_ALL         (511) // 1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 + 256
+// Bit codes (Actual Decimal) ... Used in GlobalConfig.SyncTrust
+#define ENFORCE_TRUST_NONE        (0) // Binary: 0000 0000 0000
+#define ENFORCE_TRUST_MACOS       (1) // Binary: 0000 0000 0001
+#define ENFORCE_TRUST_LINUX       (2) // Binary: 0000 0000 0010
+#define ENFORCE_TRUST_WINDOWS     (4) // Binary: 0000 0000 0100
+#define ENFORCE_TRUST_OPENCORE    (8) // Binary: 0000 0000 1000
+#define ENFORCE_TRUST_CLOVER     (16) // Binary: 0000 0001 0000
+#define ENFORCE_TRUST_OTHERS     (32) // Binary: 0000 0010 0000
+#define REQUIRE_TRUST_VERIFY     (64) // Binary: 0000 0100 0000
+#define ENFORCE_TRUST_EVERY     (127) // Binary: 0000 0111 1111 (1 + 2 + 4 + 8 + 16 + 32 + 64)
 
 // Bit codes (Actual Decimal) ... Used in GlobalConfig.GraphicsFor
-#define GRAPHICS_FOR_NONE         (0)
-#define GRAPHICS_FOR_OSX          (1)
-#define GRAPHICS_FOR_LINUX        (2)
-#define GRAPHICS_FOR_WINDOWS      (4)
-#define GRAPHICS_FOR_GRUB         (8)
-#define GRAPHICS_FOR_ELILO       (16)
-#define GRAPHICS_FOR_TOOLS       (32)
-#define GRAPHICS_FOR_CLOVER      (64)
-#define GRAPHICS_FOR_OPENCORE   (128)
-#define GRAPHICS_FOR_EVERYTHING (255) // 1 + 2 + 4 + 8 + 16 + 32 + 64 + 128
+#define GRAPHICS_FOR_NONE         (0) // Binary: 0000 0000 0000
+#define GRAPHICS_FOR_OSX          (1) // Binary: 0000 0000 0001
+#define GRAPHICS_FOR_LINUX        (2) // Binary: 0000 0000 0010
+#define GRAPHICS_FOR_WINDOWS      (4) // Binary: 0000 0000 0100
+#define GRAPHICS_FOR_GRUB         (8) // Binary: 0000 0000 1000
+#define GRAPHICS_FOR_ELILO       (16) // Binary: 0000 0001 0000
+#define GRAPHICS_FOR_TOOLS       (32) // Binary: 0000 0010 0000
+#define GRAPHICS_FOR_CLOVER      (64) // Binary: 0000 0100 0000
+#define GRAPHICS_FOR_OPENCORE   (128) // Binary: 0000 1000 0000
+#define GRAPHICS_FOR_EVERYTHING (255) // Binary: 0000 1111 1111 (1 + 2 + 4 + 8 + 16 + 32 + 64 + 128)
+
+// Bit codes (Actual Decimal) ... Used in GlobalConfig.HideUIFlags
+#define HIDEUI_FLAG_NONE          (0) // Binary: 0000 0000 0000
+#define HIDEUI_FLAG_BANNER        (1) // Binary: 0000 0000 0001
+#define HIDEUI_FLAG_LABEL         (2) // Binary: 0000 0000 0010
+#define HIDEUI_FLAG_SINGLEUSER    (4) // Binary: 0000 0000 0100
+#define HIDEUI_FLAG_HWTEST        (8) // Binary: 0000 0000 1000
+#define HIDEUI_FLAG_ARROWS       (16) // Binary: 0000 0001 0000
+#define HIDEUI_FLAG_HINTS        (32) // Binary: 0000 0010 0000
+#define HIDEUI_FLAG_EDITOR       (64) // Binary: 0000 0100 0000
+#define HIDEUI_FLAG_SAFEMODE    (128) // Binary: 0000 1000 0000
+#define HIDEUI_FLAG_BADGES      (256) // Binary: 0001 0000 0000
+#define HIDEUI_FLAG_ALL         (511) // Binary: 0001 1111 1111 (1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 + 256)
 
 // Default hint text for program-launch submenus
 #define SUBSCREEN_HINT1            L"Use arrow keys to move selection and press 'Enter' to run selected item"

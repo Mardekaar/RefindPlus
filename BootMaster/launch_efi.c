@@ -65,24 +65,38 @@
 // constants
 
 #ifdef __MAKEWITH_GNUEFI
-#ifndef EFI_SECURITY_VIOLATION
-#define EFI_SECURITY_VIOLATION    EFIERR (26)
-#endif
+#   ifndef EFI_SECURITY_VIOLATION
+#       define EFI_SECURITY_VIOLATION    EFIERR (26)
+#   endif
 #endif
 
-#if defined (EFI32)
-#define EFI_STUB_ARCH           0x0000014c00004550
+#if defined (EFIX64)
+#   define EFI_STUB_ARCH        0x0000866400004550
+#elif defined (EFI32)
+#   define EFI_STUB_ARCH        0x0000014c00004550
 #elif defined (EFIAARCH64)
-#define EFI_STUB_ARCH           0x0000aa6400004550
+#   define EFI_STUB_ARCH        0x0000aa6400004550
 #else
-#define EFI_STUB_ARCH           0x0000866400004550 /* Default: Assume EFIX64 */
+#   define EFI_STUB_ARCH        0x0000000000004550 /* Type Unknown */
 #endif
 
-#define APPLE_FAT_BINARY        0x0ef1fab9 /* ID for Apple "fat" binary */
+/* ID for Apple's "Fat" Binaries */
+#define APPLE_FAT_BINARY        0x0ef1fab9
+
+/*
+ * From linux/include/linux/pe.h in Linux Kernel:
+ * LINUX_PE_MAGIC appears at offset 0x38 into the MS-DOS header of EFI bootable
+ * Linux kernel images that target the architecture as specified by the PE/COFF
+ * header machine type field.
+ */
+#define LINUX_PE_MAGIC	        0x818223cd
+#define LINUX_PE_OFFSET         0x38
+#define BASIC_PE_OFFSET         0x3c
 
 // Amount of a file to read to search for the EFI identifying signatures.
 // Signatures as far in as 3680 (0xE60) have been found, so read a bit more.
-#define EFI_HEADER_SIZE 4096
+#define EFI_HEADER_SIZE         4096
+
 
 CHAR16         *BootSelection = NULL;
 CHAR16         *ValidText     = L"Invalid Loader";
@@ -217,7 +231,6 @@ EFI_STATUS RecoveryBootAPFS (
         DataNVRAM, AsciiStrSize (DataNVRAM), TRUE
     );
     if (EFI_ERROR(Status)) {
-        // Early Return
         return Status;
     }
 
@@ -229,7 +242,6 @@ EFI_STATUS RecoveryBootAPFS (
         (VOID **) &Entry->Volume->DevicePath, OurSize, TRUE
     );
     if (EFI_ERROR(Status)) {
-        // Early Return
         return Status;
     }
 
@@ -278,7 +290,6 @@ EFI_STATUS RecoveryBootAPFS (
     MY_FREE_POOL(DevicePath);
 
     if (EFI_ERROR(Status)) {
-        // Early Return
         return Status;
     }
 
@@ -301,12 +312,23 @@ VOID LogAssumedValid (
     CHAR16   *FileName,
     BOOLEAN   FIreWire
 ) {
-    ValidText = L"EFI File is *CONSIDERED* to be Valid";
+    BOOLEAN   Known;
+
+
+    #if !defined (EFIX64) && !defined (EFI32) && !defined (EFIAARCH64)
+    ValidText = L"EFI File *IS ASSUMED* Valid";
+    Known = FALSE;
+    #else
+    Known = TRUE;
+    ValidText = L"EFI File *IS CONSIDERED* Valid";
+    #endif
+
     ALT_LOG(1, LOG_THREE_STAR_MID,
-        L"%s%s:- '%s'",
+        L"%s%s:- '%s%s'",
         ValidText,
         FIreWire ? L" on Apple Firmware (FireWire Workaround)" : L"",
-        FileName ? FileName : L"NULL File"
+        FileName ? FileName : L"NULL File",
+        (!Known) ? L" ... System Arch Unknown" : L""
     );
     if (IsBoot) {
         LOG_MSG("\n");
@@ -315,7 +337,7 @@ VOID LogAssumedValid (
 } // static VOID LogAssumedValid()
 #endif
 
-// Returns TRUE if this file is a valid EFI loader file, and is proper ARCH
+// Returns TRUE if file is a valid EFI loader file with 'proper' ARCH
 BOOLEAN IsValidLoader (
     EFI_FILE_PROTOCOL *RootDir,
     CHAR16            *FileName
@@ -326,9 +348,9 @@ BOOLEAN IsValidLoader (
         (RootDir == NULL || FileName == NULL)
     ) {
         // DA-TAG: Investigate This
-        //         Assume "Valid" here, because Macs produce a NULL RootDir, and maybe FileName,
-        //         when launching from Firewire drives. This should be handled better, but the
-        //         fix would have to be in StartEFIImage() and/or in FindVolumeAndFilename().
+        //         Assume "Valid" as Macs produce NULL 'RootDir', 'FileName' perhaps,
+        //         when launching from Firewire drives. Should be handled better but
+        //         the fix should be in StartEFIImage and/or FindVolumeAndFilename.
         #if REFIT_DEBUG > 0
         LogAssumedValid (FileName, TRUE);
         #endif
@@ -352,10 +374,11 @@ BOOLEAN IsValidLoader (
     #endif
 
     EFI_STATUS       Status;
-    BOOLEAN          IsValid;
-    BOOLEAN          AppleBinaryFat;
+    BOOLEAN          ValidFile;
     BOOLEAN          AppleBinaryPlain;
-    UINTN            SignaturePos;
+    BOOLEAN          AppleBinaryFat;
+    UINT32           LinuxMagicPE;
+    UINT32           BaseMagicPE;
     UINTN            LoadedSize;
     CHAR8           *Header;
     UINT64           PESig;
@@ -364,9 +387,9 @@ BOOLEAN IsValidLoader (
 
     Header = AllocatePool (EFI_HEADER_SIZE);
     if (Header == NULL) {
-        // DA-TAG: Set ValidText in REL for 'FALSE' outcome
+        // DA-TAG: Set 'ValidText' in 'REL' for 'FALSE' outcome
         //         Allows accurate screen message
-        ValidText = L"EFI File is *ASSUMED* to be Invalid";
+        ValidText = L"EFI File *IS ASSUMED* to be Invalid";
 
         #if REFIT_DEBUG > 0
         AbortReason = L":- 'Unable to Allocate Memory'";
@@ -382,7 +405,7 @@ BOOLEAN IsValidLoader (
     }
 
     do {
-        IsValid = AppleBinaryFat = AppleBinaryPlain = FALSE;
+        ValidFile = AppleBinaryFat = AppleBinaryPlain = FALSE;
 
         #if REFIT_DEBUG > 0
         AbortReason = L"";
@@ -395,7 +418,6 @@ BOOLEAN IsValidLoader (
 
             //LoaderType = LOADER_TYPE_INVALID;
 
-            // Early Return
             break;
         }
 
@@ -406,12 +428,11 @@ BOOLEAN IsValidLoader (
         );
         if (EFI_ERROR(Status)) {
             #if REFIT_DEBUG > 0
-            AbortReason = L":- 'File Handle *NOT* Accessible'";
+            AbortReason = L":- 'File Handle *IS NOT* Accessible'";
             #endif
 
             //LoaderType = LOADER_TYPE_INVALID;
 
-            // Early Return
             break;
         }
 
@@ -429,14 +450,13 @@ BOOLEAN IsValidLoader (
 
             //LoaderType = LOADER_TYPE_INVALID;
 
-            // Early Return
             break;
         }
 
-        // Search for indications that this is a gzipped file.
-        // NB: This is currently only used for logging in RefindPlus
-        // and that such loaders are considered invalid at this point.
-        // GZipped loaders are mainly for ARM but our focus is on x86.
+        // Search for indications that subject is a gzipped file.
+        // NB: This is currently only used for logging in RefindPlus.
+        // Also note such loaders are considered invalid at this point.
+        // GZipped loaders are mainly for ARM but the focus is on x86_64.
         if (GlobalConfig.GzippedLoaders &&
             Header[0] == (CHAR8) 0x1F   &&
             Header[1] == (CHAR8) 0x8B
@@ -447,51 +467,68 @@ BOOLEAN IsValidLoader (
 
             //LoaderType = LOADER_TYPE_GZIP;
 
-            // Early Return
             break;
         }
 
-        // Search for standard PE32+ signature
-        PESig        = EFI_STUB_ARCH;
-        SignaturePos = *((UINT32 *) &Header[0x3c]);
-        IsValid = (
-            Header[0]   == 'M'                   &&
-            Header[1]   == 'Z'                   &&
-            LoadedSize  ==  EFI_HEADER_SIZE      &&
-            SignaturePos < (EFI_HEADER_SIZE - 8) &&
-            CompareMem(
-                &Header[SignaturePos],
-                &PESig, 6
-            ) == 0
-        );
-        if (IsValid) {
+
+
+        do {
+            // Search for Common PE Signatures and Sizes
+            ValidFile = (
+                Header[0]  == 'M' &&
+                Header[1]  == 'Z' &&
+                LoadedSize ==  EFI_HEADER_SIZE
+            );
+            if (!ValidFile) break;
+
+            // Search for Standard PE32+ Signature
+            PESig = EFI_STUB_ARCH;
+            REFIT_CALL_3_WRAPPER(
+                gBS->CopyMem, &BaseMagicPE,
+                &Header[BASIC_PE_OFFSET], sizeof (UINT32)
+            ); // Safely Read Basic PE Magic
+            ValidFile = (
+                BaseMagicPE < (EFI_HEADER_SIZE - 8) &&
+                CompareMem (
+                    &Header[BaseMagicPE], &PESig, 6
+                ) == 0
+            );
+            if (ValidFile) break;
+
+            // Check for Linux EFI Bootable Kernel Image
+            REFIT_CALL_3_WRAPPER(
+                gBS->CopyMem, &LinuxMagicPE,
+                &Header[LINUX_PE_OFFSET], sizeof (UINT32)
+            ); // Safely Read Linux PE Magic
+            ValidFile = (LinuxMagicPE == LINUX_PE_MAGIC);
+        } while (0); // This 'loop' only runs once
+        if (ValidFile) {
             //LoaderType = LOADER_TYPE_EFI;
 
-            // Early Return
             break;
         }
 
-        // Search for Apple's 'Fat' Binary signature
-        IsValid = AppleBinaryFat = (
+
+
+        // Search for Apple's 'Fat' Binary Signature
+        ValidFile = AppleBinaryFat = (
             *((UINT32 *) Header) == APPLE_FAT_BINARY
         );
-        if (IsValid) {
+        if (ValidFile) {
             //LoaderType = LOADER_TYPE_EFI;
 
-            // Early Return
             break;
         }
 
-        // Allow plain binaries on Apple firmware
-        IsValid = AppleBinaryPlain = AppleFirmware;
-        if (IsValid) {
+        // Allow Plain Binaries on Apple Firmware
+        ValidFile = AppleBinaryPlain = AppleFirmware;
+        if (ValidFile) {
             //LoaderType = LOADER_TYPE_EFI;
 
-            // Early Return
             break;
         }
 
-        // Invalid if we get here
+        // Unknown ... Invalid
         #if REFIT_DEBUG > 0
         AbortReason = L":- 'Unknown Binary Type'";
         #endif
@@ -499,20 +536,20 @@ BOOLEAN IsValidLoader (
 
 
     // DA-TAG: Set ValidText in REL for 'FALSE' outcome
-    //         Allows accurate screen message
+    //         to allow accurate screen message.
     // NOTES:  Assume 'Fat' binaries are valid on Apple firmware
     //         Assume the same for plain binaries on Apple firmware
     //         Test variables are only ever true on Apple firmware
-    ValidText = (!IsValid)
+    ValidText = (!ValidFile)
         ? L"EFI File *IS NOT* Valid"
         : (AppleBinaryFat)
-            ? L"EFI File (Apple 'Fat' Binary) is *ASSUMED* to be Valid"
+            ? L"EFI File (Apple 'Fat' Binary) *IS ASSUMED* to be Valid"
             : (AppleBinaryPlain)
-                ? L"EFI File ('Plain' Binary) is *ASSUMED* to be Valid on Apple Firmware"
+                ? L"EFI File ('Plain' Binary) *IS ASSUMED* to be Valid on Apple Firmware"
                 : L"EFI File is Valid";
 
     #if REFIT_DEBUG > 0
-    if (!IsValid) {
+    if (!ValidFile) {
         ALT_LOG(1, LOG_THREE_STAR_MID,
             L"%s:- '%s' ... Aborting%s",
             ValidText,
@@ -531,10 +568,10 @@ BOOLEAN IsValidLoader (
 
     if (IsBoot) {
         // Reset IsBoot if required
-        IsBoot = IsValid;
+        IsBoot = ValidFile;
 
         #if REFIT_DEBUG > 0
-        if (IsValid) {
+        if (ValidFile) {
             LOG_MSG("\n");
             LOG_MSG("%s ... Loading", ValidText);
         }
@@ -548,7 +585,7 @@ BOOLEAN IsValidLoader (
 
     MY_FREE_POOL(Header);
 
-    return IsValid;
+    return ValidFile;
 #endif
 } // BOOLEAN IsValidLoader()
 
@@ -754,11 +791,9 @@ EFI_STATUS StartEFIImage (
             MY_FREE_POOL(MsgStr);
             #endif
 
-            // NOTE: This does not check the return status or handle errors.
-            // It could conceivably do weird things if, say, RefindPlus is
-            // on a USB drive that is removed before launching a program.
-            //
-            // Ignore return status here
+            // NB: Does not check the return status and/or handle errors.
+            // It could result in unexpected behaviour if RefindPlus runs
+            // on a drive that is disconnected before launching a program.
             REFIT_CALL_6_WRAPPER(
                 gBS->LoadImage, FALSE,
                 SelfImageHandle, GlobalConfig.SelfDevicePath,
@@ -787,7 +822,7 @@ EFI_STATUS StartEFIImage (
                 ? ((UINT32) StrLen (FullLoadOptions) + 1) * sizeof (CHAR16) : 0;
 
             // DA-TAG: Investigate This
-            //         Re-enable the EFI watchdog timer (optionally)
+            //         Optionally Re-enable the EFI watchdog timer
             if (IsBoot &&
                 (
                     (
@@ -1293,7 +1328,6 @@ VOID StartTool (
 
         MY_FREE_POOL(MsgStr);
 
-        // Early Return
         return;
     }
 

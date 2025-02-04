@@ -54,7 +54,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -350,26 +350,35 @@ Error:
     return Status;
 } // EFI_STATUS LibScanHandleDatabase()
 
-/* Modified from EDK2 function of a similar name; original copyright Intel &
- * BSD-licensed; modifications by Roderick Smith are GPLv3.
- */
-EFI_STATUS ConnectAllDriversToAllControllers (
-    IN BOOLEAN ResetGOP
-) {
-#ifndef __MAKEWITH_GNUEFI
+// Modified from EDK2 function of similar name.
+// Original Copyright Intel under BSD License.
+// Modifications by Roderick Smith are GPLv3.
+// Modifications for RefindPlus prefer MIT.
+// NB: MIT use may be precluded by the GPL.
+//     I.E., GPL may be forced regardless.
+//     Still recording preference for a
+//       less restrictive licence but
+//       likely blocked by the GPL.
+//     Block may end with time.
+VOID ConnectAllDriversToAllControllers (VOID) {
+#ifdef __MAKEWITH_TIANO
+    static BOOLEAN ResetGOP = TRUE;
+
+
     BdsLibConnectAllDriversToAllControllers (ResetGOP);
-    return 0;
+
+    // DA-TAG: Only reset GOP once
+    ResetGOP = FALSE;
 #else
     EFI_STATUS   Status;
-    UINTN        AllHandleCount;
     EFI_HANDLE  *AllHandleBuffer;
+    UINTN        AllHandleCount;
     UINTN        Index;
     UINTN        HandleCount;
+    UINTN        HandleIndex;
     EFI_HANDLE  *HandleBuffer;
     UINT32      *HandleType;
-    UINTN        HandleIndex;
     BOOLEAN      Parent;
-    BOOLEAN      Device;
 
 
     Status = LibLocateHandle (
@@ -378,9 +387,8 @@ EFI_STATUS ConnectAllDriversToAllControllers (
         &AllHandleCount,
         &AllHandleBuffer
     );
-
     if (EFI_ERROR(Status)) {
-        return Status;
+        return;
     }
 
     for (Index = 0; Index < AllHandleCount; Index++) {
@@ -393,44 +401,38 @@ EFI_STATUS ConnectAllDriversToAllControllers (
             &HandleType
         );
         if (EFI_ERROR(Status)) {
-            break;
+            continue;
         }
 
-        Device = TRUE;
-        if (HandleType[Index] & EFI_HANDLE_TYPE_DRIVER_BINDING_HANDLE
-            || HandleType[Index] & EFI_HANDLE_TYPE_IMAGE_HANDLE
+        if ( (HandleType[Index] & EFI_HANDLE_TYPE_DEVICE_HANDLE) &&
+            !(HandleType[Index] & EFI_HANDLE_TYPE_IMAGE_HANDLE)  &&
+            !(HandleType[Index] & EFI_HANDLE_TYPE_DRIVER_BINDING_HANDLE)
         ) {
-            Device = FALSE;
-        }
-
-        // Dummy ... just to use passed parameter which is only needed for TianoCore
-        Parent = ResetGOP;
-        if (Device) {
             Parent = FALSE;
+
             for (HandleIndex = 0; HandleIndex < HandleCount; HandleIndex++) {
                 if (HandleType[HandleIndex] & EFI_HANDLE_TYPE_PARENT_HANDLE) {
                     Parent = TRUE;
+
+                    break;
                 }
             } // for
 
             if (!Parent) {
-                if (HandleType[Index] & EFI_HANDLE_TYPE_DEVICE_HANDLE) {
-                   Status = REFIT_CALL_4_WRAPPER(
-                       gBS->ConnectController, AllHandleBuffer[Index],
-                       NULL, NULL, TRUE
-                   );
-               }
+                REFIT_CALL_4_WRAPPER(
+                    gBS->ConnectController, AllHandleBuffer[Index],
+                    NULL, NULL, TRUE
+                );
             }
         }
 
         MY_FREE_POOL(HandleBuffer);
         MY_FREE_POOL(HandleType);
-    }
-    MY_FREE_POOL(AllHandleBuffer);
+    } // for Index
 
-    return Status;
+    MY_FREE_POOL(AllHandleBuffer);
 #endif
-} // EFI_STATUS ConnectAllDriversToAllControllers()
+} // VOID ConnectAllDriversToAllControllers()
 
 // DA-TAG: Exclude TianoCore - START
 #ifndef __MAKEWITH_TIANO
@@ -671,16 +673,81 @@ UINTN ScanDriverDir (
     return (NumFound);
 } // static UINTN ScanDriverDir()
 
+// Handles some otherwise largely duplicated code
+static
+UINTN LoadDriversHelper (
+    CHAR16      *Directory,
+    CHAR16      *SelfDirectory,
+    BOOLEAN      UserDefined,
+    EFI_HANDLE **DriversListUser
+) {
+    #if REFIT_DEBUG > 0
+    CHAR16      *MsgNotFound = L"Not Found or Empty";
+    #endif
 
-// Load all UEFI drivers from RefindPlus' "drivers" subdirectory and from the
-// directories specified by the user in the "scan_driver_dirs" configuration
-// file line.
-// Originally from rEFIt's main.c (BSD), but modified since then (GPLv3).
-// Returns TRUE if any drivers are loaded, FALSE otherwise.
+    UINTN        CurFound;
+    CHAR16      *BaseDirectory;
+
+
+    CleanUpPathNameSlashes (Directory);
+    if (UserDefined && StrLen (Directory) == 0) {
+        return 0;
+    }
+
+    if (SelfDirectory == NULL ||
+        (
+            UserDefined &&
+            MyStrBegins (SelfDirectory, Directory)
+        )
+    ) {
+        BaseDirectory = StrDuplicate (Directory);
+    }
+    else {
+        BaseDirectory = StrDuplicate (SelfDirectory);
+        MergeStrings (&BaseDirectory, Directory, L'\\');
+    }
+
+    CurFound = ScanDriverDir (BaseDirectory, DriversListUser);
+    #if REFIT_DEBUG > 0
+    if (CurFound == 0) {
+        ALT_LOG(1, LOG_LINE_NORMAL,
+            L"'%s' ... %s Driver Folder:- '%s'",
+            MsgNotFound,
+            UserDefined ? L"User Defined" : L"Program Default",
+            BaseDirectory
+        );
+        LOG_MSG(
+            "%s  - %s",
+            (GlobalConfig.LogLevel <= LOGLEVELMAX)
+                ? OffsetNext : L"",
+                MsgNotFound
+            );
+    }
+    #endif
+
+    MY_FREE_POOL(BaseDirectory);
+
+    return CurFound;
+} // static UINTN LoadDriversHelper()
+
+// Load all UEFI drivers from the "drivers" directory
+//   and any directories specified by the user in the
+//   "scan_driver_dirs" configuration file setting.
+// Returns TRUE if drivers are loaded or FALSE.
+//
+// Modified from the version in rEFIt's main.c.
+// Original copyrighted under the BSD License.
+// Modifications by Roderick Smith are GPLv3.
+// Modifications for RefindPlus prefer MIT.
+// NB: MIT use may be precluded by the GPL.
+//     I.E., GPL may be forced regardless.
+//     Still recording preference for a
+//       less restrictive licence but
+//       likely blocked by the GPL.
+//     Block may end with time.
 BOOLEAN LoadDrivers (VOID) {
     #if REFIT_DEBUG > 0
-    CHAR16        *MsgStr;
-    const CHAR16  *MsgNotFound = L"Not Found or Empty";
+    CHAR16      *MsgStr;
     #endif
 
     UINTN        i, k;
@@ -688,10 +755,10 @@ BOOLEAN LoadDrivers (VOID) {
     UINTN        CurFound;
     CHAR16      *Directory;
     CHAR16      *SelfDirectory;
-    CHAR16      *BaseDirectory;
-    EFI_HANDLE  *DriversListAll;
-    EFI_HANDLE  *DriversListProg;
-    EFI_HANDLE  *DriversListUser;
+    BOOLEAN      NumDriverFlag;
+    EFI_HANDLE  *DriversListAll;  // Do *NOT* Free
+    EFI_HANDLE  *DriversListProg; // Do *NOT* Free
+    EFI_HANDLE  *DriversListUser; // Do *NOT* Free
 
 #ifdef __MAKEWITH_TIANO
 // DA-TAG: Limit to TianoCore
@@ -711,9 +778,6 @@ BOOLEAN LoadDrivers (VOID) {
 #endif
     #endif
 
-    NumFound = CurFound = i = 0;
-    DriversListProg = DriversListUser = DriversListAll = NULL;
-
     if (SelfDirPath == NULL) {
         SelfDirectory = NULL;
     }
@@ -722,46 +786,27 @@ BOOLEAN LoadDrivers (VOID) {
         CleanUpPathNameSlashes (SelfDirectory);
     }
 
+    DriversListProg = NULL;
+    NumFound = CurFound = i = 0;
     while (
         CurFound == 0 &&
         (Directory = FindCommaDelimited (DRIVER_DIRS, i++)) != NULL
     ) {
-        CleanUpPathNameSlashes (Directory);
-        if (SelfDirectory == NULL) {
-            BaseDirectory = StrDuplicate (Directory);
-        }
-        else {
-            BaseDirectory = StrDuplicate (SelfDirectory);
-            MergeStrings (&BaseDirectory, Directory, L'\\');
-        }
-
-        CurFound = ScanDriverDir (BaseDirectory, &DriversListProg);
+        CurFound = LoadDriversHelper (
+            Directory, SelfDirectory,
+            FALSE, &DriversListProg
+        );
         if (CurFound > 0) {
-            // We only process one default folder
-            // Increment 'NumFound' and exit loop if drivers were found
-            NumFound = NumFound + CurFound;
-        }
-        else {
-            #if REFIT_DEBUG > 0
-            ALT_LOG(1, LOG_LINE_NORMAL,
-                L"'%s' ... Program Default Driver Folder:- '%s'",
-                MsgNotFound, BaseDirectory
-            );
-            LOG_MSG(
-                "%s  - %s",
-                (GlobalConfig.LogLevel <= LOGLEVELMAX)
-                    ? OffsetNext
-                    : L"",
-                MsgNotFound
-            );
-            #endif
+            // Only process one default folder.
+            // Increment 'NumFound' and exit loop.
+            NumFound += CurFound;
         }
 
         MY_FREE_POOL(Directory);
-        MY_FREE_POOL(BaseDirectory);
     } // while
 
     // Scan additional user-specified driver directories.
+    DriversListUser = NULL;
     if (GlobalConfig.DriverDirs) {
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_THREE_STAR_SEP, L"Load Provided Drivers in User Defined Folders");
@@ -772,49 +817,21 @@ BOOLEAN LoadDrivers (VOID) {
 
         i = 0;
         while ((Directory = FindCommaDelimited (GlobalConfig.DriverDirs, i++)) != NULL) {
-            CleanUpPathNameSlashes (Directory);
-            if (StrLen (Directory) > 0) {
-                if (SelfDirectory == NULL ||
-                    MyStrBegins (SelfDirectory, Directory)
-                ) {
-                    BaseDirectory = StrDuplicate (Directory);
-                }
-                else {
-                    BaseDirectory = StrDuplicate (SelfDirectory);
-                    MergeStrings (&BaseDirectory, Directory, L'\\');
-                }
-
-                CurFound = ScanDriverDir (BaseDirectory, &DriversListUser);
-                if (CurFound > 0) {
-                    NumFound = NumFound + CurFound;
-                }
-                else {
-                    #if REFIT_DEBUG > 0
-                    ALT_LOG(1, LOG_LINE_NORMAL,
-                        L"'%s' ... User Defined Driver Folder:- '%s'",
-                        MsgNotFound, BaseDirectory
-                    );
-                    LOG_MSG(
-                        "%s  - %s",
-                        (GlobalConfig.LogLevel <= LOGLEVELMAX)
-                            ? OffsetNext : L"",
-                        MsgNotFound
-                    );
-                    #endif
-                }
-            }
+            // Increment 'NumFound' if drivers found
+            NumFound += LoadDriversHelper (
+                Directory, SelfDirectory,
+                TRUE, &DriversListUser
+            );
 
             MY_FREE_POOL(Directory);
-            MY_FREE_POOL(BaseDirectory);
         } // while
     }
     MY_FREE_POOL(SelfDirectory);
 
-    #if REFIT_DEBUG > 0
-    LOG_MSG("\n\n");
-    #endif
+    NumDriverFlag = (NumFound > 0);
 
     #if REFIT_DEBUG > 0
+    LOG_MSG("\n\n");
     MsgStr = PoolPrint (
         L"Processed %d UEFI Driver%s",
         NumFound, (NumFound == 1) ? L"" : L"s"
@@ -825,14 +842,16 @@ BOOLEAN LoadDrivers (VOID) {
 
 #ifdef __MAKEWITH_TIANO
 // DA-TAG: Limit to TianoCore
-    DriversIndex = 0;
-    if (NumFound > 0 && GlobalConfig.RansomDrives) {
+    if (GlobalConfig.RansomDrives && NumDriverFlag) {
+        DriversIndex = 0;
+        DriversListAll = NULL;
         HandleSize = sizeof (EFI_HANDLE) * 16;
+
         /* Program Default Folders - START */
         if (DriversListProg != NULL) {
             i = 0;
             while (DriversListProg[i] != NULL) {
-                ++i;
+                i += 1;
             } // while
 
             if (i > 0) {
@@ -857,17 +876,17 @@ BOOLEAN LoadDrivers (VOID) {
         if (DriversListUser != NULL) {
             i = 0;
             while (DriversListUser[i] != NULL) {
-                ++i;
+                i += 1;
             } // while
 
             if (DriversIndex == 0) {
-                // New Array
+                // Create new array
                 DriversListAll = AllocatePool (
                     HandleSize * i
                 );
             }
             else {
-                // Extend Array
+                // Extend existing array
                 DriversListAll = ReallocatePool (
                     HandleSize * DriversIndex,
                     HandleSize * (DriversIndex + i),
@@ -888,17 +907,20 @@ BOOLEAN LoadDrivers (VOID) {
         /* User Defined Folders - END */
 
         if (DriversListAll != NULL) {
-            DriversListAll[DriversIndex] = NULL; // Terminate Array
+            // Terminate array
+            DriversListAll[DriversIndex] = NULL;
 
-            // DA-TAG: Do not free 'DriversListXYZ'
-            OcRegisterDriversToHighestPriority (DriversListAll);
+            // Prioritise drivers loaded by RefindPlus
+            OcRegisterDriversToHighestPriority (
+                DriversListAll
+            );
         }
-    } // if NumFound
+    } // if GlobalConfig.RansomDrives
 #endif
 
     // Connect Devices
     // DA-TAG: Always run this
-    ConnectAllDriversToAllControllers (TRUE);
+    ConnectAllDriversToAllControllers();
 
-    return (NumFound > 0);
+    return NumDriverFlag;
 } // BOOLEAN LoadDrivers()

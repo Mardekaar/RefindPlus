@@ -20,7 +20,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -331,6 +331,7 @@ VOID RotateCsrValue (
     }
     #endif
 
+    AccessFlagsFull |= EFI_VARIABLE_NON_VOLATILE;
     Status = (TargetCsr != 0)
         ? EfivarSetRaw (
             &AppleBootGuid, L"csr-active-config",
