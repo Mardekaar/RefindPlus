@@ -1,7 +1,7 @@
 /** @file
 Copyright (C) 2020, vit9696. All rights reserved.
 
-Modified 2021, Dayo Akanji. (sf.net/u/dakanji/profile)
+Modified 2021 - 2025, Dayo Akanji. (sf.net/u/dakanji/profile)
 
   All rights reserved.
 
@@ -27,340 +27,356 @@ Modified 2021, Dayo Akanji. (sf.net/u/dakanji/profile)
 
 static
 UINT64 ApfsFletcher64 (
-  VOID    *Data,
-  UINTN    DataSize
-  )
-{
-  UINT32        *Walker;
-  UINT32        *WalkerEnd;
-  UINT64         Sum1;
-  UINT64         Sum2;
-  UINT32         Rem;
+    VOID    *Data,
+    UINTN    DataSize
+) {
+    UINT32        *Walker;
+    UINT32        *WalkerEnd;
+    UINT64         Sum1;
+    UINT64         Sum2;
+    UINT32         Rem;
 
-  // For APFS we have the following guarantees (checked outside).
-  // - DataSize is always divisible by 4 (UINT32), the only potential exceptions
-  //   are multiples of block sizes of 1 and 2, which we do not support and filter out.
-  // - DataSize is always between 0x1000-8 and 0x10000-8, i.e. within UINT16.
-  ASSERT (DataSize >= APFS_NX_MINIMUM_BLOCK_SIZE - sizeof (UINT64));
-  ASSERT (DataSize <= APFS_NX_MAXIMUM_BLOCK_SIZE - sizeof (UINT64));
-  ASSERT (DataSize % sizeof (UINT32) == 0);
+    // For APFS we have the following guarantees (checked outside).
+    // - DataSize is always divisible by 4 (UINT32), the only potential exceptions
+    //   are multiples of block sizes of 1 and 2, which we do not support and filter out.
+    // - DataSize is always between 0x1000-8 and 0x10000-8, i.e. within UINT16.
+    ASSERT (DataSize >= APFS_NX_MINIMUM_BLOCK_SIZE - sizeof (UINT64));
+    ASSERT (DataSize <= APFS_NX_MAXIMUM_BLOCK_SIZE - sizeof (UINT64));
+    ASSERT (DataSize % sizeof (UINT32) == 0);
 
-  Sum1 = 0;
-  Sum2 = 0;
+    Sum1 = 0;
+    Sum2 = 0;
 
-  Walker     = Data;
-  WalkerEnd  = Walker + DataSize / sizeof (UINT32);
+    Walker     = Data;
+    WalkerEnd  = Walker + DataSize / sizeof (UINT32);
 
-  // Do usual Fletcher-64 rounds without modulo due to impossible overflow.
-  while (Walker < WalkerEnd) {
-    // Sum1 never overflows, because 0xFFFFFFFF * (0x10000-8) < MAX_UINT64.
-    // This is just a normal sum of data values.
-    Sum1 += *Walker;
+    // Do usual Fletcher-64 rounds without modulo due to impossible overflow.
+    while (Walker < WalkerEnd) {
+        // Sum1 never overflows, because 0xFFFFFFFF * (0x10000-8) < MAX_UINT64.
+        // This is just a normal sum of data values.
+        Sum1 += *Walker;
 
-    // Sum2 never overflows, because 0xFFFFFFFF * (0x4000-1) * 0x1FFF < MAX_UINT64.
-    // This is just a normal arithmetical progression of sums.
+        // Sum2 never overflows, because 0xFFFFFFFF * (0x4000-1) * 0x1FFF < MAX_UINT64.
+        // This is just a normal arithmetical progression of sums.
+        Sum2 += Sum1;
+        ++Walker;
+    }
+
+    // Split Fletcher-64 halves.
+    // As per Chinese remainder theorem, perform the modulo now.
+    // No overflows also possible as seen from Sum1/Sum2 upper bounds above.
     Sum2 += Sum1;
-    ++Walker;
-  }
+    APFS_MOD_MAX_UINT32 (Sum2, &Rem);
+    Sum2  = ~Rem;
 
-  // Split Fletcher-64 halves.
-  // As per Chinese remainder theorem, perform the modulo now.
-  // No overflows also possible as seen from Sum1/Sum2 upper bounds above.
-  Sum2 += Sum1;
-  APFS_MOD_MAX_UINT32 (Sum2, &Rem);
-  Sum2  = ~Rem;
+    Sum1 += Sum2;
+    APFS_MOD_MAX_UINT32 (Sum1, &Rem);
+    Sum1  = ~Rem;
 
-  Sum1 += Sum2;
-  APFS_MOD_MAX_UINT32 (Sum1, &Rem);
-  Sum1  = ~Rem;
-
-  return (Sum1 << 32U) | Sum2;
+    return (Sum1 << 32U) | Sum2;
 }
 
 static
 BOOLEAN ApfsBlockChecksumVerify (
-  APFS_OBJ_PHYS   *Block,
-  UINTN            DataSize
-  )
-{
-  UINT64  NewChecksum;
+    APFS_OBJ_PHYS   *Block,
+    UINTN            DataSize
+) {
+    UINT64  NewChecksum;
 
-  ASSERT (DataSize > sizeof (*Block));
+    ASSERT (DataSize > sizeof (*Block));
 
-  NewChecksum = ApfsFletcher64 (
-    &Block->ObjectOid,
-    DataSize - sizeof (Block->Checksum)
+    NewChecksum = ApfsFletcher64 (
+        &Block->ObjectOid,
+        DataSize - sizeof (Block->Checksum)
     );
 
-  if (NewChecksum == Block->Checksum) {
-    return TRUE;
-  }
+    if (NewChecksum == Block->Checksum) {
+        return TRUE;
+    }
 
-  return FALSE;
+    return FALSE;
 }
 
 static
 EFI_STATUS ApfsReadJumpStart (
-  IN  APFS_PRIVATE_DATA      *PrivateData,
-  OUT APFS_NX_EFI_JUMPSTART  **JumpStartPtr
-  )
-{
-  EFI_STATUS              Status;
-  APFS_NX_EFI_JUMPSTART  *JumpStart;
-  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
-  EFI_LBA                 Lba;
-  UINT32                  MaxExtents;
+    IN  APFS_PRIVATE_DATA      *PrivateData,
+    OUT APFS_NX_EFI_JUMPSTART  **JumpStartPtr
+) {
+    EFI_STATUS              Status;
+    APFS_NX_EFI_JUMPSTART  *JumpStart;
+    EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+    EFI_LBA                 Lba;
+    UINT32                  MaxExtents;
+    BOOLEAN                 Verified;
 
-  // No jump start driver, ignore.
-  if (PrivateData->EfiJumpStart == 0) {
-      return EFI_UNSUPPORTED;
-  }
+    // No jump start driver, ignore.
+    if (PrivateData->EfiJumpStart == 0) {
+        return EFI_UNSUPPORTED;
+    }
 
-  // Allocate memory for jump start.
-  JumpStart = AllocateZeroPool (PrivateData->ApfsBlockSize);
-  if (JumpStart == NULL) {
-      return EFI_OUT_OF_RESOURCES;
-  }
+    // Allocate memory for jump start.
+    JumpStart = AllocateZeroPool (PrivateData->ApfsBlockSize);
+    if (JumpStart == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+    }
 
-  BlockIo = InternalApfsTranslateBlock (PrivateData, PrivateData->EfiJumpStart, &Lba);
-  if (BlockIo == NULL) {
-      return EFI_UNSUPPORTED;
-  }
+    BlockIo = InternalApfsTranslateBlock (
+        PrivateData,
+        PrivateData->EfiJumpStart, &Lba
+    );
+    if (BlockIo == NULL) {
+        FreePool (JumpStart);
+        return EFI_UNSUPPORTED;
+    }
 
-  // Read jump start and abort on failure.
-  Status = REFIT_CALL_5_WRAPPER(
-      BlockIo->ReadBlocks, BlockIo,
-      BlockIo->Media->MediaId, Lba,
-      PrivateData->ApfsBlockSize, JumpStart
-  );
+    // Read jump start and abort on failure.
+    Status = REFIT_CALL_5_WRAPPER(
+        BlockIo->ReadBlocks, BlockIo,
+        BlockIo->Media->MediaId, Lba,
+        PrivateData->ApfsBlockSize, JumpStart
+    );
+    if (EFI_ERROR(Status)) {
+        FreePool (JumpStart);
+        return Status;
+    }
 
-  if (EFI_ERROR(Status)) {
-      FreePool (JumpStart);
-      return Status;
-  }
+    // Jump start is expected to have JSDR magic.
+    // Version is not checked by ApfsJumpStart driver.
+    if (JumpStart->Magic != APFS_NX_EFI_JUMPSTART_MAGIC) {
+        FreePool (JumpStart);
+        return EFI_UNSUPPORTED;
+    }
 
-  // Jump start is expected to have JSDR magic.
-  // Version is not checked by ApfsJumpStart driver.
-  if (JumpStart->Magic != APFS_NX_EFI_JUMPSTART_MAGIC) {
-    FreePool (JumpStart);
-    return EFI_UNSUPPORTED;
-  }
+    // Calculate and verify checksum.
+    Verified = ApfsBlockChecksumVerify (
+        &JumpStart->BlockHeader,
+        PrivateData->ApfsBlockSize
+    );
+    if (!Verified) {
+        FreePool (JumpStart);
+        return EFI_UNSUPPORTED;
+    }
 
-  // Calculate and verify checksum.
-  if (!ApfsBlockChecksumVerify (&JumpStart->BlockHeader, PrivateData->ApfsBlockSize)) {
-    FreePool (JumpStart);
-    return EFI_UNSUPPORTED;
-  }
+    // Ensure that extent count does not overflow.
+    MaxExtents = (
+        PrivateData->ApfsBlockSize - sizeof (*JumpStart)
+    ) / sizeof (JumpStart->RecordExtents[0]);
+    if (MaxExtents < JumpStart->NumExtents) {
+        FreePool (JumpStart);
+        return EFI_UNSUPPORTED;
+    }
 
-  // Ensure that extent count does not overflow.
-  MaxExtents = (PrivateData->ApfsBlockSize - sizeof (*JumpStart)) / sizeof (JumpStart->RecordExtents[0]);
-  if (MaxExtents < JumpStart->NumExtents) {
-    FreePool (JumpStart);
-    return EFI_UNSUPPORTED;
-  }
-
-  *JumpStartPtr = JumpStart;
-  return EFI_SUCCESS;
+    *JumpStartPtr = JumpStart;
+    return EFI_SUCCESS;
 }
 
 static
 EFI_STATUS ApfsReadDriver (
-  IN  APFS_PRIVATE_DATA       *PrivateData,
-  IN  APFS_NX_EFI_JUMPSTART   *JumpStart,
-  OUT UINTN                   *DriverSize,
-  OUT VOID                   **DriverBuffer
-  )
-{
-  EFI_STATUS              Status;
-  VOID                   *EfiFile;
-  UINTN                   EfiFileSize;
-  UINTN                   OrgEfiFileSize;
-  UINT8                  *ChunkPtr;
-  UINTN                   ChunkSize;
-  UINTN                   Index;
-  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
-  EFI_LBA                 Lba;
+    IN  APFS_PRIVATE_DATA       *PrivateData,
+    IN  APFS_NX_EFI_JUMPSTART   *JumpStart,
+    OUT UINTN                   *DriverSize,
+    OUT VOID                   **DriverBuffer
+) {
+    EFI_STATUS              Status;
+    VOID                   *EfiFile;
+    UINTN                   EfiFileSize;
+    UINTN                   OrgEfiFileSize;
+    UINT8                  *ChunkPtr;
+    UINTN                   ChunkSize;
+    UINTN                   Index;
+    BOOLEAN                 Overflow;
+    EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+    EFI_LBA                 Lba;
 
-  EfiFileSize = JumpStart->EfiFileLen / PrivateData->ApfsBlockSize + 1;
-  if (OcOverflowMulUN (EfiFileSize, PrivateData->ApfsBlockSize, &EfiFileSize)) {
-    return EFI_SECURITY_VIOLATION;
-  }
-
-  OrgEfiFileSize = EfiFileSize;
-
-  EfiFile = AllocateZeroPool (EfiFileSize);
-  if (EfiFile == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  ChunkPtr = EfiFile;
-
-  for (Index = 0; Index < JumpStart->NumExtents || EfiFileSize != 0; ++Index) {
-    BlockIo = InternalApfsTranslateBlock (
-      PrivateData,
-      JumpStart->RecordExtents[Index].StartPhysicalAddr,
-      &Lba
-      );
-
-    if (JumpStart->RecordExtents[Index].BlockCount > MAX_UINTN
-      || OcOverflowMulUN ((UINTN) JumpStart->RecordExtents[Index].BlockCount, PrivateData->ApfsBlockSize, &ChunkSize)
-      || ChunkSize > EfiFileSize) {
-      FreePool (EfiFile);
-      return EFI_SECURITY_VIOLATION;
+    EfiFileSize = JumpStart->EfiFileLen / PrivateData->ApfsBlockSize + 1;
+    Overflow = OcOverflowMulUN (
+        EfiFileSize, PrivateData->ApfsBlockSize, &EfiFileSize
+    );
+    if (Overflow) {
+        return EFI_SECURITY_VIOLATION;
     }
 
-    Status = BlockIo->ReadBlocks (
-      BlockIo,
-      BlockIo->Media->MediaId,
-      Lba,
-      ChunkSize,
-      ChunkPtr
-      );
+    OrgEfiFileSize = EfiFileSize;
+
+    EfiFile = AllocateZeroPool (EfiFileSize);
+    if (EfiFile == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+    }
+
+    ChunkPtr = EfiFile;
+
+    for (Index = 0; Index < JumpStart->NumExtents || EfiFileSize != 0; ++Index) {
+        BlockIo = InternalApfsTranslateBlock (
+            PrivateData,
+            JumpStart->RecordExtents[Index].StartPhysicalAddr,
+            &Lba
+        );
+        if (EFI_ERROR(Status)) {
+            Status = EFI_SECURITY_VIOLATION;
+            break;
+        }
+
+        Overflow = OcOverflowMulUN (
+            (UINTN) JumpStart->RecordExtents[Index].BlockCount,
+            PrivateData->ApfsBlockSize,
+            &ChunkSize
+        );
+        if (Overflow ||
+            ChunkSize > EfiFileSize ||
+            JumpStart->RecordExtents[Index].BlockCount > MAX_UINTN
+        ) {
+            Status = EFI_SECURITY_VIOLATION;
+            break;
+        }
+
+        Status = BlockIo->ReadBlocks (
+            BlockIo,
+            BlockIo->Media->MediaId,
+            Lba,
+            ChunkSize,
+            ChunkPtr
+        );
+        if (EFI_ERROR(Status)) {
+            break;
+        }
+
+        ChunkPtr    += ChunkSize;
+        EfiFileSize -= ChunkSize;
+    }
 
     if (EFI_ERROR(Status)) {
-      FreePool (EfiFile);
-      return Status;
+        FreePool (EfiFile);
+        return Status;
     }
 
-    ChunkPtr    += ChunkSize;
-    EfiFileSize -= ChunkSize;
-  }
+    // Ensure that we do not have meaningful trailing memory just in case.
+    if (OrgEfiFileSize != JumpStart->EfiFileLen) {
+        ChunkPtr  = EfiFile;
+        ChunkPtr += JumpStart->EfiFileLen;
+        ZeroMem (ChunkPtr, OrgEfiFileSize - JumpStart->EfiFileLen);
+    }
 
-  // Ensure that we do not have meaningful trailing memory just in case.
-  if (OrgEfiFileSize != JumpStart->EfiFileLen) {
-    ChunkPtr  = EfiFile;
-    ChunkPtr += JumpStart->EfiFileLen;
-    ZeroMem (ChunkPtr, OrgEfiFileSize - JumpStart->EfiFileLen);
-  }
+    *DriverSize   = JumpStart->EfiFileLen;
+    *DriverBuffer = EfiFile;
 
-  *DriverSize   = JumpStart->EfiFileLen;
-  *DriverBuffer = EfiFile;
-
-  return EFI_SUCCESS;
+    return EFI_SUCCESS;
 }
 
 EFI_STATUS InternalApfsReadSuperBlock (
-  IN  EFI_BLOCK_IO_PROTOCOL   *BlockIo,
-  OUT APFS_NX_SUPERBLOCK     **SuperBlockPtr
-  )
-{
-  EFI_STATUS            Status;
-  APFS_NX_SUPERBLOCK   *SuperBlock;
-  UINTN                 ReadSize;
-  UINTN                 Retry;
+    IN  EFI_BLOCK_IO_PROTOCOL   *BlockIo,
+    OUT APFS_NX_SUPERBLOCK     **SuperBlockPtr
+) {
+    EFI_STATUS            Status;
+    APFS_NX_SUPERBLOCK   *SuperBlock;
+    UINTN                 ReadSize;
+    UINTN                 Retry;
+    BOOLEAN               Verified;
 
-  // According to APFS specs, APFS block size is a multiple of disk block size.
-  // Start by reading APFS_NX_MINIMUM_BLOCK_SIZE aligned to block size.
-  ReadSize = ALIGN_VALUE (APFS_NX_MINIMUM_BLOCK_SIZE, BlockIo->Media->BlockSize);
+    // According to APFS specs, APFS block size is a multiple of disk block size.
+    // Start by reading APFS_NX_MINIMUM_BLOCK_SIZE aligned to block size.
+    ReadSize = ALIGN_VALUE (APFS_NX_MINIMUM_BLOCK_SIZE, BlockIo->Media->BlockSize);
 
-  SuperBlock = NULL;
+    SuperBlock = NULL;
 
-  // Second attempt is given for cases when block size is bigger than our guessed size.
-  for (Retry = 0; Retry < 2; ++Retry) {
-    // Allocate memory for super block.
-    SuperBlock = AllocateZeroPool (ReadSize);
-    if (SuperBlock == NULL) {
-      break;
+    // Second attempt is given for cases when block size is bigger than our guessed size.
+    for (Retry = 0; Retry < 2; ++Retry) {
+        // Allocate memory for super block.
+        SuperBlock = AllocateZeroPool (ReadSize);
+        if (SuperBlock == NULL) {
+            break;
+        }
+
+        // Read super block and abort on failure.
+        Status = REFIT_CALL_5_WRAPPER(
+            BlockIo->ReadBlocks, BlockIo,
+            BlockIo->Media->MediaId, 0,
+            ReadSize, SuperBlock
+        );
+        if (EFI_ERROR(Status)) {
+            break;
+        }
+
+        // Super block is expected to have NXSB magic.
+        if (SuperBlock->Magic != APFS_NX_SIGNATURE) {
+            break;
+        }
+
+        // Ensure APFS block size is:
+        // - A multiple of disk block size.
+        // - Divisible by UINT32 for fletcher checksum to work
+        //   (e.g. when block size is 1 or 2).
+        // - Within minimum and maximum edges.
+        if (SuperBlock->BlockSize < BlockIo->Media->BlockSize    ||
+            SuperBlock->BlockSize < APFS_NX_MINIMUM_BLOCK_SIZE   ||
+            SuperBlock->BlockSize > APFS_NX_MAXIMUM_BLOCK_SIZE   ||
+            (SuperBlock->BlockSize & (sizeof (UINT32) - 1)) != 0 ||
+            (SuperBlock->BlockSize & (BlockIo->Media->BlockSize - 1)) != 0
+        ) {
+            break;
+        }
+
+        // Check if we can calculate the checksum and try again on failure.
+        if (SuperBlock->BlockSize > ReadSize) {
+            ReadSize = SuperBlock->BlockSize;
+            FreePool (SuperBlock);
+            SuperBlock = NULL;
+            continue;
+        }
+
+        // Calculate and verify checksum.
+        Verified = ApfsBlockChecksumVerify (
+            &SuperBlock->BlockHeader,
+            SuperBlock->BlockSize
+        );
+        if (!Verified) break;
+
+        // Verify object type and flags.
+        // SubType being 0 comes from ApfsJumpStart and is not documented.
+        // ObjectOid being 1 comes from ApfsJumpStart and is not documented.
+        if (SuperBlock->BlockHeader.ObjectSubType != 0 ||
+            SuperBlock->BlockHeader.ObjectOid     != 1 ||
+            SuperBlock->BlockHeader.ObjectType    != (
+                APFS_OBJ_EPHEMERAL | APFS_OBJECT_TYPE_NX_SUPERBLOCK
+            )
+        ) {
+            break;
+        }
+
+        // Super block is assumed to be legit.
+        *SuperBlockPtr = SuperBlock;
+
+        return EFI_SUCCESS;
     }
 
-    // Read super block and abort on failure.
-    Status = REFIT_CALL_5_WRAPPER(
-        BlockIo->ReadBlocks, BlockIo,
-        BlockIo->Media->MediaId, 0,
-        ReadSize, SuperBlock
-    );
-    if (EFI_ERROR(Status)) {
-      break;
+    // All retry attempts exceeded.
+    if (SuperBlock != NULL) {
+        FreePool (SuperBlock);
     }
 
-    // Super block is expected to have NXSB magic.
-    if (SuperBlock->Magic != APFS_NX_SIGNATURE) {
-      break;
-    }
-
-    // Ensure APFS block size is:
-    // - A multiple of disk block size.
-    // - Divisible by UINT32 for fletcher checksum to work (e.g. when block size is 1 or 2).
-    // - Within minimum and maximum edges.
-    if (SuperBlock->BlockSize < BlockIo->Media->BlockSize    ||
-        SuperBlock->BlockSize < APFS_NX_MINIMUM_BLOCK_SIZE   ||
-        SuperBlock->BlockSize > APFS_NX_MAXIMUM_BLOCK_SIZE   ||
-        (SuperBlock->BlockSize & (sizeof (UINT32) - 1)) != 0 ||
-        (SuperBlock->BlockSize & (BlockIo->Media->BlockSize - 1)) != 0
-    ) {
-      break;
-    }
-
-    // Check if we can calculate the checksum and try again on failure.
-    if (SuperBlock->BlockSize > ReadSize) {
-      ReadSize = SuperBlock->BlockSize;
-      FreePool (SuperBlock);
-      SuperBlock = NULL;
-      continue;
-    }
-
-    // Calculate and verify checksum.
-    if (!ApfsBlockChecksumVerify (
-        &SuperBlock->BlockHeader,
-        SuperBlock->BlockSize)
-    ) {
-      break;
-    }
-
-    // Verify object type and flags.
-    // SubType being 0 comes from ApfsJumpStart and is not documented.
-    // ObjectOid being 1 comes from ApfsJumpStart and is not documented.
-    if (SuperBlock->BlockHeader.ObjectSubType != 0 ||
-        SuperBlock->BlockHeader.ObjectOid     != 1 ||
-        SuperBlock->BlockHeader.ObjectType    != (
-            APFS_OBJ_EPHEMERAL | APFS_OBJECT_TYPE_NX_SUPERBLOCK
-        )
-  ) {
-      break;
-    }
-
-    // Super block is assumed to be legit.
-    *SuperBlockPtr = SuperBlock;
-    return EFI_SUCCESS;
-  }
-
-  // All retry attempts exceeded.
-  if (SuperBlock != NULL) {
-    FreePool (SuperBlock);
-  }
-
-  return EFI_UNSUPPORTED;
+    return EFI_UNSUPPORTED;
 }
 
 EFI_STATUS InternalApfsReadDriver (
-  IN  APFS_PRIVATE_DATA    *PrivateData,
-  OUT UINTN                *DriverSize,
-  OUT VOID                **DriverBuffer
-  )
-{
-  EFI_STATUS              Status;
-  APFS_NX_EFI_JUMPSTART  *JumpStart;
+    IN  APFS_PRIVATE_DATA    *PrivateData,
+    OUT UINTN                *DriverSize,
+    OUT VOID                **DriverBuffer
+) {
+    EFI_STATUS              Status;
+    APFS_NX_EFI_JUMPSTART  *JumpStart;
 
-  Status = ApfsReadJumpStart (
-    PrivateData,
-    &JumpStart
+    Status = ApfsReadJumpStart (
+        PrivateData, &JumpStart
     );
-  if (EFI_ERROR(Status)) {
-    return Status;
-  }
+    if (EFI_ERROR(Status)) {
+        return Status;
+    }
 
-  Status = ApfsReadDriver (
-    PrivateData,
-    JumpStart,
-    DriverSize,
-    DriverBuffer
+    Status = ApfsReadDriver (
+        PrivateData, JumpStart,
+        DriverSize, DriverBuffer
     );
 
-  FreePool (JumpStart);
+    FreePool (JumpStart);
 
-  if (EFI_ERROR(Status)) {
     return Status;
-  }
-
-  return EFI_SUCCESS;
 }

@@ -19,9 +19,15 @@ jobs:
 
     if: github.actor == 'dakanji'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: dessant/label-actions@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           config-path: '.github/label-config.yml'
           process-only: ''
 
@@ -35,10 +41,16 @@ jobs:
     outputs:
       status: ${{ steps.handle_enhance_check_main.outputs.status }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - id: handle_enhance_check_main
         uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: exactly
           count: 1
@@ -53,20 +65,26 @@ jobs:
 
     if: needs.handle_enhance_check.outputs.status == 'success'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
 
       - name: Tag Item
         uses: actions-cool/issues-helper@v3
         with:
           actions: 'add-labels'
           labels: 'Tagged'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
 
       - name: Close Item
         uses: actions-cool/issues-helper@v3
         with:
           actions: 'close-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
 
   # Check Labels - https://github.com/mheap/github-action-required-labels
@@ -79,10 +97,16 @@ jobs:
     outputs:
       status: ${{ steps.handle_resolved_check_1_main.outputs.status }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - id: handle_resolved_check_1_main
         uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: minimum
           count: 1
@@ -99,10 +123,16 @@ jobs:
     outputs:
       status: ${{ steps.handle_resolved_check_2_main.outputs.status }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - id: handle_resolved_check_2_main
         uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: maximum
           count: 0
@@ -117,13 +147,19 @@ jobs:
 
     if: needs.handle_resolved_check_2.outputs.status == 'success'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
 
       - name: Remove Label
         uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
           labels: 'Acknowledged,Known-Issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
       - name: Add Label
@@ -131,5 +167,5 @@ jobs:
         with:
           actions: 'add-labels'
           labels: 'Bug'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}

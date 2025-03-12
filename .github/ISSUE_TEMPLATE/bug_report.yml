@@ -3,11 +3,23 @@ description: Report a problem with RefindPlus
 body:
   - type: markdown
     attributes:
-      value: |
+      value: |-
         Thank you for taking the time to report a problem with RefindPlus.
-        Please use the [DISCUSSIONS OPTION](https://github.com/dakanji/RefindPlus/discussions) instead if you wish to ask a question, make a comment or similar.
+        Please use the [DISCUSSIONS OPTION](https://github.com/RefindPlusRepo/RefindPlus/discussions/categories/general) instead if you wish to ask a question, make a comment or similar.
 
-        NB: Before continuing, try running RefindPlus with the 'ransom_drives' configuration option set if the problem is that RefindPlus hangs on UEFI-PC with HP firmware.
+        ---
+
+        ## BEFORE YOU PROCEED
+
+        If the problem is that RefindPlus hangs on UEFI-PC, especially with Hewlett Parkard (HP) firmware, try the following steps in the order listed first:
+        - Run RefindPlus with the 'ransom_drives' setting active and the 'disable_rescan_dxe' setting inactive.
+        - Run RefindPlus with 'disable_rescan_dxe' active and 'ransom_drives' inactive if that fails.
+        - Run RefindPlus with both 'ransom_drives' and 'disable_rescan_dxe' active if that fails.
+
+        ---
+
+        ## ISSUE DETAILS
+
   - type: dropdown
     id: version
     attributes:
@@ -77,9 +89,9 @@ body:
     id: log-file
     attributes:
       label: Debug Log
-      description: |
-        Please run the RefindPlus 'DBG' efi and add debug logs.
-        Please attach log files and do not paste their contents.
+      description: |-
+        Please run the RefindPlus 'DBG' efi and add debug logs.\
+        Please attach log files and *DO NOT* paste their contents.\
         Attach log files by dragging/dropping on the field below.
       placeholder: |
         Reports that do not need log files are typically best as Discussions.
@@ -90,7 +102,7 @@ body:
     id: extra-info
     attributes:
       label: Additional Context
-      description: |
+      description: |-
         Additional details that may further make the problem clear.
       placeholder: |
         You can attach files by dragging/dropping them on this field.

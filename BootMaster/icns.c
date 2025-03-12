@@ -207,12 +207,16 @@ EG_IMAGE * BuiltinIcon (
 //
 
 static
-VOID UpdateBaseIcon (
+INTN UpdateBaseIcon (
     IN     CHAR16    *BaseName,
-    IN OUT EG_IMAGE **Image
+    IN OUT EG_IMAGE **Image,
+    IN     INTN       InID
 ) {
+    UINTN             Index;
+    INTN              RetId;
+
     if (*Image != NULL) {
-        return;
+        return InID;
     }
 
     #if REFIT_DEBUG > 0
@@ -225,7 +229,22 @@ VOID UpdateBaseIcon (
     *Image = egFindIcon (
         BaseName, GlobalConfig.IconSizes[ICON_SIZE_BIG]
     );
-} // static VOID UpdateBaseIcon()
+
+    RetId = -1;
+    if (*Image != NULL) {
+        for (Index = 0; Index < BASE_OS_ICON_COUNT; Index++) {
+            if (TableBuiltinIconOS[Index].Image == NULL &&
+                MyStriCmp (BaseName, TableBuiltinIconOS[Index].FileName)
+            ) {
+                RetId = Index;
+
+                break;
+            }
+        } // for
+    }
+
+    return RetId;
+} // static INTN UpdateBaseIcon()
 
 static
 EG_IMAGE * LoadIndexedIcon (
@@ -266,8 +285,7 @@ INTN CheckTheCache (
         for (Index = 0; Index < BASE_OS_ICON_COUNT; Index++) {
             *Image = LoadIndexedIcon (BaseName, Index);
             if (*Image != NULL) {
-                RetId = (Index < BASE_OS_ICON_COUNT)
-                    ? Index : (BASE_OS_ICON_COUNT - 1);
+                RetId = Index;
 
                 break;
             }
@@ -298,7 +316,9 @@ EG_IMAGE * LoadOSIcon (
         return NULL;
     }
 
-    if (BootLogo && GlobalConfig.DisableBootLogo == DISABLE_BOOTLOGO_ALL) {
+    if (BootLogo &&
+        GlobalConfig.DisableBootLogo == DISABLE_BOOTLOGO_ALL
+    ) {
         return NULL;
     }
 
@@ -311,7 +331,10 @@ EG_IMAGE * LoadOSIcon (
         OurId =   -1;
         Image = NULL;
         do {
-            CutoutName = FindCommaDelimited (OSIconName, Index++);
+            if (OSIconName == NULL) break;
+            CutoutName = FindCommaDelimited (
+                OSIconName, Index++
+            );
             if (CutoutName == NULL) break;
 
             BaseName = PoolPrint (
@@ -323,10 +346,14 @@ EG_IMAGE * LoadOSIcon (
             // Skip cache check if BootLogo is set.
             // BootLogo is not cached.
             if (!BootLogo) {
-                OurId = CheckTheCache (BaseName, &Image);
+                OurId = CheckTheCache (
+                    BaseName, &Image
+                );
             }
 
-            UpdateBaseIcon (BaseName, &Image);
+            OurId = UpdateBaseIcon (
+                BaseName, &Image, OurId
+            );
 
             MY_FREE_POOL(BaseName);
             MY_FREE_POOL(CutoutName);
@@ -337,16 +364,22 @@ EG_IMAGE * LoadOSIcon (
         if (!LoadCustom && BootLogo) {
             Index = 0;
             do {
-                CutoutName = FindCommaDelimited (OSIconName, Index++);
+                if (OSIconName == NULL) break;
+                CutoutName = FindCommaDelimited (
+                    OSIconName, Index++
+                );
                 if (CutoutName == NULL) break;
 
                 BaseName = PoolPrint (
                     L"os_%s",
                     CutoutName
                 );
+
                 // No cache check as BootLogo is set.
                 // BootLogo is not cached.
-                UpdateBaseIcon (BaseName, &Image);
+                OurId = UpdateBaseIcon (
+                    BaseName, &Image, OurId
+                );
 
                 MY_FREE_POOL(BaseName);
                 MY_FREE_POOL(CutoutName);
@@ -363,9 +396,14 @@ EG_IMAGE * LoadOSIcon (
         // BootLogo is not cached.
         // Skip cache check if BootLogo is set.
         if (!BootLogo) {
-            OurId = CheckTheCache (BaseName, &Image);
+            OurId = CheckTheCache (
+                BaseName, &Image
+            );
         }
-        UpdateBaseIcon (BaseName, &Image);
+
+        OurId = UpdateBaseIcon (
+            BaseName, &Image, OurId
+        );
         MY_FREE_POOL(BaseName);
         if (Image != NULL) break;
 
@@ -376,12 +414,18 @@ EG_IMAGE * LoadOSIcon (
                 (BootLogo) ? L"boot" : L"os",
                 L"win"
             );
+
             // BootLogo is not cached.
             // Skip cache check if BootLogo is set.
             if (!BootLogo) {
-                OurId = CheckTheCache (BaseName, &Image);
+                OurId = CheckTheCache (
+                    BaseName, &Image
+                );
             }
-            UpdateBaseIcon (BaseName, &Image);
+
+            OurId = UpdateBaseIcon (
+                BaseName, &Image, OurId
+            );
             MY_FREE_POOL(BaseName);
             if (Image != NULL) break;
         }
@@ -389,13 +433,21 @@ EG_IMAGE * LoadOSIcon (
         if (BootLogo) {
             /* Try with 'os_' if BootLogo was set but not 'LoadCustom'. */
             if (!LoadCustom) {
-                BaseName = PoolPrint (L"os_%s", FallbackIconName);
-                UpdateBaseIcon (BaseName, &Image);
+                BaseName = PoolPrint (
+                    L"os_%s",
+                    FallbackIconName
+                );
+
+                OurId = UpdateBaseIcon (
+                    BaseName, &Image, OurId
+                );
                 MY_FREE_POOL(BaseName);
 
                 if (Image == NULL && WinAltIcon) {
                     // Try 'os_win' if 'WinAltIcon' is set.
-                    UpdateBaseIcon (L"os_win", &Image);
+                    OurId = UpdateBaseIcon (
+                        L"os_win", &Image, OurId
+                    );
                 }
             }
 
@@ -413,7 +465,9 @@ EG_IMAGE * LoadOSIcon (
                 );
             }
 
-            UpdateBaseIcon (BaseName, &Image);
+            OurId = UpdateBaseIcon (
+                BaseName, &Image, OurId
+            );
             MY_FREE_POOL(BaseName);
 
             if (Image != NULL) {

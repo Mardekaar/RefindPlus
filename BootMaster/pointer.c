@@ -372,12 +372,53 @@ EFI_EVENT pdWaitEvent (
 // Gets the current state of pointer devices and
 // assigns this to the first available device
 ////////////////////////////////////////////////////////////////////////////////
+static
+INT32 Int64ToInt32 (
+    INT64 TempINT64
+) {
+    if (TempINT64 > INT32_MAX) return INT32_MAX;
+    if (TempINT64 < INT32_MIN) return INT32_MIN;
+
+    return (INT32) TempINT64;
+} // static INT32 Int64ToInt32()
+
+static
+UINTN Uint64ToUintn (
+    UINT64 TempUINT64
+) {
+    if (TempUINT64 > UINTN_MAX) return UINTN_MAX;
+    if (TempUINT64 < UINTN_MIN) return UINTN_MIN;
+
+    return (UINTN) TempUINT64;
+} // static UINTN Uint64ToUintn()
+
+static
+UINTN Int32ToUintn (
+    INT32 TempINT32
+) {
+    if (TempINT32 > UINTN_MAX) return UINTN_MAX;
+    if (TempINT32 < UINTN_MIN) return UINTN_MIN;
+
+    return (UINTN) TempINT32;
+} // static UINTN Int32ToUintn()
+
+static
+UINTN Int64ToUintn (
+    INT64 TempINT64
+) {
+    if (TempINT64 > UINTN_MAX) return UINTN_MAX;
+    if (TempINT64 < UINTN_MIN) return UINTN_MIN;
+
+    return (UINTN) TempINT64;
+} // static UINTN Int64ToUintn()
+
 EFI_STATUS pdUpdateState (VOID) {
     EFI_STATUS                 Status;
-    EFI_STATUS                 PointerStatus;
     UINTN                      Index;
     INT32                      TargetX;
     INT32                      TargetY;
+    INT64                      TempINT64;
+    UINT64                     TempUINT64;
     BOOLEAN                    LastHolding;
     EFI_SIMPLE_POINTER_STATE   SPointerState;
     EFI_ABSOLUTE_POINTER_STATE APointerState;
@@ -392,79 +433,92 @@ EFI_STATUS pdUpdateState (VOID) {
     }
 
     LastHolding = State.Holding;
-    Status = EFI_NOT_READY;
+
     do {
         for (Index = 0; Index < NumAPointerDevices; Index++) {
-            PointerStatus = REFIT_CALL_2_WRAPPER(
-                ProtocolA[Index]->GetState, ProtocolA[Index], &APointerState
+            Status = REFIT_CALL_2_WRAPPER(
+                ProtocolA[Index]->GetState,
+                ProtocolA[Index], &APointerState
             );
-            if (!EFI_ERROR(PointerStatus)) {
-                State.X = (UINTN) DivU64x64Remainder (
-                    (UINT64)APointerState.CurrentX * (UINT64)ScreenW,
-                    (UINT64)ProtocolA[Index]->Mode->AbsoluteMaxX,
-                    NULL
-                );
-                State.Y = (UINTN) DivU64x64Remainder (
-                    (UINT64)APointerState.CurrentY * (UINT64)ScreenH,
-                    (UINT64)ProtocolA[Index]->Mode->AbsoluteMaxY,
-                    NULL
-                );
+            if (EFI_ERROR(Status)) {
+                continue; // 'for' loop
+            }
 
-                State.Holding = (APointerState.ActiveButtons & EFI_ABSP_TouchActive);
-                Status = EFI_SUCCESS;
+            TempUINT64 = DivU64x64Remainder (
+                (UINT64) APointerState.CurrentX *
+                (UINT64) ScreenW,
+                (UINT64) ProtocolA[Index]->Mode->AbsoluteMaxX,
+                NULL
+            );
+            State.X = Uint64ToUintn (TempUINT64);
 
-                break;
-            } // if !EFI_ERROR(PointerStatus)
+            TempUINT64 = DivU64x64Remainder (
+                (UINT64) APointerState.CurrentY *
+                (UINT64) ScreenH,
+                (UINT64) ProtocolA[Index]->Mode->AbsoluteMaxY,
+                NULL
+            );
+            State.Y = Uint64ToUintn (TempUINT64);
+
+            State.Holding = (
+                APointerState.ActiveButtons & EFI_ABSP_TouchActive
+            );
+
+            break; // 'for' loop
         } // for
 
         if (!EFI_ERROR(Status)) {
-            break;
+            break; // 'do' loop
         }
 
         for (Index = 0; Index < NumSPointerDevices; Index++) {
-            PointerStatus = REFIT_CALL_2_WRAPPER(ProtocolS[Index]->GetState, ProtocolS[Index], &SPointerState);
+            Status = REFIT_CALL_2_WRAPPER(
+                ProtocolS[Index]->GetState,
+                ProtocolS[Index], &SPointerState
+            );
+            if (EFI_ERROR(Status)) {
+                continue; // 'for' loop
+            }
 
-            if (!EFI_ERROR(PointerStatus)) {
-                TargetX = (INT32)((INT64)State.X + DivS64x64Remainder (
-                    (INT64)SPointerState.RelativeMovementX * (INT64)GlobalConfig.MouseSpeed,
-                    (INT64)ProtocolS[Index]->Mode->ResolutionX,
-                    NULL
-                ));
-                TargetY = (INT32)((INT64)State.Y + DivS64x64Remainder (
-                    (INT64)SPointerState.RelativeMovementY * (INT64)GlobalConfig.MouseSpeed,
-                    (INT64)ProtocolS[Index]->Mode->ResolutionY,
-                    NULL
-                ));
+            TempINT64 = (INT64) State.X + DivS64x64Remainder (
+                (INT64) SPointerState.RelativeMovementX *
+                (INT64) GlobalConfig.MouseSpeed,
+                (INT64) ProtocolS[Index]->Mode->ResolutionX,
+                NULL
+            );
+            TargetX = Int64ToInt32 (TempINT64);
 
-                if (TargetX < 0) {
-                    State.X = 0;
-                }
-                else if (TargetX >= ScreenW) {
-                    State.X = ScreenW - 1;
-                }
-                else {
-                    State.X = TargetX;
-                }
+            TempINT64 = (INT64) State.Y + DivS64x64Remainder (
+                (INT64) SPointerState.RelativeMovementY *
+                (INT64) GlobalConfig.MouseSpeed,
+                (INT64) ProtocolS[Index]->Mode->ResolutionY,
+                NULL
+            );
+            TargetY = Int64ToInt32 (TempINT64);
 
-                if (TargetY < 0) {
-                    State.Y = 0;
-                }
-                else if (TargetY >= ScreenH) {
-                    State.Y = ScreenH - 1;
-                }
-                else {
-                    State.Y = TargetY;
-                }
+            TempINT64 = ScreenW - 1;
+            if (0);
+            else if (TargetX < 0)        State.X = 0;
+            else if (TargetX >= ScreenW) State.X = Int64ToUintn (TempINT64);
+            else                         State.X = Int32ToUintn (TargetX);
 
-                State.Holding = SPointerState.LeftButton;
-                Status = EFI_SUCCESS;
+            TempINT64 = ScreenH - 1;
+            if (0);
+            else if (TargetY < 0)        State.Y = 0;
+            else if (TargetY >= ScreenH) State.Y = Int64ToUintn (TempINT64);
+            else                         State.Y = Int32ToUintn (TargetY);
 
-                break;
-            } // if !EFI_ERROR(PointerStatus)
+            State.Holding = SPointerState.LeftButton;
+
+            break; // 'for' loop
         } // for
     } while (0); // This 'loop' only runs once
 
     State.Press = (LastHolding && !State.Holding);
+
+    if (EFI_ERROR(Status)) {
+        Status = EFI_NOT_READY;
+    }
 
     return Status;
 } // EFI_STATUS pdUpdateState()

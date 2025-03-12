@@ -104,8 +104,6 @@ typedef struct {
 #   define NVRAM_EMULATED (NVRAM_TITLE L" (Emulated)")
 #endif
 
-extern EFI_GUID gFreedesktopRootGuid;
-
 INTN FindMem (
     IN VOID  *Buffer,
     IN UINTN  BufferLength,

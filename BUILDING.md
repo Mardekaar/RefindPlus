@@ -1,4 +1,32 @@
-# BUILDING VIA DOCKER VIRTUALISATION
+# REMOTE BUILD (GITHUB)
+
+RefindPlus can be built by leveraging GitHub's Workflow Artefact creation and storage capabilities. A GitHub `Workflow Action` is provided to facilitate this.
+
+- Navigate to https://github.com/RefindPlusRepo/RefindPlus and fork the repository.
+- Navigate to `https://github.com/YOUR_GITHUB_USERNAME_GOES_HERE/RefindPlus.git`.
+  - Enable Github Actions
+    - Click on the `Settings` navigation option
+    - Select the `Actions` configuration option
+    - Allow actions under the `Actions` tab
+  - Trigger Github Action
+    - Click on the `Actions` navigation option.
+    - Select the `Build Artefacts` workflow option.
+    - Run the default build or use the dropdown for run options.
+
+**NB:** Replace `YOUR_GITHUB_USERNAME_GOES_HERE` above with your actual GitHub User Name.
+
+Once the action run is completed, click on the action instance displayed and look for `Artifacts` near the bottom of the page for available builds to download. The artefacts will be automatically removed from your repository fork after a period of time.
+
+**NB:** If your repository fork has diverged from the `RefindPlusRepo` repositories, refer to the [Source Repository Alignment](https://github.com/RefindPlusRepo/RefindPlus/blob/GOPFix/BUILDING.md#source-repository-alignment) section below for sync options.
+
+
+<br><br>
+
+---
+
+<br><br>
+
+# LOCAL BUILD (DOCKER)
 
 RefindPlus can be built on any operating system environment that supports Docker virtualisation. A Docker image has been created by a third party developer and is available on the DockerHub website (https://hub.docker.com/r/xaionaro2/edk2-builder).
 Please refer to that project's repository (https://github.com/xaionaro/edk2-builder-docker) for details and support on this option.
@@ -9,7 +37,7 @@ Please refer to that project's repository (https://github.com/xaionaro/edk2-buil
 
 <br><br>
 
-# BUILDING NATIVELY ON MAC OS
+# LOCAL BUILD (MAC OS)
 
 ## Python
 
@@ -103,7 +131,7 @@ $ brew install binutils && brew upgrade binutils
 
 ### Fork the RefindPlus Repository
 
-Navigate to `https://github.com/dakanji/RefindPlus` and fork the repository.
+Navigate to `https://github.com/RefindPlusRepo/RefindPlus` and fork the repository.
 
 ### Clone the Forked RefindPlus Repository
 
@@ -113,7 +141,7 @@ In Terminal, clone the forked `RefindPlus` repository into a `RefindPlus/Working
 $ mkdir -p ~/Documents/RefindPlus && cd ~/Documents/RefindPlus
 $ git clone https://github.com/YOUR_GITHUB_USERNAME_GOES_HERE/RefindPlus.git Working
 $ cd ~/Documents/RefindPlus/Working && git checkout GOPFix
-$ git remote add upstream https://github.com/dakanji/RefindPlus.git
+$ git remote add upstream https://github.com/RefindPlusRepo/RefindPlus.git
 ```
 
 **NB:** Replace `YOUR_GITHUB_USERNAME_GOES_HERE` above with your actual GitHub User Name.
@@ -124,7 +152,7 @@ Your local RefindPlus repository will be under `Documents/RefindPlus/Working`.
 
 ### Fork the RefindPlusUDK Repository
 
-Navigate to `https://github.com/dakanji/RefindPlusUDK` and fork the repository
+Navigate to `https://github.com/RefindPlusRepo/RefindPlusUDK` and fork the repository
 
 ### Clone the Forked RefindPlusUDK Repository
 
@@ -134,7 +162,7 @@ In Terminal, clone the forked `RefindPlusUDK` repository into a `RefindPlus/edk2
 $ mkdir -p ~/Documents/RefindPlus && cd ~/Documents/RefindPlus
 $ git clone https://github.com/YOUR_GITHUB_USERNAME_GOES_HERE/RefindPlusUDK.git edk2
 $ cd ~/Documents/RefindPlus/edk2 && git checkout rudk
-$ git remote add upstream https://github.com/dakanji/RefindPlusUDK.git
+$ git remote add upstream https://github.com/RefindPlusRepo/RefindPlusUDK.git
 ```
 
 **NB:** Replace `YOUR_GITHUB_USERNAME_GOES_HERE` above with your actual GitHub User Name.
@@ -152,11 +180,9 @@ Your local RefindPlusUDK repository will be under `Documents/RefindPlus/edk2`.
   - If nothing is entered, the script will build on the default `GOPFix` branch.
   - The "chmod +x" step is typically only required the first time the script file is ever run.
 
-## Source Repository Alignment
+# Source Repository Alignment
 
-If some time has passed since your last build or since you initially created your repositories, you will need to ensure your repositories are aligned with the source repositories to incorporate updates added in the intervening period.
-
-### OPTION 1: Scripted Sync (Recommended)
+## OPTION 1: Scripted Sync (Recommended)
 
 - Navigate to your `/Documents/RefindPlus/edk2/000-BuildScript` folder in the Finder.
 - Separately, open a new Terminal window.
@@ -168,27 +194,29 @@ If some time has passed since your last build or since you initially created you
 **NB:** If you get an error after running the script, try running it again as subsequent runs should realign things.
 If the script still fails after a third attempt, try the manual sync steps outlined below instead.
 
-### OPTION 2: Manual Sync
+## OPTION 2: Manual Sync
 
-#### Sync RefindPlus Manually
+### Sync RefindPlus Manually
 
 ```
 $ cd ~/Documents/RefindPlus/Working && git checkout GOPFix
 $ git reset --hard a2cc87f019c4de3a1237e2dc23f432c27cec5ec6
+$ (git remote get-url upstream 2>/dev/null | grep -q "https://github.com/RefindPlusRepo/RefindPlus.git") || (git remote remove upstream && git remote add upstream https://github.com/RefindPlusRepo/RefindPlus.git 2>/dev/null)
 $ git push origin HEAD -f && git pull upstream GOPFix
 $ git push
 ```
 
-#### Sync RefindPlusUDK Manually
+### Sync RefindPlusUDK Manually
 
 ```
 $ cd ~/Documents/RefindPlus/edk2 && git checkout rudk
 $ git reset --hard a94082b4e5e42a1cfdcbab0516f9ecdbb596d201
+$ (git remote get-url upstream 2>/dev/null | grep -q "https://github.com/RefindPlusRepo/RefindPlusUDK.git") || (git remote remove upstream && git remote add upstream https://github.com/RefindPlusRepo/RefindPlusUDK.git 2>/dev/null)
 $ git push origin HEAD -f && git pull upstream rudk
 $ git push
 ```
 
-### OPTION 3: GitHub Sync
+## OPTION 3: GitHub Sync
 
 GitHub includes an interface for syncing forks (which will need to be pulled to your local machine).
 While, unlike Option 3, Options 1 and 2 will leave your fork with a clean history consistent with the source repositories, some may find the GitHub interface easier to use.

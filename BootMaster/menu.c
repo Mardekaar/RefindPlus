@@ -136,7 +136,7 @@ VOID LogExit (
     IN  CHAR16     *ChosenOptionTitle
 ) {
     ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Returned '%d' (%s) from Menu Screen \"%s\" Option in Function:- '%a'",
+        L"Returned '%d' (%s) from Menu Screen Option ... \"%s\" in Function:- '%a'",
         MenuExit, MenuExitInfo (MenuExit), ChosenOptionTitle, FunctionName
     );
 }
@@ -1749,7 +1749,7 @@ VOID HideTag (
     //           - https://sf.net/p/refind/discussion/general/thread/ed3185fb40
     //           - https://sf.net/p/refind/discussion/general/thread/4dfcdfdd16
     //           - https://github.com/joevt/RefindPlus/commit/8c303d504d58bb235e9d2218df8bdb939de9ed77
-    //           - https://github.com/dakanji/RefindPlus/issues/163
+    //           - https://github.com/RefindPlusRepo/RefindPlus/issues/163
     //         El Gordo is most likely a buffer overflow of some sort.
     //         El Gordo might be in one or more filesystem drivers.
     //         El Gordo might be spread across a number of files.

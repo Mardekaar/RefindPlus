@@ -137,14 +137,14 @@
 # of Windows or Linux to mimic a BGRT. This feature can be leveraged to define
 # custom exit splash screens by taking advantage of the following behaviour:
 #   - 'boot_outlogo' file will be used if present
-#   - 'boot_distroname' will be used if present otherwise
-#   - 'os_distroname' will be used if present otherwise
+#   - 'boot_{distro}' will be used if present otherwise
+#   - 'os_{distro}' will be used if present otherwise
 #
 # The options below are available:
 #   Win   - Disable Bootlogo for Windows Loaders
 #   Lin   - Disable Bootlogo for Linux Stub Loaders
 #   All   - Disable Bootlogo for Every Type of Loader
-#   Off   - Disable Bootlogo for None of the Above (Default)
+#   Off   - Disable Bootlogo for None of these Loaders (Default)
 #
 # NOTES:
 # 1. The 'All' option takes precedence over others apart from 'Off'
@@ -840,7 +840,7 @@
 # a more seamless transition, but may not display any information, which
 # can make it difficult to debug problems. However, using graphics mode
 # may prevent crashes in some instances. Note that specifying an empty
-# token will set RefindPlus up to boot all loader types in text mode.
+# token will set RefindPlus to run all loader types in graphics mode.
 # That is, 'use_graphics_for' alone works like setting 'everything'.
 #
 # Valid options:
@@ -859,9 +859,9 @@
 # 1. The 'everything' option takes precedence over others apart from 'none'
 # 2. The 'none' option takes precedence over every other setting
 #
-# Defaults to 'osx linux windows' when commented out (Loaded in graphics mode)
+# Defaults to 'osx' when commented out
 #
-#use_graphics_for osx linux grub
+#use_graphics_for osx linux windows
 
 # While using the nvRAM works with most computers, this can increase wear
 # and tear on the motherboard's nvRAM. Under conditions where the nvRAM is
@@ -876,7 +876,7 @@
 # HiddenTools, and HiddenLegacy variables and does not apply to any variables from
 # other processes/libraries (These are always written to the motherboard's nvRAM).
 #
-# Stores RefindPlus-Specific variables on the filesystem when commented out
+# Stores RefindPlus-specific variables on the filesystem when commented out
 #
 #use_nvram
 

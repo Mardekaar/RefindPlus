@@ -22,13 +22,19 @@ jobs:
 
     if: github.actor == 'dakanji' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'stale')
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Repository Checkout
         uses: actions/checkout@v4
 
       - name: Handle Rate Limits
         uses: ./.github/actions/handle-rate-limits
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Handle Cancelled/Duplicate/Invalid/Wierd/Not-Planned Issues
         uses: actions/stale@v9
@@ -42,12 +48,12 @@ jobs:
           stale-issue-label: 'Tagged'
           any-of-labels: 'Cancelled, Duplicate, Known-Issue, Invalid, Cannot-Replicate, Not-Planned'
           remove-issue-stale-when-updated: false
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ steps.app-token.outputs.token }}
 
       - name: Handle Rate Limits
         uses: ./.github/actions/handle-rate-limits
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Handle Incomplete Issues
         uses: actions/stale@v9
@@ -68,12 +74,12 @@ jobs:
           stale-issue-label: 'Stale'
           any-of-labels: 'Incomplete'
           remove-issue-stale-when-updated: true
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ steps.app-token.outputs.token }}
 
       - name: Handle Rate Limits
         uses: ./.github/actions/handle-rate-limits
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Handle No-Response Issues
         uses: actions/stale@v9
@@ -94,12 +100,12 @@ jobs:
           stale-issue-label: 'Stale'
           any-of-labels: 'Queries'
           remove-issue-stale-when-updated: true
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ steps.app-token.outputs.token }}
 
       - name: Handle Rate Limits
         uses: ./.github/actions/handle-rate-limits
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Catchall Closer
         uses: actions/stale@v9
@@ -119,4 +125,4 @@ jobs:
           exempt-assignees: 'dakanji'
           stale-issue-label: 'Stale'
           remove-issue-stale-when-updated: true
-          repo-token: ${{ secrets.PAT_TOKEN }}
+          repo-token: ${{ steps.app-token.outputs.token }}

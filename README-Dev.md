@@ -6,11 +6,11 @@ A Boot Manager for Mac and PC
 
 <br>
 
-[![Release Version](https://img.shields.io/github/v/release/dakanji/RefindPlus?style=for-the-badge&color=informational&label=current)](https://github.com/dakanji/RefindPlus/releases)[![Release Date](https://img.shields.io/github/release-date/dakanji/RefindPlus.svg?display_date=published_at&style=for-the-badge&color=informational&label=)](https://github.com/dakanji/RefindPlus/releases)
+[![Release Version](https://img.shields.io/github/v/release/RefindPlusRepo/RefindPlus?style=for-the-badge&color=informational&label=current)](https://github.com/RefindPlusRepo/RefindPlus/releases)[![Release Date](https://img.shields.io/github/release-date/RefindPlusRepo/RefindPlus.svg?display_date=published_at&style=for-the-badge&color=informational&label=)](https://github.com/RefindPlusRepo/RefindPlus/releases)
 
-[![Coverity Scan](https://img.shields.io/coverity/scan/22695)](https://scan.coverity.com/projects/22695)&nbsp;&nbsp;&nbsp;[![Codacy Grade](https://img.shields.io/codacy/grade/d2955171e96246579279c1a28c4b11cf?label=codacy)](https://app.codacy.com/gh/dakanji/RefindPlus/dashboard)
+[![Coverity Scan](https://img.shields.io/coverity/scan/22695)](https://scan.coverity.com/projects/22695)&nbsp;&nbsp;&nbsp;[![Codacy Grade](https://img.shields.io/codacy/grade/3d486c33f276471cbe95735bd28ea3e9?label=codacy)](https://app.codacy.com/gh/RefindPlusRepo/RefindPlus/dashboard)
 
-[![License Type](https://img.shields.io/badge/GPL%203.0/Later-blue?label=copies)](https://github.com/dakanji/RefindPlus/blob/GOPFix/INFO.txt)
+[![License Type](https://img.shields.io/badge/GPL%203.0/Later-blue?label=copies)](https://github.com/RefindPlusRepo/RefindPlus/blob/GOPFix/INFO.txt)
 
 </div>
 
@@ -54,7 +54,7 @@ Some features:
 
 ## Installation
 
-[MyBootMgr](https://www.dakanji.com/creations/index.html) is recommended to automate installing RefindPlus when running Mac OS on Intel-based Macs. Alternatively, as the RefindPlus efi file can function as a drop-in replacement for the upstream efi file, the [rEFInd package](https://www.rodsbooks.com/refind/installing.html) can be installed first and its efi file replaced with the RefindPlus efi file (Rename RefindPlus file to match). This allows installing RefindPlus on other compatible operating systems supported upstream. See `UEFI Secure Boot` under the [Divergence Section](https://github.com/dakanji/RefindPlus#divergence) for how to enable this if required.
+[MyBootMgr](https://www.dakanji.com/creations/index.html) is recommended to automate installing RefindPlus when running Mac OS on Intel-based Macs. Alternatively, as the RefindPlus efi file can function as a drop-in replacement for the upstream efi file, the [rEFInd package](https://www.rodsbooks.com/refind/installing.html) can be installed first and its efi file replaced with the RefindPlus efi file (Rename RefindPlus file to match). This allows installing RefindPlus on other compatible operating systems supported upstream. See `UEFI Secure Boot` under the [Divergence Section](https://github.com/RefindPlusRepo/RefindPlus#divergence) for how to enable this if required.
 
 > [!NOTE]
 >
@@ -66,7 +66,7 @@ Upstream post-release code updates are typically ported to RefindPlus as they ha
 >
 > Consider replacing upstream filesystem drivers with those packaged with RefindPlus as these are always either exactly the same as upstream versions or have had fixes applied.
 
-RefindPlus will function with the upstream configuration file, `refind.conf`, but users may wish to replace this with the RefindPlus configuration file, `config.conf`, to configure the additional options provided by RefindPlus. A sample RefindPlus configuration file is available here: [config.conf-sample-Dev](https://github.com/dakanji/RefindPlus/blob/GOPFix/config.conf-sample-Dev).
+RefindPlus will function with the upstream configuration file, `refind.conf`, but users may wish to replace this with the RefindPlus configuration file, `config.conf`, to configure the additional options provided by RefindPlus. A sample RefindPlus configuration file is available here: [config.conf-sample-Dev](https://github.com/RefindPlusRepo/RefindPlus/blob/GOPFix/config.conf-sample-Dev).
 
 > [!TIP]
 >
@@ -76,18 +76,18 @@ When run without activating RefindPlus-specific configuration options, as will b
 
 > [!NOTE]
 >
-> This equivalence is subject to some differences such as outlined under the [Divergence Section](https://github.com/dakanji/RefindPlus#divergence) below.
+> This equivalence is subject to some differences such as outlined under the [Divergence Section](https://github.com/RefindPlusRepo/RefindPlus#divergence) below.
 
 ## Additional Functionality
 
-RefindPlus-specific funtionality can be configured using the tokens below.<br>
-Additional information is provided in the sample RefindPlus configuration file.<br>
+RefindPlus-specific funtionality can be configured using the tokens below.\
+Additional information is provided in the sample RefindPlus configuration file.\
 These tokens are included in `Section 1` of the sample RefindPlus configuration file.
 
 Token | Functionality
 ----- | -----
 continue_on_warning   |Proceed as if a key was pressed after screen warnings (for unattended boot)
-csr_dynamic           |Actively enables or disables Apple's `System Integrity Protection` (SIP)
+csr_dynamic           |Actively sets or unsets Apple's `Configurable Security Restrictions (CSR)`
 csr_normalise         |Removes the `APPLE_INTERNAL` bit, when present, to permit OTA updates
 decline_help_icon     |Disables feature that may improve loading speed by preferring generic icons
 decline_help_size     |Disables feature that sets additional UI scaling for very high DPI screens
@@ -149,11 +149,12 @@ In addition to the new functionality listed above, the following upstream tokens
   - This is equivalent to activating the `csr_normalise` token.
 - **"log_level":** Controls the native log format and an implementation of the upstream format.
   - Levels 0, 1, or 2 can be specified.
-    - Level 0 activates the native succinct log format.
-    - Level 1 is broadly equivalent to the verbose upstream Level 4 format (Upstream Levels 1 to 3 were dispensed with)
+    - Level 0 activates the succinct native log format.
+    - Level 1 is broadly equivalent to the verbose upstream Level 4 format
+      - Upstream Levels 1 to 3 were dispensed with
     - Level 2 is only exposed on `NOOPT` builds and outputs logs at a very detailed level
       - The RefindPlus build script will create `NOOPT` builds when passed `ALL` or `NPT` as a second parameter
-        - Setting `ALL` includes an `NPT` build to the standard `REL` and `DBG` builds created
+        - Setting `ALL` adds an `NPT` build to the standard `REL` and `DBG` builds created
         - Setting `NPT` creates only that build type
           - Applies to setting `REL` or `DBG`
       - The first parameter is the build branch, which also needs to be specified in such instances
@@ -169,14 +170,14 @@ In addition to the new functionality listed above, the following upstream tokens
 Significant visible implementation differences vis-a-vis the upstream base are:
 - **UEFI Secure Boot:** RefindPlus binaries are currently not signed for secure boot support and do not include the `Secure Boot Advanced Targeting (SBAT)` sections required by Shim v15.3/newer.
   - > The process [outlined here](https://www.rodsbooks.com/refind/secureboot.html#installation) for signing self built upstream binaries can be followed to enable suport.
-  - > An adaptation of the process for RefindPlus is [provided here](https://github.com/dakanji/RefindPlus/discussions/190#discussioncomment-10130431). Modify for newer releases as required.
+  - > An adaptation of the process for RefindPlus is [provided here](https://github.com/RefindPlusRepo/RefindPlus/discussions/190#discussioncomment-10130431). Modify for newer releases as required.
   - > Refer to [this summation](https://forum.manjaro.org/t/howto-enable-secure-boot-with-refind/121403/6) for futher insight.
 - **GZipped Loaders:** RefindPlus only provides stub support for handling GZipped loaders as this is largely only relevant for units on the ARM architecture.
   - > This stub support is only used for debug logging in RefindPlus and can be activated using the same `support_gzipped_loaders` configuration token as upstream.
 - **Screenshots:** These are saved in the PNG format with a significantly smaller file size.
-  - > Additionally, the file naming is different and the files are always saved to the same ESP as the RefindPlus efi file.
+  - > Additionally, the file naming is different and files are always saved to the same ESP RefindPlus.
 - **UI Flags:** RefindPlus requires that any desired previously set `hideui` configuration token options are explicitly defined in supplementary/theme configuration files; as whenever the token is found in such files, the token setting is reset by RefindPlus to the specified option(s). The upstream implementation effectively adds new settings to any previously existing ones for this configuration token instead.
-  - > The RefindPlus implementation maintains consistency with how other configuration tokens are handled.
+  - > RefindPlus maintains consistency with how other configuration tokens are handled.
 - **UI Scaling:** WQHD monitors are correctly determined not to be HiDPI monitors and UI elements are not scaled up on such monitors when the RefindPlus-specific `scale_ui` configuration token is set to automatically detect the screen resolution. RefindPlus also takes vertically orientated screens into account and additionally scales UI elements down when low resolution screens (less than 1025px on the longest edge) are detected.
   - > Additionally, UI elements on extremely high resultion screens (greater than 5999px on the longest edge) receive a `4X scaling` as opposed to the `2X scaling` applied for standard HiDPI screens.
 - **Loader Icons:** RefindPlus prefers `os_windows` and `boot_windows` icon files, if present, over `os_win` and `boot_win` and the `win8` variants. Separately, RefindPlus defaults to preferring generic icons for loaders ahead of the slower to load custom icons where possible. The upstream icon search implementation involves only loading such icons after a search for custom icons has not turned anything up.
@@ -194,7 +195,7 @@ Significant visible implementation differences vis-a-vis the upstream base are:
 - **Mac Legacy BIOS Boot:** RefindPlus originally assumed all Macs were capable of legacy BIOS boot based on code that went in upstream back in 2012 when this was a reasonable default. However, some later Intel Macs do not support legacy BIOS boot and RefindPlus now attempts to categorise Macs to enable/disable legacy boot accordingly.
   - > Activate the RefindPlus-specific `disable_legacy_sync` configuration token to base legacy BIOS boot availability on the old assumption.
 - **Secondary Configuration Files:** While the upstream documentation prohibits including tertiary configuration files from secondary configuration files, there is no mechanism enforcing this prohibition. Hence, tertiary, quaternary, quinary, and more, configuration files can in fact be included.
-  - > The RefindPlus implementation enforces the limitation for inclusion to secondary configuration files.
+  - > RefindPlus enforces the limitation for inclusion to secondary configuration files.
 - **Shortcut Keys:** RefindPlus does not allocate shortcut keys based on the operating system type/name as there is no way of knowing what would actually be loaded in many cases.
   - > Keys are allocated based on display position in the order of `Key 1` to `Key Z`.
   - > Alphabetic `Keys I and O` are not used while Numeric `Key 0` is reserved for internal use.
@@ -202,10 +203,10 @@ Significant visible implementation differences vis-a-vis the upstream base are:
 - **Disabled Manual Stanzas:** The processing of a user configured boot stanza is halted, and the `Entry` object immediately discarded, once a `Disabled` setting is encountered. The outcome is the same as upstream, which always continues to create and return a fully built object that is later discarded in such cases. The approach adopted in RefindPlus allows for an optimised loading process particularly when such `Disabled` tokens are placed immediately after the `menuentry` line (see examples near the bottom of the `config.conf-sample` file).
   - > This also applies to `submenuentry` items which can be enabled or disabled separately.
 - **Pointer Device Priority:** The upstream implementation of pointer device priority is based on how the `enable_mouse` and `enable_touch` pointer device control tokens appear in the configuration file(s) when both are active. The last pointer device control token read in the main configuration file and/or any supplementary/override configuration file will be used and the other disregarded. In RefindPlus however, `enable_touch` always takes priority when both tokens are active without regard to the order of appearance in the configuration file(s).
-  - > Hence, to use a mouse in RefindPlus, `enable_touch` must be disabled (default) in addition to enabling `enable_mouse`.
+  - > Keep `enable_touch` disabled, in addition to setting `enable_mouse`, to use a mouse in RefindPlus.
 
 ## Roll Your Own
 
-Refer to [BUILDING.md](https://github.com/dakanji/RefindPlus/blob/GOPFix/BUILDING.md) for build instructions.
+Refer to [BUILDING.md](https://github.com/RefindPlusRepo/RefindPlus/blob/GOPFix/BUILDING.md) for build instructions.
 
-[CLICK HERE](https://github.com/dakanji/RefindPlus/blob/GOPFix/README-Dev.md) for the ReadMe file related to the current (work in progress) code base.
+[CLICK HERE](https://github.com/RefindPlusRepo/RefindPlus/blob/GOPFix/README-Dev.md) for the ReadMe file related to the current (work in progress) code base.

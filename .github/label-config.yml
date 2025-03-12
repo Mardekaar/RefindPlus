@@ -30,6 +30,9 @@ Acknowledged:
 # The `Accepted` label is added to issues
 Accepted:
   issues:
+    # Add labels
+    label:
+      - 'Unresolved'
     # Remove labels
     unlabel:
       - 'Acknowledged'
@@ -53,7 +56,7 @@ Accepted:
     reopen: true
     unlock: true
 
-# The `Declined` label is added to Pull Requests
+# The `Declined` label is added to PRs
 Declined:
   prs:
     # Remove labels
@@ -79,6 +82,13 @@ Declined:
     close: true
     # Closure reason
     close-reason: 'not planned'
+
+# The `Declined` label is removed from PRs
+-Declined:
+  prs:
+    # Reopen PR and unlock thread
+    reopen: true
+    unlock: true
 
 # The `Uncertain` label is added to issues
 Uncertain:

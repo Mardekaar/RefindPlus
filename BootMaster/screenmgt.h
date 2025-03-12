@@ -35,7 +35,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2020-2022 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -69,14 +69,14 @@
 //#define LAYOUT_TEXT_WIDTH (425)
 #define LAYOUT_BANNER_YGAP 32
 
-//#define FONT_CELL_WIDTH (7)
+//#define FONT_CELL_WIDTH   (7)
 //#define FONT_CELL_HEIGHT (12)
 
-// Codes for text position, used by egDisplayMessage() and PrintUglyText()
-#define CENTER 0
-#define BOTTOM 1
-#define TOP 2
-#define NEXTLINE 3
+// Text position codes for 'egDisplayMessage' and 'PrintUglyText'
+#define CENTER   (0)
+#define BOTTOM   (1)
+#define TOP      (2)
+#define NEXTLINE (3)
 
 extern UINTN     ConWidth;
 extern UINTN     ConHeight;

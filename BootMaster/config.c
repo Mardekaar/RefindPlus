@@ -494,10 +494,11 @@ VOID HandleHexes (
     } // for
 } // static VOID HandleHexes()
 
-// Convert TimeString (in "HH:MM" format) to a pure-minute format. Values should be
-// in the range from 0 (for 00:00, or midnight) to 1439 (for 23:59; aka LAST_MINUTE).
-// Any value outside that range denotes an error in the specification. Note that the
-// input value is returned in "UINTN" form if it is a number without a colon.
+// Convert TimeString (in "HH:MM" format) to a pure-minute format.
+// Values should be in the range between 0 (for 00:00, or midnight)
+// and 1439 (for 23:59; aka LAST_MINUTE) inclusive.
+// Any value outside this range is a specification error.
+// Input value as number without a colon is returned in "UINTN" form.
 static
 UINTN HandleTime (
     IN CHAR16 *TimeString
@@ -522,7 +523,7 @@ UINTN HandleTime (
             Minute += (TimeString[i] - L'0');
         }
 
-        i++;
+        i += 1;
     } // while
 
     TimeMinutes =  (Hour == 0)
@@ -624,6 +625,92 @@ VOID SetDefaultByTime (
 // Determine volume associated with stanza
 // Return 'NULL' if stanza is disabled
 static
+BOOLEAN GetIsDisabled (
+    REFIT_FILE   *File
+) {
+    UINTN           SubMenus;
+    UINTN           NumToken;
+    CHAR8          *FilePtr08;
+    CHAR16         *FilePtr16;
+    CHAR16        **TokenList;
+    BOOLEAN         IsExitLoop;
+    BOOLEAN         IsDisabled;
+    BOOLEAN         IsContinue;
+
+
+    SubMenus      =      0;
+    IsExitLoop    =  FALSE;
+    IsDisabled    =  FALSE;
+
+    // Store original TokenLine pointers
+    FilePtr08 = File->Current8Ptr;
+    FilePtr16 = File->Current16Ptr;
+
+    for (;;) {
+        IsContinue = FALSE;
+
+        NumToken = ReadTokenLine (File, &TokenList);
+        if (NumToken == 0) {
+            IsExitLoop = TRUE;
+        }
+        else if (MyStriCmp (TokenList[0], L"}")) {
+            if (SubMenus < 1) {
+                IsExitLoop = TRUE;
+            }
+            else {
+                SubMenus -= 1;
+                IsContinue = TRUE;
+            }
+        }
+        else if (MyStriCmp (TokenList[0], L"submenuentry")) {
+            SubMenus += 1;
+            IsContinue = TRUE;
+        }
+        else if (IsDisabled || SubMenus > 0) {
+            IsContinue = TRUE;
+        }
+
+        if (!IsExitLoop &&
+            !IsContinue &&
+            !MyStriCmp (TokenList[0], L"disabled")
+        ) {
+            IsContinue = TRUE;
+        }
+
+        if (IsExitLoop || IsContinue) {
+            FreeTokenLine (&TokenList, &NumToken);
+
+            if (IsExitLoop) {
+                break;
+            }
+
+            continue;
+        }
+
+        if (MyStriCmp (TokenList[0], L"disabled")) {
+            IsDisabled = TRUE;
+        }
+
+        FreeTokenLine (&TokenList, &NumToken);
+    } // for ;;
+
+    if (IsDisabled) {
+        // Return NULL without restoring TokenLine pointers
+        // Continues in Caller from current line
+        return TRUE;
+    }
+
+    // Restore original TokenLine pointers
+    // Continues in Caller with original line
+    File->Current8Ptr  = FilePtr08;
+    File->Current16Ptr = FilePtr16;
+
+    return FALSE;
+} // static BOOLEAN GetIsDisabled()
+
+// Determine volume associated with stanza
+// Return 'NULL' if stanza is disabled
+static
 REFIT_VOLUME * GetStanzaVolume (
     REFIT_FILE   *File,
     REFIT_VOLUME *Volume
@@ -704,6 +791,12 @@ REFIT_VOLUME * GetStanzaVolume (
             continue;
         }
 
+        IsDisabled = GetIsDisabled (File);
+        if (IsDisabled) {
+            FreeTokenLine (&TokenList, &NumToken);
+
+            break;
+        }
 
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_THREE_STAR_MID, L"Handle Token:- 'volume'");
@@ -1646,17 +1739,9 @@ VOID ExitOuter (
         GlobalConfig.NvramProtectEx = FALSE;
     }
 
-    if (GlobalConfig.EnableMouse ||
-        GlobalConfig.EnableTouch
-    ) {
-        // Force 'RescanDXE' for these
-        // Override Previous Outcomes
-        GlobalConfig.RescanDXE = TRUE;
-
-        if (GlobalConfig.EnableTouch) {
-            // Disable Mouse if Touch Active
-            GlobalConfig.EnableMouse = FALSE;
-        }
+    if (GlobalConfig.EnableTouch) {
+        // Disable Mouse if Touch Active
+        GlobalConfig.EnableMouse = FALSE;
     }
 
     if (GlobalConfig.SyncTrust  != ENFORCE_TRUST_NONE) {
@@ -2487,9 +2572,7 @@ VOID ReadConfig (
     #endif
 
     if (OuterLoop) {
-        GlobalConfig.GraphicsFor |= GRAPHICS_FOR_OSX;
-        GlobalConfig.GraphicsFor |= GRAPHICS_FOR_LINUX;
-        GlobalConfig.GraphicsFor |= GRAPHICS_FOR_WINDOWS;
+        GlobalConfig.GraphicsFor = GRAPHICS_FOR_OSX;
     }
 
     if (!FileExists (SelfDir, FileName)) {
@@ -2681,14 +2764,14 @@ VOID ReadConfig (
                     }
                     else {
                         if (0);
-                        else if (MyStriCmp (TokenList[i], L"osx"     )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_OSX;
-                        else if (MyStriCmp (TokenList[i], L"grub"    )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_GRUB;
-                        else if (MyStriCmp (TokenList[i], L"tools"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_TOOLS;
-                        else if (MyStriCmp (TokenList[i], L"linux"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_LINUX;
-                        else if (MyStriCmp (TokenList[i], L"elilo"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_ELILO;
-                        else if (MyStriCmp (TokenList[i], L"clover"  )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_CLOVER;
-                        else if (MyStriCmp (TokenList[i], L"windows" )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_WINDOWS;
-                        else if (MyStriCmp (TokenList[i], L"opencore")) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_OPENCORE;
+                        else if (MyStriCmp (Flag, L"osx"     )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_OSX;
+                        else if (MyStriCmp (Flag, L"grub"    )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_GRUB;
+                        else if (MyStriCmp (Flag, L"tools"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_TOOLS;
+                        else if (MyStriCmp (Flag, L"linux"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_LINUX;
+                        else if (MyStriCmp (Flag, L"elilo"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_ELILO;
+                        else if (MyStriCmp (Flag, L"clover"  )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_CLOVER;
+                        else if (MyStriCmp (Flag, L"windows" )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_WINDOWS;
+                        else if (MyStriCmp (Flag, L"opencore")) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_OPENCORE;
                     }
                 }
             } // for

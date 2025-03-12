@@ -33,10 +33,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - OpenUnlock'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Invalid,Resolved,Duplicate,Not-Planned,Incomplete,Known-Issue'
 
@@ -47,10 +53,16 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'unlock-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   issue_open_unlock3:
@@ -60,10 +72,16 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'open-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   # Misc Issue Items - https://github.com/actions-cool/issues-helper
@@ -73,10 +91,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - CloseLock'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Queries,Triage,Tagged,Stale'
 
@@ -87,11 +111,17 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'close-issue'
           close-reason: 'completed'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   issue_close_lock3:
@@ -101,15 +131,21 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'create-comment'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           body: |
             This thread is being locked.
 
-            Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
+            Please use the [Discussions Feature](https://github.com/RefindPlusRepo/RefindPlus/discussions/categories/general) for follow-on discussion or raise a new issue if appropriate.
 
   issue_close_lock4:
     name: Issue - CloseLock4
@@ -118,10 +154,16 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'lock-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   # Misc Issue Items - https://github.com/actions-cool/issues-helper
@@ -131,10 +173,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - Open'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'open-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   issue_close1:
@@ -143,10 +191,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - Close'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'add-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Tagged'
 
@@ -157,11 +211,17 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'close-issue'
           close-reason: 'completed'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   issue_comment_delete:
@@ -170,10 +230,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - Comment - Delete'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'delete-comment'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           comment-id: ${{ github.event.inputs.item_id }}
 
   issue_thread_lock1:
@@ -182,10 +248,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - Thread - Lock'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Tagged,Stale'
 
@@ -196,15 +268,21 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'create-comment'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           body: |
             This thread is being locked.
 
-            Please use the [Discussions Feature](https://github.com/dakanji/RefindPlus/discussions) for follow-on discussion or raise a new issue if appropriate.
+            Please use the [Discussions Feature](https://github.com/RefindPlusRepo/RefindPlus/discussions/categories/general) for follow-on discussion or raise a new issue if appropriate.
 
   issue_thread_lock3:
     name: Issue - Thread - Lock3
@@ -213,10 +291,16 @@ jobs:
 
     if: ${{ success() || failure() }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'lock-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
 
   issue_thread_unlock:
@@ -225,8 +309,14 @@ jobs:
 
     if: github.event.inputs.operation == 'Issue - Thread - Unlock'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'unlock-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}

@@ -1,0 +1,84 @@
+name: Build Artefacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_id:
+        description: "Commit ID (Blank for GOPFix Latest)"
+        required: false
+
+jobs:
+  create-binaries:
+    name: Create Binaries
+    runs-on: macos-13
+
+    steps:
+      - name: Get Repositories
+        shell: bash
+        run: |
+          mkdir ~/Documents/RefindPlus || exit 1
+          cd ~/Documents/RefindPlus || exit 1
+
+          # Clone RefindPlusUDK
+          git clone https://github.com/RefindPlusRepo/RefindPlusUDK.git edk2
+
+          # Clone RefindPlus
+          OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
+          git clone https://github.com/${OWNER}/RefindPlus.git Working
+          cd Working || exit 1
+
+          # Determine RefindPlus Branch with Target Commit
+          if [ ! -n "${{ github.event.inputs.commit_id }}" ]; then
+            BRANCH=GOPFix
+            git checkout GOPFix
+          else
+            BRANCH=$(git branch -r --contains ${{ github.event.inputs.commit_id }} | grep -v 'HEAD' | head -n 1 | sed 's/origin\///')
+            if [ -z "$BRANCH" ]; then
+              echo "Error: Commit ID not found on any branches!"
+              exit 1
+            fi
+            git checkout "$BRANCH"
+            git reset --hard ${{ github.event.inputs.commit_id }}
+          fi
+
+          # Save for Later
+          echo "BRANCH=${BRANCH}" >> $GITHUB_ENV
+
+      - name: Handle Prerequisites
+        shell: bash
+        run: |
+          brew install nasm && brew install acpica && brew install ocmtoc
+          curl -O https://www.python.org/ftp/python/2.7.18/python-2.7.18-macosx10.9.pkg
+          sudo installer -pkg python-2.7.18-macosx10.9.pkg -target /
+
+          if [[ "${PATH}" != *"/usr/local/bin"* ]] ; then export PATH="/usr/local/bin:${PATH}"; fi
+          echo "PATH=${PATH}" >> $GITHUB_ENV
+
+      - name: Run Build Script
+        env:
+          TERM: xterm
+        run: |
+          cd ~/Documents/RefindPlus/edk2/000-BuildScript || exit 1
+          chmod +x RefindPlusBuilder.sh
+          sh RefindPlusBuilder.sh "${BRANCH}" ALL
+
+      - name: Archive Build Artefacts (RELEASE)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: x64_RefindPlus-Artefacts_REL
+          path: ~/Documents/RefindPlus/edk2/Build/RefindPlus/RELEASE_XCODE5/x64/*.efi
+
+      - name: Archive Build Artefacts (DEBUG)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: x64_RefindPlus-Artefacts_DBG
+          path: ~/Documents/RefindPlus/edk2/Build/RefindPlus/DEBUG_XCODE5/x64/*.efi
+
+      - name: Archive Build Artefacts (NOOPT)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: x64_RefindPlus-Artefacts_NPT
+          path: ~/Documents/RefindPlus/edk2/Build/RefindPlus/NOOPT_XCODE5/x64/*.efi

@@ -1450,7 +1450,11 @@ VOID SetLoaderDefaults (
         ) {
             BREAD_CRUMB(L"%a:  5b 1", __func__);
             if (GetImage) {
-                MergeUniqueStrings (&TmpIconName, L"windows,win,win8", L',');
+                MergeUniqueStrings (
+                    &TmpIconName,
+                    L"windows,win8,win",
+                    L','
+                );
             }
 
             BREAD_CRUMB(L"%a:  5b 2", __func__);
@@ -2266,7 +2270,7 @@ VOID CleanUpLoaderList (
     }
 
     while (LoaderList != NULL) {
-        Temp = LoaderList;
+        Temp       = LoaderList;
         LoaderList = LoaderList->NextEntry;
         MY_FREE_POOL(Temp->FileName);
         MY_FREE_POOL(Temp);
@@ -2274,107 +2278,110 @@ VOID CleanUpLoaderList (
 } // static VOID CleanUpLoaderList()
 
 CHAR16 * SetVolKind (
-    IN CHAR16 *InstanceName,
-    IN CHAR16 *VolumeName,
-    IN UINT32  VolumeFSType
+    IN CHAR16 *EntryName,
+    IN CHAR16 *VolName,
+    IN UINT32  VolFSType
 ) {
     CHAR16 *RetVal;
 
 
+    // DA-TAG: Order of Appearance is Important
+    //         Do not trivially change this
     if (0);
-    else if (VolumeFSType == FS_TYPE_FAT32         ) RetVal = L""         ;
-    else if (VolumeFSType == FS_TYPE_FAT16         ) RetVal = L""         ;
-    else if (VolumeFSType == FS_TYPE_FAT12         ) RetVal = L""         ;
-    else if (VolumeFSType == FS_TYPE_EXFAT         ) RetVal = L""         ;
-    else if (MyStriCmp (VolumeName,   L"EFI"      )) RetVal = L""         ;
-    else if (MyStriCmp (VolumeName,   L"ESP"      )) RetVal = L""         ;
-    else if (MyStrStr  (VolumeName,   L"Volume"   )) RetVal = L""         ;
-    else if (MyStrStr  (VolumeName,   L"Partition")) RetVal = L""         ;
-    else if (MyStrStr  (VolumeName,   L"XBOOTLDR" )) RetVal = L""         ;
-    else if (MyStrStr  (InstanceName, L" via "    )) RetVal = L""         ;
-    else if (MyStrStr  (InstanceName, L"Instance:")) RetVal = L"Volume:- ";
-    else                                             RetVal = L""         ;
+    else if (VolFSType == FS_TYPE_FAT32         ) RetVal = L""         ;
+    else if (VolFSType == FS_TYPE_FAT16         ) RetVal = L""         ;
+    else if (VolFSType == FS_TYPE_FAT12         ) RetVal = L""         ;
+    else if (VolFSType == FS_TYPE_EXFAT         ) RetVal = L""         ;
+    else if (MyStriCmp (VolName,   L"EFI"      )) RetVal = L""         ;
+    else if (MyStriCmp (VolName,   L"ESP"      )) RetVal = L""         ;
+    else if (IsStriStr (VolName,   L"Volume"   )) RetVal = L""         ;
+    else if (IsStriStr (VolName,   L"Partition")) RetVal = L""         ;
+    else if (IsStriStr (VolName,   L"XBOOTLDR" )) RetVal = L""         ;
+    else if (IsStriStr (EntryName, L" via "    )) RetVal = L""         ;
+    else if (IsStriStr (EntryName, L"Instance:")) RetVal = L"Volume:- ";
+    else                                          RetVal = L""         ;
 
     return RetVal;
 } // CHAR16 * SetVolKind()
 
 CHAR16 * SetVolJoin (
-    IN CHAR16  *InstanceName,
+    IN CHAR16  *EntryName,
     IN BOOLEAN  ForBoot
 ) {
     CHAR16 *RetVal;
 
 
+    // DA-TAG: Order of Appearance is Important
+    //         Do not trivially change this
     if (0);
-    else if (MyStrStr  (InstanceName, L"Manual Stanza:" )) RetVal = L""      ;
-    else if (MyStrStr  (InstanceName, L"Stub Loader"    )) RetVal = L" | "   ;
-    else if (MyStrStr  (InstanceName, L" via "          )) RetVal = L" on "  ;
-    else if (MyStriCmp (InstanceName, L"Legacy Bootcode")) RetVal = L" for " ;
-    else if (ForBoot                                     ) RetVal = L" from ";
-    else                                                   RetVal = L" on "  ;
+    else if (IsStriStr (EntryName, L" Stanza:"   )) RetVal = L""      ;
+    else if (IsStriStr (EntryName, L"Stub Loader")) RetVal = L" | "   ;
+    else if (IsStriStr (EntryName, L" via "      )) RetVal = L" on "  ;
+    else if (MyStriCmp (EntryName, L"Legacy Boot")) RetVal = L" for " ;
+    else if (ForBoot                              ) RetVal = L" from ";
+    else                                            RetVal = L" on "  ;
 
     return RetVal;
 } // CHAR16 * SetVolJoin()
 
 CHAR16 * SetVolFlag (
-    IN CHAR16 *InstanceName,
-    IN CHAR16 *VolumeName
+    IN CHAR16 *EntryName,
+    IN CHAR16 *VolName
 ) {
     CHAR16 *RetVal;
 
 
-    if (MyStrStr (InstanceName, L"Manual Stanza:")) {
+    if (MyStrStr (EntryName, L" Stanza:")) {
         RetVal = L"";
     }
     else {
-        RetVal = VolumeName;
+        RetVal = VolName;
     }
 
     return RetVal;
 } // CHAR16 * SetVolFlag()
 
 CHAR16 * SetVolType (
-    IN CHAR16 *InstanceName OPTIONAL,
-    IN CHAR16 *VolumeName,
-    IN UINT32  VolumeFSType
+    IN CHAR16 *EntryName OPTIONAL,
+    IN CHAR16 *VolName,
+    IN UINT32  VolFSType
 ) {
     CHAR16 *RetVal;
 
 
+    // DA-TAG: Order of Appearance is Important
+    //         Do not trivially change this
     if (0);
-    else if (MyStrStr  (VolumeName,   L"Partition"     )) RetVal = L"";
-    else if (MyStrStr  (InstanceName, L"Stub Loader"   )) {
-        RetVal = (MyStrStr (VolumeName, L"Linux"))
-            ? L" Partition" : L" Linux Partition";
-    }
-    else if (MyStrStr  (InstanceName, L"Manual Stanza:")) RetVal = L"";
-    else if (MyStrStr  (InstanceName, L"Instance:"     )) RetVal = L"";
-    else if (MyStrStr  (InstanceName, L"(Legacy"       )) RetVal = L"";
-    else if (MyStrStr  (VolumeName,   L"Volume"        )) RetVal = L"";
-    else if (MyStriCmp (VolumeName,   L"ESP"           )) RetVal = L"";
+    else if (IsStriStr (EntryName, L" Stanza:" )) RetVal = L""                 ;
+    else if (IsStriStr (VolName,   L"Partition")) RetVal = L""                 ;
+    else if (IsStriStr (VolName,   L"Volume"   )) RetVal = L""                 ;
+    else if (MyStriCmp (VolName,   L"ESP"      )) RetVal = L""                 ;
+    else if (MyStriCmp (VolName,   L"EFI"      )) RetVal = L" System Partition";
     else if (
-        MyStrStr  (InstanceName, L"vmlinuz-") ||
-        MyStrStr  (InstanceName, L"bzImage-") ||
-        MyStrStr  (InstanceName, L"kernel-")  ||
-        MyStrStr  (InstanceName, L"Image-")
+        IsStriStr (EntryName, L"Stub Loader") ||
+        IsStriStr (EntryName, L"vmLinuz-"   ) ||
+        IsStriStr (EntryName, L"bzImage-"   ) ||
+        IsStriStr (EntryName, L"Kernel-"    ) ||
+        IsStriStr (EntryName, L"Image-"     )
     ) {
-        RetVal = (MyStrStr (VolumeName, L"Linux"))
+        RetVal = (IsStriStr (VolName, L"Linux"))
             ? L" Partition" : L" Linux Partition";
     }
-    else if (MyStriCmp (VolumeName,   L"EFI"            )) RetVal = L" System Partition";
-    else if (MyStriCmp (VolumeName,   L"BOOTCAMP"       )) RetVal = L" Partition"       ;
-    else if (MyStrStr  (VolumeName,   L"XBOOTLDR"       )) RetVal = L" Partition"       ;
-    else if (MyStriCmp (InstanceName, L"Legacy Bootcode")) RetVal = L" Partition"       ;
-    else if (VolumeFSType == FS_TYPE_FAT32               ) RetVal = L" Partition"       ;
-    else if (VolumeFSType == FS_TYPE_FAT16               ) RetVal = L" Partition"       ;
-    else if (VolumeFSType == FS_TYPE_FAT12               ) RetVal = L" Partition"       ;
-    else if (VolumeFSType == FS_TYPE_EXFAT               ) RetVal = L" Partition"       ;
-    else                                                   RetVal = L""                 ;
+    else if (IsStriStr (EntryName, L"Instance:"  )) RetVal = L""          ;
+    else if (IsStriStr (EntryName, L"(Legacy"    )) RetVal = L""          ;
+    else if (MyStriCmp (EntryName, L"Legacy Boot")) RetVal = L" Partition";
+    else if (MyStriCmp (VolName,   L"BOOTCAMP"   )) RetVal = L" Partition";
+    else if (IsStriStr (VolName,   L"XBOOTLDR"   )) RetVal = L" Partition";
+    else if (VolFSType == FS_TYPE_FAT32           ) RetVal = L" Partition";
+    else if (VolFSType == FS_TYPE_FAT16           ) RetVal = L" Partition";
+    else if (VolFSType == FS_TYPE_FAT12           ) RetVal = L" Partition";
+    else if (VolFSType == FS_TYPE_EXFAT           ) RetVal = L" Partition";
+    else                                            RetVal = L""          ;
 
     return RetVal;
 } // CHAR16 * SetVolType()
 
-// Returns FALSE if the specified file/volume matches the GlobalConfig.DontScanDirs
+// Returns FALSE if the specified file/volume matches GlobalConfig.DontScanDirs
 // or GlobalConfig.DontScanVolumes specification, or if Path points to a volume
 // other than the one specified by Volume, or if the specified path is 'SelfDir',
 // or if the volume has been otherwise flagged as being 'unreadable',
@@ -2388,11 +2395,8 @@ BOOLEAN ShouldScan (
     CHAR16                 *VolName;
     CHAR16                 *PathCopy;
     CHAR16                 *DontScanDir;
-    CHAR16                 *TmpVolNameA;
-    CHAR16                 *TmpVolNameB;
     CHAR16                 *VentoyName;
     BOOLEAN                 ScanIt;
-    BOOLEAN                 FoundVentoy;
 
 
     if (GlobalConfig.NvramProtect &&
@@ -2414,59 +2418,37 @@ BOOLEAN ShouldScan (
         return FALSE;
     }
 
-    ScanIt = VolumeScanAllowed (Volume, FALSE, FALSE); // Do NOT Check Ventoy Here
-    if (ScanIt && Volume->FSType == FS_TYPE_APFS) {
-        if (GlobalConfig.SyncAPFS) {
-            TmpVolNameA = PoolPrint (L"%s - DATA", Volume->VolName);
-            if (IsListItem (TmpVolNameA, GlobalConfig.DontScanVolumes)) {
-                ScanIt = FALSE;
-            }
-            MY_FREE_POOL(TmpVolNameA);
-
-            if (ScanIt) {
-                TmpVolNameB = SanitiseString (Volume->VolName);
-                TmpVolNameA = PoolPrint (L"%s - DATA", TmpVolNameB);
-                if (IsListItem (TmpVolNameA, GlobalConfig.DontScanVolumes)) {
-                    ScanIt = FALSE;
-                }
-                MY_FREE_POOL(TmpVolNameA);
-                MY_FREE_POOL(TmpVolNameB);
-            }
-
-            if (!ScanIt) {
-                return FALSE;
-            }
-        }
-    }
-
-    if (GlobalConfig.HandleVentoy && !ScanIt) {
-        FoundVentoy = FALSE;
-        if (MyStriCmp (Path, L"EFI\\BOOT") &&
-            FileExists (Volume->RootDir, FALLBACK_FULLNAME)
-        ) {
-            i = 0;
-            while (
-                !FoundVentoy &&
-                (VentoyName = FindCommaDelimited (VENTOY_NAMES, i++)) != NULL
-            ) {
-                if (MyStrBegins (VentoyName, Volume->VolName) ||
-                    MyStrBegins (VentoyName, Volume->FsName)  ||
-                    MyStrBegins (VentoyName, Volume->PartName)
-                ) {
-                    FoundVentoy = TRUE;
-                }
-                MY_FREE_POOL(VentoyName);
-            } // while
-        }
-
-        return FoundVentoy;
-    }
-
+    // Do *NOT* Check for Ventoy in 'VolumeScanAllowed'
+    ScanIt = VolumeScanAllowed (Volume, FALSE, FALSE);
     if (!ScanIt) {
-        return FALSE;
+        // Check for Ventoy here
+        if (GlobalConfig.HandleVentoy) {
+            if (MyStriCmp (Path, L"EFI\\BOOT") &&
+                FileExists (Volume->RootDir, FALLBACK_FULLNAME)
+            ) {
+                i = 0;
+                while (!ScanIt) {
+                    VentoyName = FindCommaDelimited (
+                        VENTOY_NAMES, i++
+                    );
+                    if (VentoyName == NULL) break;
+
+                    if (MyStrBegins (VentoyName, Volume->VolName) ||
+                        MyStrBegins (VentoyName, Volume->FsName)  ||
+                        MyStrBegins (VentoyName, Volume->PartName)
+                    ) {
+                        ScanIt = TRUE;
+                    }
+                    MY_FREE_POOL(VentoyName);
+                } // while
+            }
+        }
+
+        // Return 'FALSE' or 'TRUE' if Ventoy found
+        return ScanIt;
     }
 
-    // See if Path includes an explicit volume declaration that is NOT Volume.
+    // Check if any explicit volume declaration in Path is *NOT* Volume
     VolName  = NULL;
     PathCopy = StrDuplicate (Path);
     if (SplitVolumeAndFilename (&PathCopy, &VolName)) {
@@ -5022,7 +5004,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreCleanNvram->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreCleanNvram->Tag         = TAG_CLEAN_NVRAM;
                     MenuEntryPreCleanNvram->Row         = 1;
@@ -5141,7 +5123,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryAbout->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryAbout->Tag         = TAG_ABOUT;
                     MenuEntryAbout->Row         =  1;
@@ -5245,7 +5227,7 @@ VOID ScanForTools (VOID) {
                     }
 
                     MenuEntryHiddenTags->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryHiddenTags->Tag         = TAG_HIDDEN;
                     MenuEntryHiddenTags->Row         = 1;
@@ -5342,7 +5324,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreShellEFI->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreShellEFI->Tag         = TAG_SHELL;
                     MenuEntryPreShellEFI->Row         = 1;
@@ -5383,7 +5365,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreGPTSync->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreGPTSync->Tag         = TAG_GPTSYNC;
                     MenuEntryPreGPTSync->Row         = 1;
@@ -5424,7 +5406,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreGDiskTool->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreGDiskTool->Tag         = TAG_GDISK;
                     MenuEntryPreGDiskTool->Row         = 1;
@@ -5465,7 +5447,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreMokTool->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreMokTool->Tag         = TAG_MOK;
                     MenuEntryPreMokTool->Row         = 1;
@@ -5506,7 +5488,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreFwUpdateTool->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreFwUpdateTool->Tag         = TAG_FWUPDATE;
                     MenuEntryPreFwUpdateTool->Row         = 1;
@@ -5547,7 +5529,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreNetBoot->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreNetBoot->Tag         = TAG_NETBOOT;
                     MenuEntryPreNetBoot->Row         = 1;
@@ -5587,7 +5569,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreRecoveryMac->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreRecoveryMac->Tag         = TAG_RECOVERY_MAC;
                     MenuEntryPreRecoveryMac->Row         = 1;
@@ -5628,7 +5610,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreRecoveryWin->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreRecoveryWin->Tag         = TAG_RECOVERY_WIN;
                     MenuEntryPreRecoveryWin->Row         = 1;
@@ -5724,7 +5706,7 @@ VOID ScanForTools (VOID) {
                 }
 
                 MenuEntryRotateCSR->Title = PoolPrint (
-                    L"Show '%s' Screen", ToolName
+                    L"Show '%s' Menu", ToolName
                 );
                 MenuEntryRotateCSR->Tag         = TAG_CSR_ROTATE;
                 MenuEntryRotateCSR->Row         = 1;
@@ -5786,7 +5768,7 @@ VOID ScanForTools (VOID) {
                 }
 
                 MenuEntryBootOrder->Title = PoolPrint (
-                    L"Show '%s' Screen", ToolName
+                    L"Show '%s' Menu", ToolName
                 );
                 MenuEntryBootOrder->Tag         = TAG_BOOTORDER;
                 MenuEntryBootOrder->Row         = 1;
@@ -5814,7 +5796,7 @@ VOID ScanForTools (VOID) {
                     FoundTool = TRUE;
 
                     MenuEntryPreMemTest->Title = PoolPrint (
-                        L"Show '%s' Screen", ToolName
+                        L"Show '%s' Menu", ToolName
                     );
                     MenuEntryPreMemTest->Tag         = TAG_MEMTEST;
                     MenuEntryPreMemTest->Row         = 1;

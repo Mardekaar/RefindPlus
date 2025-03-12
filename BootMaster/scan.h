@@ -65,18 +65,18 @@
 #define __SCAN_H_
 
 #define LABEL_BOOTORDER     L"Manage BootOrder"
-#define LABEL_FIRMWARE      L"Firmware Reboot"
-#define LABEL_INSTALL       L"Install RefindPlus"
-#define LABEL_NETBOOT       L"Net Boot"
-#define LABEL_REBOOT        L"System Restart"
-#define LABEL_SHUTDOWN      L"System Shutdown"
 #define LABEL_CSR_ROTATE    L"Rotate CSR"
+#define LABEL_FIRMWARE      L"Firmware Reboot"
+#define LABEL_SHUTDOWN      L"System Shutdown"
+#define LABEL_REBOOT        L"System Restart"
 #define LABEL_ABOUT         L"About RefindPlus"
 #define LABEL_MOK           L"MOK Protocol"
 #define LABEL_EXIT          L"Exit RefindPlus"
 #define LABEL_SHELL         L"uEFI Shell"
 #define LABEL_HIDDEN        L"Hidden Items"
 #define LABEL_MEMTEST       L"MemTest Tool"
+#define LABEL_INSTALL       L"Install RefindPlus"
+#define LABEL_NETBOOT       L"Net Boot"
 #define LABEL_GDISK         L"GDisk Tool"
 #define LABEL_GPTSYNC       L"GPTsync Tool"
 #define LABEL_FWUPDATE      L"Firmware Update"
@@ -86,41 +86,44 @@
 
 #if defined (EFIX64)
 #   define MEMTEST_FILES \
-L"bootx64.efi,memtest86.efi,memtest.efi,\
-memtest86_x64.efi,memtest86x64.efi,memtest86+x64.efi,memtest_x64.efi,\
-memtest86p.efi,memtest86p_x64.efi,memtest86px64.efi"
+L"bootx64.efi,memtest.efi,memtest86.efi,memtest86p.efi,\
+memtest_x64.efi,memtestx64.efi,memtest+x64.efi,x64_memtest.efi,\
+memtest86_x64.efi,memtest86x64.efi,memtest86+x64.efi,x64_memtest86.efi,\
+memtest86p_x64.efi,memtest86px64.efi,memtest86p+x64.efi,x64_memtest86p.efi"
 #   define SKIPNAME_PATTERNS       L"*ia32*.efi,*aa64*.efi,*mips*.efi"
 #   define FALLBACK_FULLNAME       L"EFI\\BOOT\\bootx64.efi"
 #   define FALLBACK_BASENAME       L"bootx64.efi"
-#   define NETBOOT_FILES           L"ipxe.efi,ipxe_x64.efi,ipxex64.efi"
-#   define GPTSYNC_FILES           L"gptsync.efi,gptsync_x64.efi,gptsyncx64.efi"
-#   define GDISK_FILES             L"gdisk.efi,gdisk_x64.efi,gdisk_x64.efi"
-#   define SHELL_FILES             L"shell.efi,shell_x64.efi,shellx64.efi"
-#   define NVRAMCLEAN_FILES        L"CleanNvram.efi,CleanNvram_x64.efi,CleanNvramx64.efi"
+#   define NETBOOT_FILES           L"ipxe.efi,ipxe_x64.efi,ipxex64.efi,x64_ipxe.efi"
+#   define GPTSYNC_FILES           L"gptsync.efi,gptsync_x64.efi,gptsyncx64.efi,x64_gptsync.efi"
+#   define GDISK_FILES             L"gdisk.efi,gdisk_x64.efi,gdiskx64.efi,x64_gdisk.efi"
+#   define SHELL_FILES             L"shell.efi,shell_x64.efi,shellx64.efi,x64_shell.efi"
+#   define NVRAMCLEAN_FILES        L"CleanNvram.efi,CleanNvramx64.efi,CleanNvram_x64.efi,x64_CleanNvram.efi"
 #elif defined (EFI32)
 #   define MEMTEST_FILES \
-L"bootia32.efi,memtest.efi,\
-memtest_ia32.efi,memtestia32.efi"
+L"bootia32.efi,memtest.efi,memtest_ia32.efi,\
+memtestia32.efi,memtest+ia32.efi,ia32_memtest.efi"
 #   define SKIPNAME_PATTERNS       L"*x64*.efi,*aa64*.efi,*mips*.efi"
 #   define FALLBACK_FULLNAME       L"EFI\\BOOT\\bootia32.efi"
 #   define FALLBACK_BASENAME       L"bootia32.efi"
-#   define NETBOOT_FILES           L"ipxe.efi,ipxe_ia32.efi,ipxeia32.efi"
-#   define GPTSYNC_FILES           L"gptsync.efi,gptsync_ia32.efi,gptsyncia32.efi"
-#   define GDISK_FILES             L"gdisk.efi,gdisk_ia32.efi,gdiskia32.efi"
-#   define SHELL_FILES             L"shell.efi,shell_ia32.efi,shellia32.efi"
-#   define NVRAMCLEAN_FILES        L"CleanNvram.efi,CleanNvram_ia32.efi,CleanNvramia32.efi"
+#   define NETBOOT_FILES           L"ipxe.efi,ipxe_ia32.efi,ipxeia32.efi,ia32_ipxe.efi"
+#   define GPTSYNC_FILES           L"gptsync.efi,gptsync_ia32.efi,gptsyncia32.efi,ia32_gptsync.efi"
+#   define GDISK_FILES             L"gdisk.efi,gdisk_ia32.efi,gdiskia32.efi,ia32_gdisk.efi"
+#   define SHELL_FILES             L"shell.efi,shell_ia32.efi,shellia32.efi,ia32_shell.efi"
+#   define NVRAMCLEAN_FILES        L"CleanNvram.efi,CleanNvramia32.efi,CleanNvram_ia32.efi,ia32_CleanNvram.efi"
 #elif defined (EFIAARCH64)
 #   define MEMTEST_FILES \
-L"bootaa64.efi,memtest.efi,\
-memtest_aa64.efi,memtestaa64.efi"
+L"bootaa64.efi,memtest.efi,memtest86.efi,memtest86p.efi,\
+memtest_aa64.efi,memtestaa64.efi,memtest+aa64.efi,aa64_memtest.efi,\
+memtest86_aa64.efi,memtest86aa64.efi,memtest86+aa64.efi,aa64_memtest86.efi,\
+memtest86p_aa64.efi,memtest86paa64.efi,memtest86p+aa64.efi,aa64_memtest86p.efi"
 #   define SKIPNAME_PATTERNS       L"*x64*.efi,*ia32*.efi,*mips*.efi"
 #   define FALLBACK_FULLNAME       L"EFI\\BOOT\\bootaa64.efi"
 #   define FALLBACK_BASENAME       L"bootaa64.efi"
-#   define NETBOOT_FILES           L"ipxe.efi,ipxe_aa64.efi,ipxeaa64.efi"
-#   define GPTSYNC_FILES           L"gptsync.efi,gptsync_aa64.efi,gptsyncaa64.efi"
-#   define GDISK_FILES             L"gdisk.efi,gdisk_aa64.efi,gdiskaa64.efi"
-#   define SHELL_FILES             L"shell.efi,shell_aa64.efi,shellaa64.efi"
-#   define NVRAMCLEAN_FILES        L"CleanNvram.efi,CleanNvram_aa64.efi,CleanNvramaa64.efi"
+#   define NETBOOT_FILES           L"ipxe.efi,ipxe_aa64.efi,ipxeaa64.efi,aa64_ipxe.efi"
+#   define GPTSYNC_FILES           L"gptsync.efi,gptsync_aa64.efi,gptsyncaa64.efi,aa64_gptsync.efi"
+#   define GDISK_FILES             L"gdisk.efi,gdisk_aa64.efi,gdiskaa64.efi,aa64_gdisk.efi"
+#   define SHELL_FILES             L"shell.efi,shell_aa64.efi,shellaa64.efi,aa64_shell.efi"
+#   define NVRAMCLEAN_FILES        L"CleanNvram.efi,CleanNvramaa64.efi,CleanNvram_aa64.efi,aa64_CleanNvram.efi"
 #else
 #   define MEMTEST_FILES \
 L"boot.efi,memtest.efi"
@@ -179,22 +182,22 @@ VOID ScanFirmwareDefined (
 
 CHAR16 * GetShowName (IN CHAR16 *LinuxName);
 CHAR16 * SetVolJoin (
-    IN CHAR16  *InstanceName,
+    IN CHAR16  *EntryName,
     IN BOOLEAN  ForBoot
 );
 CHAR16 * SetVolKind (
-    IN CHAR16 *InstanceName,
-    IN CHAR16 *VolumeName,
-    IN UINT32  VolumeFSType
+    IN CHAR16 *EntryName,
+    IN CHAR16 *VolName,
+    IN UINT32  VolFSType
 );
 CHAR16 * SetVolFlag (
-    IN CHAR16 *InstanceName,
-    IN CHAR16 *VolumeName
+    IN CHAR16 *EntryName,
+    IN CHAR16 *VolName
 );
 CHAR16 * SetVolType (
-    IN CHAR16 *InstanceName OPTIONAL,
-    IN CHAR16 *VolumeName,
-    IN UINT32  VolumeFSType
+    IN CHAR16 *EntryName OPTIONAL,
+    IN CHAR16 *VolName,
+    IN UINT32  VolFSType
 );
 CHAR16 * GetVolumeGroupName (
     IN CHAR16       *LoaderPath,

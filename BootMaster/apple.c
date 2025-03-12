@@ -331,7 +331,6 @@ VOID RotateCsrValue (
     }
     #endif
 
-    AccessFlagsFull |= EFI_VARIABLE_NON_VOLATILE;
     Status = (TargetCsr != 0)
         ? EfivarSetRaw (
             &AppleBootGuid, L"csr-active-config",

@@ -1,6 +1,14 @@
 0.14.2.AC (PRE-RELEASE):
 -----------------------
-- PENDING
+- Fixes `HelpIcon` Handling
+  * New deduplication code disabled loader icon caching
+  * This bug was introduced in v0.14.2.AB (Commit 09e0f29)
+- Amends `Misc` Handling
+  * Addresses misc missed Graphics Screen boot modes
+  * Adds identification for `Non-Folded` Linux kernel loaders
+  * Avoids potential implicit type conversion issues. Thanks @clague
+  * Provides option to create GitHub Build Artefacts. Thanks @startergo
+  * Addresses Potential NULL Pointer Dereferencing. Thnaks @MicroMilo
 
 
 0.14.2.AB (04 FEB 2025):
@@ -18,8 +26,8 @@
     - Enlarged Linux/Windows icons are shown as exit splash screen
     - Changes can be leveraged to define custom exit splash screens
       * `boot_outlogo` file will be used if present
-      * `boot_distroname` will be used if present otherwise
-      * `os_distroname` will be used if present otherwise
+      * `boot_{distro}` will be used if present otherwise
+      * `os_{distro}` will be used if present otherwise
   * Enabled by default but can be adjusted using a new `disable_bootlogo` configuration token
     - This can be used to fully or partially disable boot logo display
 - Improves `Shortcut Key` Handling
@@ -72,7 +80,7 @@
   * This bug was inherited from upstream code
 - Fixes `ScanFirmwareDefined` Handling
   * Spurious items were added (Typically as firmware shell instances)
-    - Ref: Issue https://github.com/dakanji/RefindPlus/issues/184
+    - Ref: Issue https://github.com/RefindPlusRepo/RefindPlus/issues/184
   * This bug was introduced in v0.14.0.AC (Commit aad3298)
 - Fixes Jpeg Image Handling
   * Garbled images were output

@@ -90,13 +90,13 @@ EFI_DEVICE_PATH_PROTOCOL EndDevicePath[] = {
 #define FAT32_SIGNATURE                  "FAT32   "
 
 #if defined (EFIX64)
-EFI_GUID gFreedesktopRootGuid = {0x4f68bce3, 0xe8cd, 0x4db1, {0x96, 0xe7, 0xfb, 0xca, 0xf9, 0x84, 0xb7, 0x09}};
+EFI_GUID gRootGuid = {0x4f68bce3, 0xe8cd, 0x4db1, {0x96, 0xe7, 0xfb, 0xca, 0xf9, 0x84, 0xb7, 0x09}};
 #elif defined (EFI32)
-EFI_GUID gFreedesktopRootGuid = {0x44479540, 0xf297, 0x41b2, {0x9a, 0xf7, 0xd1, 0x31, 0xd5, 0xf0, 0x45, 0x8a}};
+EFI_GUID gRootGuid = {0x44479540, 0xf297, 0x41b2, {0x9a, 0xf7, 0xd1, 0x31, 0xd5, 0xf0, 0x45, 0x8a}};
 #elif defined (EFIAARCH64)
-EFI_GUID gFreedesktopRootGuid = {0xb921b045, 0x1df0, 0x41c3, {0xaf, 0x44, 0x4c, 0x6f, 0x28, 0x0d, 0x3f, 0xae}};
+EFI_GUID gRootGuid = {0xb921b045, 0x1df0, 0x41c3, {0xaf, 0x44, 0x4c, 0x6f, 0x28, 0x0d, 0x3f, 0xae}};
 #else //  GUID for ARM32 is Below
-EFI_GUID gFreedesktopRootGuid = {0x69dad710, 0x2ce4, 0x4e3c, {0xb1, 0x6c, 0x21, 0xa1, 0xd4, 0x9a, 0xbe, 0xd3}};
+EFI_GUID gRootGuid = {0x69dad710, 0x2ce4, 0x4e3c, {0xb1, 0x6c, 0x21, 0xa1, 0xd4, 0x9a, 0xbe, 0xd3}};
 #endif
 
 // Macros
@@ -171,6 +171,7 @@ EFI_GUID                    GuidHFS                  =              HFS_GUID_VAL
 EFI_GUID                    GuidAPFS                 =             APFS_GUID_VALUE;
 EFI_GUID                    GuidNull                 =             NULL_GUID_VALUE;
 EFI_GUID                    GuidSwap                 =             SWAP_GUID_VALUE;
+EFI_GUID                    GuidHome                 =             HOME_GUID_VALUE;
 EFI_GUID                    GuidLuks                 =             LUKS_GUID_VALUE;
 EFI_GUID                    GuidLinux                =            LINUX_GUID_VALUE;
 EFI_GUID                    GuidBasicData            =       BASIC_DATA_GUID_VALUE;
@@ -181,7 +182,7 @@ EFI_GUID                    GuidMacRaidOff           =     MAC_RAID_OFF_GUID_VAL
 EFI_GUID                    GuidReservedMS           =    MSFT_RESERVED_GUID_VALUE;
 EFI_GUID                    GuidWindowsRE            = WIN_RECOVERY_ENV_GUID_VALUE;
 EFI_GUID                    GuidRecoveryHD           =  MAC_RECOVERY_HD_GUID_VALUE;
-EFI_GUID                    GuidContainerHFS         =    CONTAINER_HFS_GUID_VALUE;
+EFI_GUID                    GuidContainHFS           =    CONTAINER_HFS_GUID_VALUE;
 
 
 extern EFI_GUID             RefindPlusOldGuid;
@@ -735,7 +736,7 @@ EFI_STATUS FindVarsDir (VOID) {
         #if REFIT_DEBUG > 0
         ALT_LOG(1, LOG_BLANK_LINE_SEP, L"X");
         ALT_LOG(1, LOG_LINE_NORMAL,
-            L"Locate Upstream %s for RefindPlus-Specific Items ... In Installation Folder:- '%r'",
+            L"Locate Upstream %s for RefindPlus-specific Items ... In Installation Folder:- '%r'",
             NVRAM_EMULATED, Status
         );
         #endif
@@ -753,7 +754,7 @@ EFI_STATUS FindVarsDir (VOID) {
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_BLANK_LINE_SEP, L"X");
     ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Locate/Create %s for RefindPlus-Specific Items ... In Installation Folder:- '%r'",
+        L"Locate/Create %s for RefindPlus-specific Items ... In Installation Folder:- '%r'",
         NVRAM_EMULATED, Status
     );
     #endif
@@ -773,7 +774,7 @@ EFI_STATUS FindVarsDir (VOID) {
 
     #if REFIT_DEBUG > 0
     ALT_LOG(1, LOG_LINE_NORMAL,
-        L"Locate/Create %s for RefindPlus-Specific Items ... In First Available ESP:- '%r'",
+        L"Locate/Create %s for RefindPlus-specific Items ... In First Available ESP:- '%r'",
         NVRAM_EMULATED, Status
     );
 
@@ -1354,11 +1355,12 @@ CHAR16 * FSTypeName (
         retval = (FoundVentoy) ? L"ExFAT (Assumed)" : L"NTFS (Assumed)";
     }
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidReservedMS)) retval = L"NTFS (Assumed)"  ;
-    else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidBasicData )) retval = L"NTFS (Assumed)"  ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidWindowsRE )) retval = L"NTFS (Assumed)"  ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidESP       )) retval = L"FAT-32 (Assumed)";
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLinux     )) retval = L"Ext4 (Assumed)"  ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidRecoveryHD)) retval = L"HFS+ (Assumed)"  ;
+    else if (GuidsAreEqual (&(Volume->PartTypeGuid), &gRootGuid     )) retval = L"Linux Root"      ;
+    else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHome      )) retval = L"Linux Home"      ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidSwap      )) retval = L"Linux Swap"      ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLuks      )) retval = L"LUKS Encrypted"  ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidMacRaidOn )) retval = L"Apple Raid (ON)" ;
@@ -2072,7 +2074,7 @@ VOID SetPartGuidAndName (
         PartInfo->type_guid, sizeof (EFI_GUID)
     );
 
-    if (GuidsAreEqual (&(Volume->PartTypeGuid), &gFreedesktopRootGuid) &&
+    if (GuidsAreEqual (&(Volume->PartTypeGuid), &gRootGuid) &&
         ((PartInfo->attributes & GPT_NO_AUTOMOUNT) == 0)
     ) {
         GlobalConfig.DiscoveredRoot = Volume;
@@ -2144,33 +2146,16 @@ CHAR16 * GetVolumeNameEx (
         FoundName = StrDuplicate (L"Network Volume (Assumed)");
     }
     else {
-        if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidAPFS)) {
-            FoundName = StrDuplicate (L"APFS/FileVault Container");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidRecoveryHD)) {
-            FoundName = StrDuplicate (L"Recovery HD");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLinux)) {
-            FoundName = StrDuplicate (L"Linux Volume");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidReservedMS)) {
-            FoundName = StrDuplicate (L"Microsoft Reserved Partition");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidMacRaidOn)) {
-            FoundName = StrDuplicate (L"Apple Raid Partition (Online)");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidMacRaidOff)) {
-            FoundName = StrDuplicate (L"Apple Raid Partition (Offline)");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidContainerHFS)) {
-            FoundName = StrDuplicate (L"Fusion/FileVault Container");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidApplTvRec)) {
-            FoundName = StrDuplicate (L"AppleTV Recovery Partition");
-        }
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHFS)) {
-            FoundName = StrDuplicate (L"Unidentified HFS+ Partition");
-        }
+        if (0);
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidAPFS      )) FoundName = StrDuplicate (L"APFS/FileVault Container");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidESP       )) FoundName = StrDuplicate (L"EFI System Partition");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLinux     )) FoundName = StrDuplicate (L"Linux Volume");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidRecoveryHD)) FoundName = StrDuplicate (L"Recovery HD");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidReservedMS)) FoundName = StrDuplicate (L"Microsoft Reserved Partition");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidMacRaidOn )) FoundName = StrDuplicate (L"Apple Raid Partition (Online)");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidMacRaidOff)) FoundName = StrDuplicate (L"Apple Raid Partition (Offline)");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidContainHFS)) FoundName = StrDuplicate (L"Fusion/FileVault Container");
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidApplTvRec )) FoundName = StrDuplicate (L"AppleTV Recovery Partition");
         else {
             // Do *NOT* Free ... 'FSTypeName' returns a constant
             TypeName = FSTypeName (Volume);
@@ -2179,18 +2164,26 @@ CHAR16 * GetVolumeNameEx (
                 FoundName = StrDuplicate (L"APFS Volume (Assumed)");
             }
             else {
-                // Try to use fs type and size as name
-                FileSystemInfoPtr = (Volume->RootDir != NULL)
-                    ? LibFileSystemInfo (Volume->RootDir) : NULL;
-                if (FileSystemInfoPtr != NULL) {
-                    SISize    = SizeInIEEEUnits (FileSystemInfoPtr->VolumeSize);
-                    FoundName = PoolPrint (L"%s %s Volume", SISize, TypeName);
-                    MY_FREE_POOL(FileSystemInfoPtr);
-                    MY_FREE_POOL(SISize);
-                }
+                if (0);
+                else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHFS  )) FoundName = StrDuplicate (L"Unidentified HFS+ Partition");
+                else if (GuidsAreEqual (&(Volume->PartTypeGuid), &gRootGuid)) FoundName = StrDuplicate (L"Linux Root Volume");
+                else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHome )) FoundName = StrDuplicate (L"Linux Home Volume");
+                else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidSwap )) FoundName = StrDuplicate (L"Linux Swap Volume");
+                else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLuks )) FoundName = StrDuplicate (L"Encrypted Linux Volume");
+                else {
+                    // Try to use fs type and size as name
+                    FileSystemInfoPtr = (Volume->RootDir != NULL)
+                        ? LibFileSystemInfo (Volume->RootDir) : NULL;
 
-                if (FoundName == NULL) {
-                    FoundName = PoolPrint (L"%s Volume", TypeName);
+                    if (FileSystemInfoPtr == NULL) {
+                        FoundName = PoolPrint (L"%s Volume", TypeName);
+                    }
+                    else {
+                        SISize    = SizeInIEEEUnits (FileSystemInfoPtr->VolumeSize);
+                        FoundName = PoolPrint (L"%s %s Volume", SISize, TypeName);
+                        MY_FREE_POOL(FileSystemInfoPtr);
+                        MY_FREE_POOL(SISize);
+                    }
                 }
             }
         }
@@ -3248,7 +3241,9 @@ VOID ScanVolumes (VOID) {
         else if (IsStriStr (Volume->VolName, L"APFS/FileVault"           )) RoleStr = L"?* Type Entity-Container";
         else if (MyStriCmp (Volume->VolName, L"Whole Disk Volume"        )) RoleStr = L" * Type Entity-WholeDisk";
         else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidESP        )) RoleStr = L" * Part System EFI (ESP)";
-        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLinux      )) RoleStr = L" * Part Linux Filesystem";
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLinux      )) RoleStr = L" * Part Linux FileSystem";
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &gRootGuid      )) RoleStr = L" * Part Linux RootVolume";
+        else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHome       )) RoleStr = L" * Part Linux HomeVolume";
         else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidSwap       )) RoleStr = L" * Part Linux SwapVolume";
         else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidBasicData  )) RoleStr = L" * Type Volume-BasicData";
         else if (IsStriStr (Volume->VolName, L"Optical Disc"             )) RoleStr = L" * Type Entity-OpticDisk";

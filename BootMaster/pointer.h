@@ -39,6 +39,16 @@ typedef struct PointerStateStruct {
     BOOLEAN Holding;
 } POINTER_STATE;
 
+#define INT32_MIN    ((INT32) 0x80000000)         // -2,147,483,648
+#define INT32_MAX    ((INT32) 0x7FFFFFFF)         //  2,147,483,647
+
+#define UINTN_MIN    ((UINTN) 0)                  //  Always 0
+#if defined(EFI32)
+#   define UINTN_MAX ((UINTN) 0xFFFFFFFF)         //  4,294,967,295
+#else
+#   define UINTN_MAX ((UINTN) 0xFFFFFFFFFFFFFFFF) //  18,446,744,073,709,551,615
+#endif
+
 VOID pdInitialize();
 VOID pdCleanup();
 BOOLEAN pdAvailable();

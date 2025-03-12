@@ -10,6 +10,7 @@ on:
         - 'Label - Remove - Abandoned'
         - 'Label - Remove - Cancelled'
         - 'Label - Remove - Cannot-Replicate'
+        - 'Label - Remove - Declined'
         - 'Label - Remove - Duplicate'
         - 'Label - Remove - Incomplete'
         - 'Label - Remove - Invalid'
@@ -40,10 +41,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Abandoned'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Abandoned'
 
@@ -53,10 +60,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Cancelled'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Cancelled'
 
@@ -66,12 +79,37 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Cannot-Replicate'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Cannot-Replicate'
+
+  label_remove_declined:
+    name: Label - Remove - Declined
+    runs-on: ubuntu-24.04
+
+    if: github.event.inputs.operation == 'Label - Remove - Duplicate'
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'remove-labels'
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ github.event.inputs.item_id }}
+          labels: 'Declined'
 
   label_remove_duplicate:
     name: Label - Remove - Duplicate
@@ -79,10 +117,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Duplicate'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Duplicate,Resolved'
 
@@ -92,10 +136,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Incomplete'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Incomplete'
 
@@ -105,10 +155,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Invalid'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Invalid'
 
@@ -118,10 +174,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Triage'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Triage'
 
@@ -131,10 +193,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Parked'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Parked'
 
@@ -144,10 +212,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Prorogued'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Prorogued'
 
@@ -157,10 +231,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Resolved'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Resolved'
 
@@ -170,10 +250,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Tagged'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Tagged'
 
@@ -183,10 +269,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Queries'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Queries'
 
@@ -196,10 +288,16 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Upstream'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Upstream'
 
@@ -209,9 +307,15 @@ jobs:
 
     if: github.event.inputs.operation == 'Label - Remove - Not-Planned'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.inputs.item_id }}
           labels: 'Not-Planned'

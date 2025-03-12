@@ -17,14 +17,20 @@ jobs:
     name: Close Issue Label - Check
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     outputs:
       status: ${{ steps.add_label_user_close_check_main.outputs.status }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - id: add_label_user_close_check_main
         uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: exactly
           count: 0
@@ -39,10 +45,16 @@ jobs:
 
     if: needs.add_label_user_close_check.outputs.status == 'success'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'add-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Cancelled'
 
@@ -50,12 +62,18 @@ jobs:
     name: Enhancement Request Label
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'opened' && contains(github.event.issue.body, 'Suggested Feature') && contains(github.event.issue.body, 'Background Information') && contains(github.event.issue.body, 'Additional Context')
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'opened' && contains(github.event.issue.body, 'Suggested Feature') && contains(github.event.issue.body, 'Background Information') && contains(github.event.issue.body, 'Additional Context')
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'add-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Enhancement'
 
@@ -65,12 +83,18 @@ jobs:
     needs: [add_label_user_open_enhance]
     runs-on: ubuntu-24.04
 
-    if: ${{ !failure() && github.actor != 'dakanji' && github.event.action == 'opened' }}
+    if: ${{ !failure() && github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'opened' }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'add-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Triage'
 
@@ -80,14 +104,20 @@ jobs:
     needs: [add_label_user_open]
     runs-on: ubuntu-24.04
 
-    if: ${{ !failure() && github.actor != 'dakanji' && github.event.action == 'opened' }}
+    if: ${{ !failure() && github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'opened' }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-similarity-analysis@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          since-days: 450
+          token: ${{ steps.app-token.outputs.token }}
+          since-days: 540
           filter-threshold: 0.51
-          comment-title: '### Similar Items:'
+          comment-title: '### Similar Item(s):'
           comment-body: '${index}. [Similarity Rating: ${similarity}] ... [${title}](https://github.com/${{ github.repository }}/issues/${number})'
           show-footer: false
 
@@ -97,10 +127,16 @@ jobs:
 
     if: github.actor == 'dakanji' && github.event.action == 'reopened'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Not-Planned,Tagged,Stale,Cannot-Replicate,Known-Issue,Incomplete,Uncertain,Resolved,Unclear,Invalid,Unclear'
 
@@ -108,12 +144,18 @@ jobs:
     name: Reopen Issue Label - User
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'reopened'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'reopened'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'add-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Triage'
 
@@ -122,12 +164,18 @@ jobs:
     name: Remove Cancelled Label
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'reopened'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'reopened'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Cancelled'
 
@@ -135,12 +183,18 @@ jobs:
     name: Remove Misc Labels
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'remove-labels'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           labels: 'Stale,Tagged,Triage,Cannot-Replicate,Known-Issue,Incomplete,Uncertain,Unclear,Invalid,Queries,Unclear'
 
@@ -149,14 +203,20 @@ jobs:
     name: Bounce Bug - Check1
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     outputs:
       status: ${{ steps.bounce_bug_check1_main.outputs.status }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - id: bounce_bug_check1_main
         uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: exactly
           count: 1
@@ -171,10 +231,16 @@ jobs:
 
     if: needs.bounce_bug_check1.outputs.status == 'success'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'open-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
 
   # Reopen Issue - https://github.com/actions-cool/issues-helper
@@ -183,12 +249,18 @@ jobs:
     needs: [bounce_bug_act1]
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'create-comment'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           body: |
             Please do not close confirmed bug items in future.
@@ -199,14 +271,20 @@ jobs:
     name: Bounce Enhance - Check1
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     outputs:
       status: ${{ steps.bounce_enhance_check1_main.outputs.status }}
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - id: bounce_enhance_check1_main
         uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: exactly
           count: 1
@@ -221,9 +299,15 @@ jobs:
 
     if: needs.bounce_enhance_check1.outputs.status == 'success'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: mheap/github-action-required-labels@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           mode: exactly
           count: 1
@@ -235,12 +319,18 @@ jobs:
     needs: [bounce_enhance_check2]
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'open-issue'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
 
   # Reopen Issue - https://github.com/actions-cool/issues-helper
@@ -249,12 +339,18 @@ jobs:
     needs: [bounce_enhance_act1]
     runs-on: ubuntu-24.04
 
-    if: github.actor != 'dakanji' && github.event.action == 'closed'
+    if: github.actor != 'refindplusbot[bot]' && github.actor != 'dakanji' && github.event.action == 'closed'
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions-cool/issues-helper@v3
         with:
           actions: 'create-comment'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.issue.number }}
           body: |
             Please do not close accepted enhancement items in future.

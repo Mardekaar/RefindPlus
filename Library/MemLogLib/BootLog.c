@@ -13,8 +13,8 @@
  **/
 
 #include "../../include/tiano_includes.h"
-#include "MemLogLib.h"
 #include "../../BootMaster/global.h"
+#include "MemLogLib.h"
 
 #if REFIT_DEBUG > 0
 // DBG Build Only - START
@@ -24,8 +24,13 @@
 #include <Guid/FileInfo.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include "../../BootMaster/lib.h"
+#include "../../BootMaster/screenmgt.h"
 #include "../../BootMaster/mystrings.h"
 #include "../../include/refit_call_wrapper.h"
+
+#ifndef __MAKEWITH_GNUEFI
+#   define LibOpenRoot EfiLibOpenRoot
+#endif
 
 extern  EFI_GUID  gEfiMiscSubClassGuid;
 
@@ -140,7 +145,9 @@ EFI_FILE_PROTOCOL * OpenLogFile (VOID) {
 
     if (mDebugLog == NULL) {
         DateStr = GetDateString();
-        mDebugLog = PoolPrint (L"EFI\\%s.log", DateStr);
+        mDebugLog = PoolPrint (
+            L"EFI\\%s.log", DateStr
+        );
         MY_FREE_POOL(DateStr);
     }
 
@@ -159,10 +166,24 @@ EFI_FILE_PROTOCOL * OpenLogFile (VOID) {
         );
     }
 
-    // DA-TAG: Do not set 'mRootDir' to NULL here
-    //         May be used in caller when 'LogProtocol' is not NULL
     return LogProtocol;
 } // static EFI_FILE_PROTOCOL * OpenLogFile()
+
+static
+EFI_STATUS HandleDir (
+    EFI_FILE_PROTOCOL *Entity OPTIONAL
+) {
+    EFI_STATUS         Status;
+
+    Status = REFIT_CALL_1_WRAPPER(
+        mRootDir->Close, mRootDir
+    );
+    if (Entity == NULL) {
+        Status = EFI_NOT_READY;
+    }
+
+    return Status;
+} // static EFI_STATUS HandleDir()
 
 static
 EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
@@ -176,42 +197,84 @@ EFI_FILE_PROTOCOL * GetDebugLogFile (VOID) {
         gBS->HandleProtocol, gImageHandle,
         &gEfiLoadedImageProtocolGuid, (VOID **) &LoadedImage
     );
-    if (EFI_ERROR(Status) || LoadedImage->DeviceHandle == NULL) {
+    if (EFI_ERROR(Status) ||
+        LoadedImage->DeviceHandle == NULL
+    ) {
         return NULL;
     }
 
     // DA-TAG: Always get 'mRootDir' each time
     //
     // Get mRootDir from the device we are loaded from
-    mRootDir = EfiLibOpenRoot (LoadedImage->DeviceHandle);
-    LogProtocol = OpenLogFile();
-    if (mRootDir == NULL) {
-        Status = EFI_NOT_READY;
+    mRootDir = LibOpenRoot (
+        LoadedImage->DeviceHandle
+    );
+    if (mRootDir != NULL) {
+        LogProtocol = OpenLogFile();
+        Status = HandleDir (LogProtocol);
     }
     else {
-        Status = REFIT_CALL_1_WRAPPER(mRootDir->Close, mRootDir);
+        Status = EFI_NOT_READY;
+
+        REFIT_CALL_2_WRAPPER(
+            gST->ConOut->SetAttribute,
+            gST->ConOut, ATTR_ERROR
+        );
+        PrintUglyText (
+            L"Default ESP for RefindPlus Debug Log Storage:- 'Not Ready'",
+            NEXTLINE
+        );
+
+        REFIT_CALL_2_WRAPPER(
+            gST->ConOut->SetAttribute,
+            gST->ConOut, ATTR_BASIC
+        );
+        PrintUglyText (
+            L"RefindPlus will now try other ESPs ... if available'",
+            NEXTLINE
+        );
+        PrintUglyText (
+            L"Debug log file, if created, *WILL NOT* be in the default ESP'",
+            NEXTLINE
+        );
+
+        PauseSeconds (4);
     }
+
     if (EFI_ERROR(Status)) {
-        // Try on first EFI partition
+        // Try first ESP found
         mRootDir = NULL;
         Status = egFindESP (&mRootDir);
         if (!EFI_ERROR(Status)) {
             LogProtocol = OpenLogFile();
-            if (mRootDir == NULL) {
-                Status = EFI_NOT_READY;
-            }
-            else {
-                Status = REFIT_CALL_1_WRAPPER(mRootDir->Close, mRootDir);
-            }
+            Status = HandleDir (LogProtocol);
         }
 
         if (EFI_ERROR(Status)) {
             mRootDir = LogProtocol = NULL;
+
+            REFIT_CALL_2_WRAPPER(
+                gST->ConOut->SetAttribute,
+                gST->ConOut, ATTR_ERROR
+            );
+            PrintUglyText (
+                L"Alernative ESP for RefindPlus Debug Log Storage:- 'Not Ready'",
+                NEXTLINE
+            );
+
+            REFIT_CALL_2_WRAPPER(
+                gST->ConOut->SetAttribute,
+                gST->ConOut, ATTR_BASIC
+            );
+            PrintUglyText (
+                L"RefindPlus *WILL NOT* create a debug log file",
+                NEXTLINE
+            );
+
+            PauseSeconds (4);
         }
     }
 
-    // DA-TAG: Do not set 'mRootDir' to NULL here
-    //         May be used in caller when 'LogProtocol' is not NULL
     return LogProtocol;
 } // static EFI_FILE_PROTOCOL * GetDebugLogFile()
 
@@ -244,9 +307,13 @@ VOID SaveMessageToDebugLogFile (
             RefitReadWrite, 0
         );
         if (!EFI_ERROR(Status)) {
-            Status = REFIT_CALL_1_WRAPPER(LogFile->Delete, LogFile);
+            Status = REFIT_CALL_1_WRAPPER(
+                LogFile->Delete, LogFile
+            );
             if (!EFI_ERROR(Status)) {
-                REFIT_CALL_1_WRAPPER(mRootDir->Close, mRootDir);
+                REFIT_CALL_1_WRAPPER(
+                    mRootDir->Close, mRootDir
+                );
                 DelMsgLog = TRUE;
             }
         }
