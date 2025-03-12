@@ -1913,12 +1913,13 @@ LOADER_ENTRY * AddLoaderEntry (
     IN     BOOLEAN       CheckLinux
 ) {
     UINTN                   i;
+    CHAR16                 *KernFile;
+    CHAR16                 *NameClues;
     CHAR16                 *DisplayName;
     CHAR16                 *SearchName;
     CHAR16                 *LinuxName;
-    CHAR16                 *NameClues;
     CHAR16                 *ShowName;      // Do *NOT* Free
-    CHAR16                 *TmpName;
+    CHAR16                 *TmpName;       // Do *NOT* Free
     BOOLEAN                 Found;
     BOOLEAN                 IsStub;
     BOOLEAN                 GotSysD;
@@ -2005,22 +2006,95 @@ LOADER_ENTRY * AddLoaderEntry (
                                     : PoolPrint (
                                         L"Instance: Linux - %s via Elilo", ShowName
                                     );
-                    }
-                }
+                    } // if FindSubStr
+                    MY_FREE_POOL(SearchName);
+                } // if !IsStub
+
+                KernFile = NULL;
+                TmpName = L"FIND BUGS!!"; // Find bug if this shows up
 
                 if (!Found) {
-                    MY_FREE_POOL(LinuxName);
-                    GuessLinuxDistribution (&LinuxName, Volume, LoaderPath, TRUE);
+                    if (LoaderPath != NULL) {
+                        MY_FREE_POOL(LinuxName);
+                        GuessLinuxDistribution (
+                            &LinuxName, Volume,
+                            LoaderPath, TRUE
+                        );
+                    }
 
                     if (LinuxName != NULL) {
-                        Found = TRUE;
+                        if (!GlobalConfig.FoldLinuxKernels) {
+                            KernFile = Basename (LoaderPath);
+                            if (!MyStrStr (KernFile, L".")) {
+                                TmpName = KernFile;
+                            }
+                            else {
+                                NameClues = StripSetExtension (
+                                    L".signed", KernFile
+                                );
 
+                                MY_FREE_POOL(KernFile);
+                                KernFile = StripEfiExtension (NameClues);
+
+                                TmpName = StripSetExtension (
+                                    L".signed", KernFile
+                                );
+
+                                MY_FREE_POOL(NameClues);
+                                MY_FREE_POOL(KernFile);
+                                KernFile = TmpName;
+                            }
+
+                            i = 0;
+                            Found = FALSE; // Temporarily used tor while loop
+                            while (!Found) {
+                                SearchName = FindCommaDelimited (
+                                    GlobalConfig.LinuxPrefixes, i++
+                                );
+                                if (SearchName == NULL) break;
+
+                                NameClues = PoolPrint (L"%s-", SearchName);
+                                if (MyStrBegins (NameClues, KernFile)) {
+                                    Found = TRUE; // To break loop
+
+                                    TmpName = GetSubStrAfter (
+                                        NameClues, KernFile
+                                    );
+                                    if (!MyStrStr (TmpName, L"-")) {
+                                        TmpName = KernFile;
+                                    }
+
+                                    // DA-TAG: Delibrate
+                                    if (MyStrBegins (L"linux-", TmpName)) {
+                                        MY_FREE_POOL(NameClues);
+                                        NameClues = GetSubStrAfter (
+                                            L"linux-", KernFile
+                                        );
+                                        if (MyStrStr (NameClues, L"-")) {
+                                            TmpName = NameClues;
+                                        }
+                                        MY_SOFT_FREE(NameClues); // Important!
+                                    }
+                                }
+
+                                MY_FREE_POOL(NameClues);
+                                MY_FREE_POOL(SearchName);
+                            } // while
+                        } // if !GlobalConfig.FoldLinuxKernels
+
+                        Found = TRUE;  // Final Actual Setting
                         ShowName = GetShowName (LinuxName);
 
                         LoaderEntry->Title = (IsStub)
-                            ? PoolPrint (
-                                L"Instance: Linux - %s via Stub Loader", ShowName
-                            )
+                            ? (KernFile == NULL)
+                                ? PoolPrint (
+                                    L"Instance: Linux - %s via Stub Loader",
+                                    ShowName
+                                )
+                                : PoolPrint (
+                                    L"Instance: Linux - %s via Stub Loader ::: %s",
+                                    ShowName, TmpName
+                                )
                             : (!GotGrub && !GotSysD && !GotElilo)
                                 ? PoolPrint (
                                     L"Instance: Linux - %s", ShowName
@@ -2036,9 +2110,10 @@ LOADER_ENTRY * AddLoaderEntry (
                                         : PoolPrint (
                                             L"Instance: Linux - %s via Elilo", ShowName
                                         );
-                    }
+                    } // if LinuxName != NULL
                 } // if !Found
 
+                MY_FREE_POOL(KernFile);
                 MY_FREE_POOL(LinuxName);
                 MY_FREE_POOL(SearchName);
             } // while
@@ -2057,6 +2132,7 @@ LOADER_ENTRY * AddLoaderEntry (
                     LoaderEntry->OSType  = 'W';
                     LoaderEntry->Title = PoolPrint (L"Instance: Windows (UEFI) - %s", LoaderPath);
                 }
+                MY_FREE_POOL(NameClues);
             }
         }
     } // if/else LoaderTitle

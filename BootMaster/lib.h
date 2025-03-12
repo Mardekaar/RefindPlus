@@ -175,6 +175,10 @@ CHAR16 * FindPath (IN CHAR16* FullPath);
 CHAR16 * FindExtension (IN CHAR16 *Path);
 CHAR16 * FindLastDirName (IN CHAR16 *Path);
 CHAR16 * StripEfiExtension (IN CHAR16 *FileName);
+CHAR16 * StripSetExtension (
+    IN CHAR16 *Extension,
+    IN CHAR16 *FileName
+);
 CHAR16 * GetVolumeName (IN REFIT_VOLUME *Volume);
 CHAR16 * SplitDeviceString (IN OUT CHAR16 *InString);
 CHAR16 * RefitGetBootPathName (

@@ -6,6 +6,9 @@
 - Amends `Misc` Handling
   * Addresses misc missed Graphics Screen boot modes
   * Adds identification for `Non-Folded` Linux kernel loaders
+  * Restores default upstream equivalence on `use_graphics_for`
+    - Now only defaults to graphics mode for MacOS boot
+    - All other available boot types must now be explicitly set
   * Avoids potential implicit type conversion issues. Thanks @clague
   * Provides option to create GitHub Build Artefacts. Thanks @startergo
   * Addresses Potential NULL Pointer Dereferencing. Thnaks @MicroMilo

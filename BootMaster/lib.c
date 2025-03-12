@@ -4174,13 +4174,15 @@ CHAR16 * Basename (
     return StrDuplicate (FileName);
 }
 
-// Remove the .efi extension from FileName -- for instance, if FileName is
-// "fred.efi", returns "fred". If the filename contains no .efi extension,
+// Remove the extension from FileName -- for instance, if FileName is
+// "fred.xyz", returns "fred". If the filename contains no extension,
 // returns a copy of the original input.
-CHAR16 * StripEfiExtension (
+CHAR16 * StripSetExtension (
+    IN CHAR16 *Extension,
     IN CHAR16 *FileName
 ) {
-    UINTN   Length;
+    UINTN   LengthExt;
+    UINTN   LengthFile;
     CHAR16 *Copy;
 
 
@@ -4188,14 +4190,31 @@ CHAR16 * StripEfiExtension (
         return NULL;
     }
 
-    Copy = StrDuplicate (FileName);
-    Length = StrLen (Copy);
-    if ((Length >= 4) && MyStriCmp (&Copy[Length - 4], L".efi")) {
-        Copy[Length - 4] = 0;
+    if (!MyStrBegins (L".", Extension)) {
+        return NULL;
+    }
+
+    Copy       = StrDuplicate (FileName);
+    LengthFile = StrLen (Copy);
+    LengthExt  = StrLen (Extension);
+
+    if (LengthFile >= LengthExt) {
+        if (MyStriCmp (&Copy[LengthFile - LengthExt], Extension)) {
+            Copy[LengthFile - LengthExt] = 0;
+        }
     }
 
     return Copy;
-} // CHAR16 *StripExtension()
+} // CHAR16 * StripSetExtension()
+
+
+// Remove the .efi extension from FileName.
+// See 'StripSetExtension()' for details.
+CHAR16 * StripEfiExtension (
+    IN CHAR16 *FileName
+) {
+    return StripSetExtension(L".efi", FileName);
+} // CHAR16 * StripExtension()
 
 //
 // memory string search
