@@ -4268,6 +4268,50 @@ VOID ReadConfig (
                 &(GlobalConfig.ExtraKernelVersionStrings)
             );
         }
+        else if (MyStriCmp (TokenList[0], L"badram_fix_list")) {
+            #if REFIT_DEBUG > 0
+            if (!OuterLoop) {
+                UpdatedToken = LogUpdate (
+                    TokenList[0], NotRunBefore, TRUE
+                );
+            }
+            #endif
+
+            HandleStrings (
+                TokenList, TokenCount,
+                &(GlobalConfig.BadRamFixList)
+            );
+        }
+        else if (
+            TokenCount == 2 &&
+            MyStriCmp (TokenList[0], L"badram_fix_type")
+        ) {
+            #if REFIT_DEBUG > 0
+            if (!OuterLoop) {
+                UpdatedToken = LogUpdate (
+                    TokenList[0], NotRunBefore, TRUE
+                );
+            }
+            #endif
+
+            HandleSignedInt (
+                TokenList, TokenCount,
+                &(GlobalConfig.BadRamFixType)
+            );
+        }
+        else if (MyStriCmp (TokenList[0], L"badram_fix_wide")) {
+            #if REFIT_DEBUG > 0
+            if (!OuterLoop) {
+                UpdatedToken = LogUpdate (
+                    TokenList[0], NotRunBefore, TRUE
+                );
+            }
+            #endif
+
+            GlobalConfig.BadRamFixWide = HandleBoolean (
+                TokenList, TokenCount
+            );
+        }
         else if (MyStriCmp (TokenList[0], L"max_tags")) {
             #if REFIT_DEBUG > 0
             if (!OuterLoop) {

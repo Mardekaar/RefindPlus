@@ -58,6 +58,7 @@
 #include "install.h"
 #include "screenmgt.h"
 #include "mystrings.h"
+#include "badram_fix.h"
 #include "launch_efi.h"
 #include "launch_legacy.h"
 #include "driver_support.h"
@@ -82,6 +83,7 @@ INT16 NowSecond = 0;
 REFIT_MENU_SCREEN *MainMenu = NULL;
 
 REFIT_CONFIG GlobalConfig = {
+    .BadRamFixWide             =                   FALSE,
     .DirectBoot                =                   FALSE,
     .CustomScreenBG            =                   FALSE,
     .TextOnly                  =                   FALSE,
@@ -156,12 +158,14 @@ REFIT_CONFIG GlobalConfig = {
     .LogLevel                  =                       0,
     .IconRowMove               =                       0,
     .IconRowTune               =                       0,
+    .BadRamFixType             =                       0,
     .ScreenR                   =                      -1,
     .ScreenG                   =                      -1,
     .ScreenB                   =                      -1,
     .DiscoveredRoot            =                    NULL,
     .SelfDevicePath            =                    NULL,
     .ScreenBackground          =                    NULL,
+    .BadRamFixList             =                    NULL,
     .ToolLocations             =                    NULL,
     .ToolLocationsExtra        =                    NULL,
     .ConfigFilename            =                    NULL,
@@ -198,7 +202,7 @@ REFIT_CONFIG GlobalConfig = {
     }
 };
 
-#define RP_NVRAM_VARIABLES L"PreviousBoot,HiddenTags,HiddenTools,HiddenLegacy,HiddenFirmware"
+#define RP_NVRAM_VARIABLES L"PreviousBoot,HiddenTags,HiddenTools,HiddenLegacy,HiddenFirmware,BadRamInfo"
 
 
 UINTN                  AppleFramebuffers    =                     0;
@@ -210,6 +214,7 @@ CHAR16                *ArchBits             =                  NULL;
 CHAR16                *VendorInfo           =                  NULL;
 CHAR16                *gHiddenTools         =                  NULL;
 CHAR16                *AllToolLocations     =                  NULL;
+CHAR16                *ErrorTagBadRAM       =                  NULL;
 BOOLEAN                gKernelStarted       =                 FALSE;
 BOOLEAN                KeepTrustChain       =                 FALSE;
 BOOLEAN                IsBoot               =                 FALSE;
@@ -226,9 +231,10 @@ BOOLEAN                ExtremeHiDPI         =                 FALSE;
 BOOLEAN                AppleFirmware        =                 FALSE;
 BOOLEAN                FlushFailedTag       =                 FALSE;
 BOOLEAN                FlushFailReset       =                 FALSE;
-BOOLEAN                WarnMissingQVInfo    =                 FALSE;
+BOOLEAN                WarnTagBadRAM        =                 FALSE;
 BOOLEAN                WarnVersionEFI       =                 FALSE;
 BOOLEAN                WarnRevisionUEFI     =                 FALSE;
+BOOLEAN                WarnMissingQVInfo    =                 FALSE;
 BOOLEAN                VarNoCheckCompat     =                 FALSE;
 BOOLEAN                VarNoCheckAMFI       =                 FALSE;
 BOOLEAN                VarDisablePanicLog   =                 FALSE;
@@ -3913,6 +3919,21 @@ EFI_STATUS EFIAPI efi_main (
     /* Load Config Tokens */
     ReadConfig (GlobalConfig.ConfigFilename);
 
+    /* Handle BadRam */
+    Status = ManageBadRam (
+        GlobalConfig.BadRamFixList,
+        GlobalConfig.BadRamFixType,
+        GlobalConfig.BadRamFixWide
+    );
+    if (Status != EFI_SUCCESS &&
+        Status != EFI_NOT_STARTED &&
+        Status != EFI_ALREADY_STARTED
+    ) {
+        WarnTagBadRAM = TRUE;
+
+        ErrorTagBadRAM = PoolPrint (L"        Error Type:- '%r'", Status);
+    }
+
     /* Set some Convenience Variables */
     VarNoCheckAMFI     = GlobalConfig.DisableCheckAMFI    ;
     VarNoCheckCompat   = GlobalConfig.DisableCheckCompat  ;
@@ -3969,6 +3990,7 @@ EFI_STATUS EFIAPI efi_main (
     LOG_MSG("%s      LogLevel:- '%d'",       TAG_ITEM_A(LogLevelConfig               ));
     LOG_MSG("%s      ScanDelay:- '%d'",      TAG_ITEM_A(GlobalConfig.ScanDelay       ));
     LOG_MSG("%s      SyncNVram:- '%d'",      TAG_ITEM_A(GlobalConfig.SyncNVram       ));
+    LOG_MSG("%s      TagBadRAM:- '%d'",      TAG_ITEM_A(GlobalConfig.BadRamFixType   ));
     LOG_MSG("%s      PreferUGA:- '%s'",      TAG_ITEM_B(GlobalConfig.PreferUGA       ));
     LOG_MSG("%s      ReloadGOP:- '%s'",      TAG_ITEM_B(GlobalConfig.ReloadGOP       ));
     LOG_MSG("%s      SyncTrust:- '%03d'",    TAG_ITEM_A(GlobalConfig.SyncTrust       ));
@@ -4502,6 +4524,66 @@ EFI_STATUS EFIAPI efi_main (
         #endif
         GlobalConfig.ContinueOnWarning = ForceContinue;
         ForceContinue = FALSE;
+
+        MsgStr = StrDuplicate (L"Warning Acknowledged or Timed Out");
+        ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
+        ALT_LOG(1, LOG_BLANK_LINE_SEP, L"X");
+        LOG_MSG("%s      %s ...", OffsetNext, MsgStr);
+        MY_FREE_POOL(MsgStr);
+
+        if (AllowGraphicsMode) {
+            LOG_MSG("Restore Graphics Mode");
+            LOG_MSG("\n\n");
+
+            GraphicsScreenDirty = TRUE;
+            SwitchToGraphicsAndClear (TRUE);
+        }
+        else {
+            LOG_MSG("Proceeding");
+            LOG_MSG("\n\n");
+
+            BltClearScreen (FALSE);
+        }
+
+        // Wait 1 second
+        // DA-TAG: 100 Loops == 1 Sec
+        RefitStall (100);
+    }
+
+    // Show TagBadRAM Error
+    if (WarnTagBadRAM) {
+        SwitchToText (FALSE);
+
+        LOG_MSG("D I S P L A Y   U S E R   N O T I C E");
+        MsgStr = StrDuplicate (L"Tag Bad RAM Error");
+        ALT_LOG(1, LOG_LINE_THIN_SEP, L"Display %s Warning", MsgStr);
+        LOG_MSG("\n");
+        LOG_MSG("INFO: User Warning:- '%s'", MsgStr);
+        MY_FREE_POOL(MsgStr);
+
+        ForceContinue = (GlobalConfig.ContinueOnWarning) ? TRUE : FALSE;
+        GlobalConfig.ContinueOnWarning = TRUE;
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_SET;
+        #endif
+        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_ERROR);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+        PrintUglyText (L"                    Tag Bad RAM Error                     ", NEXTLINE);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+
+        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+        PrintUglyText (L"        Could Not Tag Some or All Target Addresses        ", NEXTLINE);
+        PrintUglyText (ErrorTagBadRAM,                                                NEXTLINE);
+        PrintUglyText (L"                                                          ", NEXTLINE);
+        PauseForKey();
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_OFF;
+        #endif
+        GlobalConfig.ContinueOnWarning = ForceContinue;
+        ForceContinue = FALSE;
+
+        MY_FREE_POOL(ErrorTagBadRAM);
 
         MsgStr = StrDuplicate (L"Warning Acknowledged or Timed Out");
         ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
