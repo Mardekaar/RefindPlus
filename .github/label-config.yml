@@ -4,6 +4,10 @@
 # The `Config` label is added to issues
 Config:
   issues:
+    # Add labels
+    label:
+      - 'Tagged'
+      - 'Invalid'
     # Remove labels
     unlabel:
       - 'Not-Planned'
@@ -19,7 +23,6 @@ Config:
       - 'Noted'
       - 'Queries'
       - 'Unclear'
-      - 'Invalid'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -59,6 +62,7 @@ Noted:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -92,6 +96,7 @@ Confirmed:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -123,6 +128,7 @@ Accepted:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -153,6 +159,7 @@ Declined:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -190,6 +197,7 @@ Uncertain:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -220,6 +228,7 @@ Bug:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -245,6 +254,7 @@ Cancelled:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Incomplete'
       - 'Known-Issue'
@@ -277,6 +287,7 @@ Discussion:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -284,8 +295,8 @@ Discussion:
       - 'Enhancement'
       - 'Cannot-Replicate'
 
-# The `Dismissed` label is added to issues
-Dismissed:
+# The `Dropped` label is added to issues
+Dropped:
   issues:
     # Remove labels
     unlabel:
@@ -338,6 +349,7 @@ Documentation:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Incomplete'
       - 'Cannot-Replicate'
@@ -364,6 +376,7 @@ Duplicate:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Incomplete'
       - 'Known-Issue'
@@ -394,32 +407,9 @@ Enhancement:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
-      - 'Incomplete'
-      - 'Known-Issue'
-      - 'Cannot-Replicate'
-
-# The `Tagged` label is added to issues
-Tagged:
-  issues:
-    # Remove labels
-    unlabel:
-      - 'Not-Planned'
-      - 'Uncertain'
-      - 'Confirmed'
-      - 'Cancelled'
-      - 'Accepted'
-      - 'Resolved'
-      - 'Triage'
-      - 'Parked'
-      - 'Stale'
-      - 'Bug'
-      - 'Noted'
-      - 'Config'
-      - 'Queries'
-      - 'Unclear'
-      - 'Prorogued'
       - 'Incomplete'
       - 'Known-Issue'
       - 'Cannot-Replicate'
@@ -444,6 +434,7 @@ Good-First-Issue:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -466,6 +457,7 @@ Help-Wanted:
       - 'Config'
       - 'Queries'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -493,6 +485,7 @@ Incomplete:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Duplicate'
       - 'Prorogued'
       - 'Known-Issue'
@@ -517,9 +510,9 @@ Invalid:
       - 'Stale'
       - 'Bug'
       - 'Noted'
-      - 'Config'
       - 'Queries'
       - 'Unclear'
+      - 'Dropped'
       - 'Upstream'
       - 'Prorogued'
       - 'Duplicate'
@@ -550,6 +543,7 @@ Known-Issue:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -576,6 +570,7 @@ Parked:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -601,6 +596,7 @@ Upstream:
       - 'Stale'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -625,6 +621,7 @@ Queries:
       - 'Stale'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -639,20 +636,12 @@ Resolved:
   issues:
     # Remove labels
     unlabel:
-      - 'Not-Planned'
       - 'Unresolved'
       - 'Uncertain'
-      - 'Confirmed'
-      - 'Cancelled'
-      - 'Accepted'
       - 'Triage'
       - 'Parked'
       - 'Stale'
-      - 'Config'
-      - 'Unclear'
-      - 'Invalid'
       - 'Prorogued'
-      - 'Duplicate'
       - 'Incomplete'
       - 'Cannot-Replicate'
     # Close thread
@@ -667,24 +656,6 @@ Resolved:
 #    # Reopen issue and unlock thread
 #    reopen: true
 #    unlock: true
-
-# The `Stale` label is added to issues
-Stale:
-  issues:
-    # Remove labels
-    unlabel:
-      - 'Not-Planned'
-      - 'Confirmed'
-      - 'Cancelled'
-      - 'Accepted'
-      - 'Resolved'
-      - 'Triage'
-      - 'Parked'
-      - 'Tagged'
-      - 'Queries'
-      - 'Unclear'
-      - 'Prorogued'
-      - 'Duplicate'
 
 # The `Unclear` label is added to issues
 Unclear:
@@ -705,6 +676,7 @@ Unclear:
       - 'Noted'
       - 'Config'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -734,6 +706,7 @@ Not-Planned:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -771,6 +744,7 @@ Cannot-Replicate:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Prorogued'
       - 'Duplicate'
       - 'Incomplete'
@@ -805,6 +779,7 @@ Prorogued:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
+      - 'Dropped'
       - 'Duplicate'
       - 'Incomplete'
       - 'Known-Issue'
@@ -840,7 +815,7 @@ Triage:
       - 'Queries'
       - 'Unclear'
       - 'Invalid'
-      - 'Dismissed'
+      - 'Dropped'
       - 'Prorogued'
       - 'Incomplete'
       - 'Known-Issue'

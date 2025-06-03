@@ -16,4 +16,7 @@
  * Modifications distributed under the preceding terms.
  */
 
-#define REFINDPLUS_VERSION L"0.14.2.AC (PRE-RELEASE)"
+#define WIDE_STR2(x) L##x
+#define WIDE_STR(x) WIDE_STR2(x)
+#define VERSION_STRING_ASCII "0.14.2.AC_PRE-RELEASE"
+#define REFINDPLUS_VERSION WIDE_STR(VERSION_STRING_ASCII)

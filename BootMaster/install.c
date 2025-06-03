@@ -302,8 +302,14 @@ EFI_STATUS RenameFile (
             gBS->CopyMem, NewInfo,
             Buffer, sizeof (EFI_FILE_INFO)
         );
-        NewInfo->FileName[0] = 0;
-        StrCat (NewInfo->FileName, NewName);
+
+        // Safe copy of new name
+        NewInfo->FileName[0] = L'\0';
+        SafeStrCat (
+            NewInfo->FileName,
+            (NewInfoSize - sizeof (EFI_FILE_INFO)) / sizeof (CHAR16),
+            NewName
+        );
 
         Status = REFIT_CALL_4_WRAPPER(
             BaseDir->SetInfo, FilePtr,

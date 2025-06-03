@@ -697,7 +697,16 @@ fsw_status_t fsw_dnode_readlink(struct fsw_dnode *dno, struct fsw_string *target
     if (dno->type != FSW_DNODE_TYPE_SYMLINK)
         return FSW_UNSUPPORTED;
 
-    return dno->vol->fstype_table->readlink(dno->vol, dno, target_name);
+    // CWE-20  [False Positive: Improper Input Validation]
+    //         'fsw_string' used intentionally for string-safe operations
+    //         The type is a structure and not raw C string
+    // CWE-362 [False Positive: TOCTOU Race Condition]
+    //         Executing in single-threaded UEFI context
+    //         Concurrent access not possible
+    /* Flawfinder: ignore */
+    return dno->vol->fstype_table->readlink (
+        dno->vol, dno, target_name
+    );
 }
 
 /**

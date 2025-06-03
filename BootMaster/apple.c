@@ -1017,7 +1017,11 @@ VOID RefitAppleFbInfoInstallProtocol (VOID) {
         #endif
 
         UninitRefitLib();
-        Status = REFIT_CALL_4_WRAPPER(
+        #if REFIT_DEBUG > 0
+        // DA-TAG: Delibrate for Codacy
+        Status =
+        #endif
+        REFIT_CALL_4_WRAPPER(
             gBS->InstallMultipleProtocolInterfaces, &gImageHandle,
             &gAppleFramebufferInfoProtocolGuid, (VOID *) &OurAppleFramebufferInfo, NULL
         );

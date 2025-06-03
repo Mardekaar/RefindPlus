@@ -221,6 +221,8 @@ VOID GetBadRamInfo (
         MY_FREE_POOL(*BadRamData);
     }
 
+    // DA-TAG: Delibrate ... BadRamData is NULL
+    /* coverity[var_deref_op: SUPPRESS] */
     *BadRamData = BadRamTemp;
 } // static VOID GetBadRamInfo()
 
@@ -251,10 +253,10 @@ EFI_STATUS ScanRAM (
 
 
     // Scan for, handle bad RAM and store addresses found
-    RangeStart = 0;
-    BadRamInfo = NULL;
-    InBadRange = FALSE;
-    Status     = EFI_SUCCESS;
+    RangeStart =             0;
+    BadRamInfo =          NULL;
+    InBadRange =         FALSE;
+    Status     =   EFI_SUCCESS;
     XStatus    = EFI_NOT_READY;
 
     for (MemoryMapEntry = MemoryMap;
@@ -294,7 +296,7 @@ EFI_STATUS ScanRAM (
                         InBadRange = FALSE;
 
                         GetBadRamInfo (
-                            &BadRamInfo, RangeStart, PageAddress
+                            &BadRamInfo, PageAddress, RangeStart
                         );
                     }
 
@@ -314,7 +316,7 @@ EFI_STATUS ScanRAM (
                 InBadRange = FALSE;
 
                 GetBadRamInfo (
-                    &BadRamInfo, RangeStart, PageAddress
+                    &BadRamInfo, PageAddress, RangeStart
                 );
             }
         }

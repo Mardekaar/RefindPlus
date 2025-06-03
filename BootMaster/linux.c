@@ -77,6 +77,7 @@ CHAR16 * FindInitrd (
     CHAR16              *VolName; // Do *NOT* Free
     #endif
 
+    UINTN                TempCount;
     UINTN                SharedChars;
     UINTN                MaxSharedChars;
     CHAR16              *Path;
@@ -137,9 +138,13 @@ CHAR16 * FindInitrd (
     // Add trailing backslash now if not added earlier.
     // For consistency in building 'InitrdName' later.
     BREAD_CRUMB(L"%a:  7", __func__);
-    if ((StrLen (Path) > 0) && (Path[StrLen (Path) - 1] != L'\\')) {
+    TempCount = StrLen (Path);
+    if (TempCount > 0) {
         BREAD_CRUMB(L"%a:  7a 1", __func__);
-        MergeStrings(&Path, L"\\", 0);
+        if (Path[TempCount - 1] != L'\\') {
+            BREAD_CRUMB(L"%a:  7a 1a 1", __func__);
+            MergeStrings(&Path, L"\\", 0);
+        }
     }
 
     BREAD_CRUMB(L"%a:  8", __func__);
@@ -495,6 +500,10 @@ VOID ParseReleaseFile (
         ToLower (*OSIconName);
         MY_FREE_POOL(TempName);
 
+        return;
+    }
+
+    if (TempName == NULL) {
         return;
     }
 

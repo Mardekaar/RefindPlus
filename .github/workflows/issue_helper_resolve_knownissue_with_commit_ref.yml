@@ -41,8 +41,8 @@ concurrency:
 
 jobs:
 
-  issue_resolve_knownissue1:
-    name: Issue - Resolve - KnownIssue1
+  issue_resolve_knownissue:
+    name: Issue - Resolve - KnownIssue
     runs-on: ubuntu-24.04
 
     steps:

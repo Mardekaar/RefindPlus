@@ -40,8 +40,8 @@ concurrency:
   group: lock
 
 jobs:
-  issue_resolve_enhance1:
-    name: Issue - Resolve - Enhance1
+  issue_resolve_enhance:
+    name: Issue - Resolve - Enhance
     runs-on: ubuntu-24.04
 
     steps:

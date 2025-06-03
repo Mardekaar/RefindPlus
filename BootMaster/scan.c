@@ -315,7 +315,10 @@ LOADER_ENTRY * InitializeLoaderEntry (
     NewEntry->EfiLoaderPath   =           NULL;
     NewEntry->me.Title        =           NULL;
     NewEntry->me.Tag          =     TAG_LOADER;
-    NewEntry->Volume          =  Entry->Volume;
+
+    if (Entry != NULL) {
+        NewEntry->Volume      =  Entry->Volume;
+    }
 
     if (Entry == NULL) {
         NewEntry->EfiBootNum      =          0;
@@ -1897,7 +1900,7 @@ LOADER_ENTRY * AddEfiLoaderEntry (
 
     OSIconName = NULL;
     MergeUniqueWords (&OSIconName, MenuEntry->me.Title, L',');
-    MergeUniqueStrings (&OSIconName, L"Unknown", L',');
+    MergeUniqueStrings (&OSIconName, LABEL_UNKNOWN, L',');
 
     MenuEntry->me.Image = (Icon != NULL)
         ? egCopyImage (Icon) : LoadOSIcon (OSIconName, NULL, FALSE);
@@ -5008,6 +5011,7 @@ VOID ScanForBootloaders (VOID) {
 VOID ScanForTools (VOID) {
     #if REFIT_DEBUG > 0
     BOOLEAN           CheckMute = FALSE;
+    BOOLEAN           FoundTool;
     CHAR16           *ToolStr;
     CHAR16           *LogSection = L"H A N D L E   T O O L   O P T I O N S";
     #endif
@@ -5019,7 +5023,6 @@ VOID ScanForTools (VOID) {
     UINT64            osind     ;
     UINT32            CsrValue  ;
     CHAR16           *ToolName  ;
-    BOOLEAN           FoundTool ;
 
     REFIT_MENU_ENTRY *MenuEntryHiddenTags;
     REFIT_MENU_ENTRY *MenuEntryBootOrder ;
@@ -5150,16 +5153,19 @@ VOID ScanForTools (VOID) {
 
         #if REFIT_DEBUG > 0
         LOG_MSG("%s  - Tool List Item %02d ... ", OffsetNext, ToolTotal);
-        #endif
 
         FoundTool = FALSE;
+        #endif
+
         switch (GlobalConfig.ShowTools[i]) {
             case TAG_CLEAN_NVRAM:
                 MenuEntryPreCleanNvram = AllocateZeroPool (
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreCleanNvram) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreCleanNvram->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5200,7 +5206,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryShutdown) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryShutdown->Title       = StrDuplicate (ToolName);
                     MenuEntryShutdown->Tag         = TAG_SHUTDOWN;
@@ -5239,7 +5247,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryReset) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryReset->Title       = StrDuplicate (ToolName);
                     MenuEntryReset->Tag         = TAG_REBOOT;
@@ -5278,7 +5288,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryAbout) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryAbout->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5319,7 +5331,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryExit) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryExit->Title       = StrDuplicate (ToolName);
                     MenuEntryExit->Tag         = TAG_EXIT;
@@ -5479,7 +5493,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreShellEFI != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreShellEFI->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5520,7 +5536,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreGPTSync != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreGPTSync->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5561,7 +5579,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreGDiskTool != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreGDiskTool->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5602,7 +5622,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreMokTool != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreMokTool->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5643,7 +5665,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreFwUpdateTool != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreFwUpdateTool->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5684,7 +5708,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreNetBoot != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreNetBoot->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5724,7 +5750,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreRecoveryMac != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreRecoveryMac->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5765,7 +5793,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreRecoveryWin != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreRecoveryWin->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName
@@ -5951,7 +5981,9 @@ VOID ScanForTools (VOID) {
                     sizeof (REFIT_MENU_ENTRY)
                 );
                 if (MenuEntryPreMemTest != NULL) {
+                    #if REFIT_DEBUG > 0
                     FoundTool = TRUE;
+                    #endif
 
                     MenuEntryPreMemTest->Title = PoolPrint (
                         L"Show '%s' Menu", ToolName

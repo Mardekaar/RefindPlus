@@ -5,12 +5,13 @@
  */
  /*
   * Modified for RefindPlus
-  * Copyright (c) 2024 Dayo Akanji (sf.net/u/dakanji/profile)
+  * Copyright (c) 2024-2025 Dayo Akanji (sf.net/u/dakanji/profile)
   *
   * Modifications distributed under the preceding terms.
   */
 
 #include <global.h>
+#include "../BootMaster/mystrings.h"
 #include "../include/refit_call_wrapper.h"
 
 #include "simple_file.h"
@@ -53,6 +54,7 @@ EFI_STATUS simple_file_open_by_handle (
 }
 
 // generate_path() from shim by Matthew J. Garrett
+// Modified for RefindPlus by Dayo Akanji
 static
 EFI_STATUS generate_path (
     CHAR16                     *NameStr,
@@ -66,8 +68,14 @@ EFI_STATUS generate_path (
     CHAR16     *FoundStr;
     CHAR16     *DevPathStr;
 
+
     FoundStr = NULL;
     DevPathStr = DevicePathToStr (LoadedImage->FilePath);
+    if (DevPathStr == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+    }
+
+    // Normalise and find last backslash
     for (i = 0; i < StrLen (DevPathStr); i++) {
         if (DevPathStr[i] == '/') {
             DevPathStr[i] = '\\';
@@ -84,15 +92,16 @@ EFI_STATUS generate_path (
         while (*(FoundStr - 1) == '\\') {
             --FoundStr;
         }
-
-        *FoundStr = '\0';
+        *FoundStr = L'\0';
         PathLen = StrLen (DevPathStr);
     }
 
-    if (NameStr[0] != '\\') {
+    if (NameStr[0] != L'\\') {
+        // Moved by 1 for extra backslash
         PathLen++;
     }
 
+    // Added 1 for null terminator
     DestSize  = StrLen (NameStr) + PathLen + 1;
     *PathName = AllocatePool (sizeof (CHAR16) * DestSize);
     if (*PathName == NULL) {
@@ -102,18 +111,24 @@ EFI_STATUS generate_path (
         return EFI_OUT_OF_RESOURCES;
     }
 
-    StrCpyS (*PathName, DestSize, DevPathStr);
+    // Terminate before appending
+    (*PathName)[0] = L'\0';
 
-    if (NameStr[0] != '\\') {
-        StrCat (*PathName, L"\\");
+    if (PathLen > 0) {
+        SafeStrCat (*PathName, DestSize, DevPathStr);
     }
-    StrCat (*PathName, NameStr);
+
+    if (NameStr[0] != L'\\') {
+        SafeStrCat (*PathName, DestSize, L"\\");
+    }
+
+    SafeStrCat (*PathName, DestSize, NameStr);
 
     *path = FileDevicePath (LoadedImage->DeviceHandle, *PathName);
     FreePool (DevPathStr);
 
     return EFI_SUCCESS;
-} // generate_path()
+} // static EFI_STATUS generate_path()
 
 EFI_STATUS simple_file_open (
     EFI_HANDLE          image,

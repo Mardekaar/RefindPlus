@@ -90,7 +90,7 @@ EFI_STATUS BdsLibConnectDevicePath (
         SetDevicePathEndNode (Next);
 
         PreviousHandle = NULL;
-        while (!IsDevicePathEnd (RemainingDevicePath)) {
+        do {
             // Loops until RemainingDevicePath is an empty device path
             //
             // Find the handle that best matches the device path.
@@ -126,7 +126,10 @@ EFI_STATUS BdsLibConnectDevicePath (
                 gBS->ConnectController, Handle,
                 NULL, RemainingDevicePath, FALSE
             );
-        } // while
+        } while (
+            RemainingDevicePath != NULL &&
+            !IsDevicePathEnd (RemainingDevicePath)
+        );
     } while (DevicePath != NULL);
 
     MY_FREE_POOL(CopyOfDevicePath);

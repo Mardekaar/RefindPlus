@@ -13,6 +13,12 @@
  * either version 2 of the GNU General Public License ("GPL") or BSD license
  * ("BSD").
  */
+ /*
+  * Modified for RefindPlus
+  * Copyright (c) 2025 Dayo Akanji (sf.net/u/dakanji/profile)
+  *
+  * Modifications distributed under the preceding terms.
+  */
 
 #ifndef MEM_H_MODULE
 #define MEM_H_MODULE
@@ -45,6 +51,8 @@ typedef uintptr_t uPtrDiff;
 ZSTD_STATIC unsigned ZSTD_32bits(void) { return sizeof (size_t) == 4; }
 ZSTD_STATIC unsigned ZSTD_64bits(void) { return sizeof (size_t) == 8; }
 
+#define CHECK_32(x) x = ZSTD_32bits();
+#define CHECK_64(x) x = ZSTD_64bits();
 
 /*=== Little endian r/w ===*/
 
@@ -60,10 +68,14 @@ ZSTD_STATIC U64 ZSTD_readLE64(const void *memPtr) { return get_unaligned_le64(me
 
 ZSTD_STATIC size_t ZSTD_readLEST(const void *memPtr)
 {
-	if (ZSTD_32bits())
-		return (size_t)ZSTD_readLE32(memPtr);
-	else
-		return (size_t)ZSTD_readLE64(memPtr);
+    unsigned Is32Bit = 0;
+    CHECK_32(Is32Bit);
+
+    if (Is32Bit) {
+        return (size_t)ZSTD_readLE32(memPtr);
+    }
+
+    return (size_t)ZSTD_readLE64(memPtr);
 }
 
 #endif /* MEM_H_MODULE */

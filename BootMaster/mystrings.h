@@ -52,7 +52,6 @@ BOOLEAN IsGuid (CHAR16 *UnknownString);
 BOOLEAN IsIn (IN CHAR16 *SmallString, IN CHAR16 *List);
 BOOLEAN TruncateString (CHAR16 *TheString, UINTN Limit);
 BOOLEAN LimitStringLength (CHAR16 *TheString, UINTN Limit);
-BOOLEAN StriSubCmp (IN CHAR16 *TargetStr, IN CHAR16 *BigStr);
 BOOLEAN IsListItem (IN CHAR16 *SmallString, IN CHAR16 *List);
 BOOLEAN IsListMatch (IN CHAR16 *TestString, IN CHAR16 *List);
 BOOLEAN IsInSubstring (IN CHAR16 *BigString, IN CHAR16 *List);
@@ -151,4 +150,10 @@ UINTN NumCharsInCommon (IN CHAR16 *String1, IN CHAR16 *String2);
 UINT64 StrToHex (CHAR16 *OurStr, UINTN Pos, UINTN NumChars);
 
 EFI_GUID StringAsGuid (CHAR16 *InString);
+
+EFI_STATUS SafeStrCat (
+    OUT       CHAR16 *Dest,
+    IN        UINTN   DestSize,
+    IN  CONST CHAR16 *Src
+);
 #endif

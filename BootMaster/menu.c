@@ -96,6 +96,13 @@ EG_IMAGE *SelectionImages[2] = {NULL, NULL};
 EFI_EVENT *WaitList          = NULL;
 UINT64     MainMenuLoad      = 0;
 UINTN      WaitListLength    = 0;
+UINTN      IconRowPosX       = 0;
+UINTN      IconRowPosY       = 0;
+UINTN      ToolRowPosX       = 0;
+UINTN      ToolRowPosY       = 0;
+UINTN      IconRowCount      = 0;
+UINTN      ToolRowCount      = 0;
+UINTN      IconRowItems      = 0;
 
 // Pointer variables
 BOOLEAN PointerEnabled       = FALSE;
@@ -105,16 +112,12 @@ BOOLEAN DrawSelection        =  TRUE;
 BOOLEAN SubScreenBoot        = FALSE;
 
 REFIT_MENU_ENTRY MenuEntryNo = {
-    L"No",
-    TAG_RETURN,
-    1, 0,
-    NULL, NULL, NULL
+    L"No", TAG_RETURN,
+    1, 0, NULL, NULL, NULL
 };
 REFIT_MENU_ENTRY MenuEntryYes = {
-    L"Yes",
-    TAG_RETURN,
-    1, 0,
-    NULL, NULL, NULL
+    L"Yes", TAG_RETURN,
+    1, 0, NULL, NULL, NULL
 };
 
 extern UINT64              GetCurrentMS (VOID);
@@ -207,15 +210,15 @@ VOID InitSelection (VOID) {
         );
     }
 
-    if (TempSmallImage->Width  != TileSizes[1] ||
-        TempSmallImage->Height != TileSizes[1]
+    if (TempSmallImage->Width  == TileSizes[1] &&
+        TempSmallImage->Height == TileSizes[1]
     ) {
+        SelectionImages[1] = egCopyImage (TempSmallImage);
+    }
+    else {
         SelectionImages[1] = egScaleImage (
             TempSmallImage, TileSizes[1], TileSizes[1]
         );
-    }
-    else {
-        SelectionImages[1] = egCopyImage (TempSmallImage);
     }
 
     #if REFIT_DEBUG > 0
@@ -271,15 +274,15 @@ VOID InitSelection (VOID) {
        );
     }
 
-    if (TempBigImage->Width  != TileSizes[0] ||
-        TempBigImage->Height != TileSizes[0]
+    if (TempBigImage->Width  == TileSizes[0] &&
+        TempBigImage->Height == TileSizes[0]
     ) {
+        SelectionImages[0] = egCopyImage (TempBigImage);
+    }
+    else {
         SelectionImages[0] = egScaleImage (
             TempBigImage, TileSizes[0], TileSizes[0]
         );
-    }
-    else {
-        SelectionImages[0] = egCopyImage (TempBigImage);
     }
 
     #if REFIT_DEBUG > 0
@@ -319,7 +322,7 @@ VOID InitScroll (
     State->PaintAll       = TRUE;
     State->PaintSelection = FALSE;
     State->LastVisible    = State->FirstVisible + State->MaxVisible - 1;
-}
+} // static VOID InitScroll()
 
 // Adjust variables relating to the scrolling of tags, for when a selected icon
 // is not visible given the current scrolling condition.
@@ -333,7 +336,7 @@ VOID AdjustScrollState (
         State->FirstVisible = 1 + State->CurrentSelection - State->MaxVisible;
 
         if (State->FirstVisible < 0) {
-            // should not happen, but just in case.
+            // Should not happen, but just in case.
             State->FirstVisible = 0;
         }
 
@@ -374,15 +377,15 @@ VOID UpdateScroll (
         case SCROLL_LINE_UP:
             if (State->ScrollMode == SCROLL_MODE_ICONS) {
                 if (State->CurrentSelection >= State->InitialRow1) {
-                    if (State->MaxIndex > State->InitialRow1) {
+                    if (State->MaxIndex <= State->InitialRow1) {
+                        State->CurrentSelection = State->FirstVisible;
+                    }
+                    else {
                         // Avoid division by 0!
                         State->CurrentSelection = State->FirstVisible
                             + (State->LastVisible      - State->FirstVisible)
                             * (State->CurrentSelection - State->InitialRow1)
                             / (State->MaxIndex         - State->InitialRow1);
-                    }
-                    else {
-                        State->CurrentSelection = State->FirstVisible;
                     }
                 }
             }
@@ -396,15 +399,15 @@ VOID UpdateScroll (
         case SCROLL_LINE_DOWN:
             if (State->ScrollMode == SCROLL_MODE_ICONS) {
                 if (State->CurrentSelection <= State->FinalRow0) {
-                    if (State->LastVisible > State->FirstVisible) {
+                    if (State->LastVisible <= State->FirstVisible) {
+                        State->CurrentSelection = State->InitialRow1;
+                    }
+                    else {
                         // Avoid division by 0!
                         State->CurrentSelection = State->InitialRow1 +
                             (State->MaxIndex         - State->InitialRow1) *
                             (State->CurrentSelection - State->FirstVisible) /
                             (State->LastVisible      - State->FirstVisible);
-                    }
-                    else {
-                        State->CurrentSelection = State->InitialRow1;
                     }
                 }
             }
@@ -495,11 +498,12 @@ VOID IdentifyRows (
         if (Screen->Entries[i]->Row == 0) {
             State->FinalRow0 = i;
         }
-        else if (
-            State->InitialRow1 > i    &&
-            Screen->Entries[i]->Row == 1
-        ) {
-            State->InitialRow1 = i;
+        else {
+            if (State->InitialRow1 > i    &&
+                Screen->Entries[i]->Row == 1
+            ) {
+                State->InitialRow1 = i;
+            }
         }
     } // for
 
@@ -529,36 +533,36 @@ VOID SaveScreen (VOID) {
     UINT64   TimeWait;
     UINT64   BaseWait;
     EG_PIXEL OUR_COLOR;
-    EG_PIXEL COLOR_01 = {   0,  51,  51,  0 };
-    EG_PIXEL COLOR_02 = {   0, 102, 102,  0 };
-    EG_PIXEL COLOR_03 = {   0, 153, 153,  0 };
-    EG_PIXEL COLOR_04 = {   0, 204, 204,  0 };
-    EG_PIXEL COLOR_05 = {   0, 255, 255,  0 };
-    EG_PIXEL COLOR_06 = {  51,   0, 204,  0 };
-    EG_PIXEL COLOR_07 = {  51,  51, 153,  0 };
-    EG_PIXEL COLOR_08 = {  51, 102, 102,  0 };
-    EG_PIXEL COLOR_09 = {  51, 153,  51,  0 };
-    EG_PIXEL COLOR_10 = {  51, 204,   0,  0 };
-    EG_PIXEL COLOR_11 = {  51, 255,  51,  0 };
-    EG_PIXEL COLOR_12 = { 102,   0, 102,  0 };
-    EG_PIXEL COLOR_13 = { 102,  51, 153,  0 };
-    EG_PIXEL COLOR_14 = { 102, 102, 204,  0 };
-    EG_PIXEL COLOR_15 = { 102, 153, 255,  0 };
-    EG_PIXEL COLOR_16 = { 102, 204, 204,  0 };
-    EG_PIXEL COLOR_17 = { 102, 255, 153,  0 };
-    EG_PIXEL COLOR_18 = { 153,   0, 102,  0 };
-    EG_PIXEL COLOR_19 = { 153,  51,  51,  0 };
-    EG_PIXEL COLOR_20 = { 153, 102,   0,  0 };
-    EG_PIXEL COLOR_21 = { 153, 153,  51,  0 };
-    EG_PIXEL COLOR_22 = { 153, 204, 102,  0 };
-    EG_PIXEL COLOR_23 = { 153, 255, 153,  0 };
-    EG_PIXEL COLOR_24 = { 204,   0, 204,  0 };
-    EG_PIXEL COLOR_25 = { 204,  51, 255,  0 };
-    EG_PIXEL COLOR_26 = { 204, 102, 204,  0 };
-    EG_PIXEL COLOR_27 = { 204, 153, 153,  0 };
-    EG_PIXEL COLOR_28 = { 204, 204, 102,  0 };
-    EG_PIXEL COLOR_29 = { 204, 255,  51,  0 };
-    EG_PIXEL COLOR_30 = { 255,   0,   0,  0 };
+    EG_PIXEL COLOR_001 = {   0,  51,  51,  0 };
+    EG_PIXEL COLOR_002 = {   0, 102, 102,  0 };
+    EG_PIXEL COLOR_003 = {   0, 153, 153,  0 };
+    EG_PIXEL COLOR_004 = {   0, 204, 204,  0 };
+    EG_PIXEL COLOR_005 = {   0, 255, 255,  0 };
+    EG_PIXEL COLOR_006 = {  51,   0, 204,  0 };
+    EG_PIXEL COLOR_007 = {  51,  51, 153,  0 };
+    EG_PIXEL COLOR_008 = {  51, 102, 102,  0 };
+    EG_PIXEL COLOR_009 = {  51, 153,  51,  0 };
+    EG_PIXEL COLOR_010 = {  51, 204,   0,  0 };
+    EG_PIXEL COLOR_011 = {  51, 255,  51,  0 };
+    EG_PIXEL COLOR_012 = { 102,   0, 102,  0 };
+    EG_PIXEL COLOR_013 = { 102,  51, 153,  0 };
+    EG_PIXEL COLOR_014 = { 102, 102, 204,  0 };
+    EG_PIXEL COLOR_015 = { 102, 153, 255,  0 };
+    EG_PIXEL COLOR_016 = { 102, 204, 204,  0 };
+    EG_PIXEL COLOR_017 = { 102, 255, 153,  0 };
+    EG_PIXEL COLOR_018 = { 153,   0, 102,  0 };
+    EG_PIXEL COLOR_019 = { 153,  51,  51,  0 };
+    EG_PIXEL COLOR_020 = { 153, 102,   0,  0 };
+    EG_PIXEL COLOR_021 = { 153, 153,  51,  0 };
+    EG_PIXEL COLOR_022 = { 153, 204, 102,  0 };
+    EG_PIXEL COLOR_023 = { 153, 255, 153,  0 };
+    EG_PIXEL COLOR_024 = { 204,   0, 204,  0 };
+    EG_PIXEL COLOR_025 = { 204,  51, 255,  0 };
+    EG_PIXEL COLOR_026 = { 204, 102, 204,  0 };
+    EG_PIXEL COLOR_027 = { 204, 153, 153,  0 };
+    EG_PIXEL COLOR_028 = { 204, 204, 102,  0 };
+    EG_PIXEL COLOR_029 = { 204, 255,  51,  0 };
+    EG_PIXEL COLOR_030 = { 255,   0,   0,  0 };
 
 
     #if REFIT_DEBUG > 0
@@ -573,7 +577,7 @@ VOID SaveScreen (VOID) {
     LOG_MSG("\n");
     #endif
 
-    // Start with COLOR_01 ... 0 will be incremented to 1
+    // Start with COLOR_001 ... 0 will be incremented to 1
     OurIndex = 0;
 
     // Start with BaseWait
@@ -609,36 +613,36 @@ VOID SaveScreen (VOID) {
         }
 
         switch (OurIndex) {
-            case  1: OUR_COLOR = COLOR_01; break;
-            case  2: OUR_COLOR = COLOR_02; break;
-            case  3: OUR_COLOR = COLOR_03; break;
-            case  4: OUR_COLOR = COLOR_04; break;
-            case  5: OUR_COLOR = COLOR_05; break;
-            case  6: OUR_COLOR = COLOR_06; break;
-            case  7: OUR_COLOR = COLOR_07; break;
-            case  8: OUR_COLOR = COLOR_08; break;
-            case  9: OUR_COLOR = COLOR_09; break;
-            case 10: OUR_COLOR = COLOR_10; break;
-            case 11: OUR_COLOR = COLOR_11; break;
-            case 12: OUR_COLOR = COLOR_12; break;
-            case 13: OUR_COLOR = COLOR_13; break;
-            case 14: OUR_COLOR = COLOR_14; break;
-            case 15: OUR_COLOR = COLOR_15; break;
-            case 16: OUR_COLOR = COLOR_16; break;
-            case 17: OUR_COLOR = COLOR_17; break;
-            case 18: OUR_COLOR = COLOR_18; break;
-            case 19: OUR_COLOR = COLOR_19; break;
-            case 20: OUR_COLOR = COLOR_20; break;
-            case 21: OUR_COLOR = COLOR_21; break;
-            case 22: OUR_COLOR = COLOR_22; break;
-            case 23: OUR_COLOR = COLOR_23; break;
-            case 24: OUR_COLOR = COLOR_24; break;
-            case 25: OUR_COLOR = COLOR_25; break;
-            case 26: OUR_COLOR = COLOR_26; break;
-            case 27: OUR_COLOR = COLOR_27; break;
-            case 28: OUR_COLOR = COLOR_28; break;
-            case 29: OUR_COLOR = COLOR_29; break;
-            default: OUR_COLOR = COLOR_30; break;
+            case   1: OUR_COLOR = COLOR_001; break;
+            case   2: OUR_COLOR = COLOR_002; break;
+            case   3: OUR_COLOR = COLOR_003; break;
+            case   4: OUR_COLOR = COLOR_004; break;
+            case   5: OUR_COLOR = COLOR_005; break;
+            case   6: OUR_COLOR = COLOR_006; break;
+            case   7: OUR_COLOR = COLOR_007; break;
+            case   8: OUR_COLOR = COLOR_008; break;
+            case   9: OUR_COLOR = COLOR_009; break;
+            case  10: OUR_COLOR = COLOR_010; break;
+            case  11: OUR_COLOR = COLOR_011; break;
+            case  12: OUR_COLOR = COLOR_012; break;
+            case  13: OUR_COLOR = COLOR_013; break;
+            case  14: OUR_COLOR = COLOR_014; break;
+            case  15: OUR_COLOR = COLOR_015; break;
+            case  16: OUR_COLOR = COLOR_016; break;
+            case  17: OUR_COLOR = COLOR_017; break;
+            case  18: OUR_COLOR = COLOR_018; break;
+            case  19: OUR_COLOR = COLOR_019; break;
+            case  20: OUR_COLOR = COLOR_020; break;
+            case  21: OUR_COLOR = COLOR_021; break;
+            case  22: OUR_COLOR = COLOR_022; break;
+            case  23: OUR_COLOR = COLOR_023; break;
+            case  24: OUR_COLOR = COLOR_024; break;
+            case  25: OUR_COLOR = COLOR_025; break;
+            case  26: OUR_COLOR = COLOR_026; break;
+            case  27: OUR_COLOR = COLOR_027; break;
+            case  28: OUR_COLOR = COLOR_028; break;
+            case  29: OUR_COLOR = COLOR_029; break;
+            default : OUR_COLOR = COLOR_030; break;
         }
 
         #if REFIT_DEBUG > 0
@@ -733,7 +737,14 @@ VOID ShowTextInfoLines (
 
 static
 UINTN TextLineHeight (VOID) {
-    return egGetFontHeight() + TEXT_YMARGIN * 2;
+    static UINTN TheLineHeight = 0;
+
+    if (TheLineHeight != 0) {
+        return TheLineHeight;
+    }
+
+    TheLineHeight = egGetFontHeight() + TEXT_YMARGIN * 2;
+    return TheLineHeight;
 } // static UINTN TextLineHeight()
 
 // Display text with a solid background (MenuBackgroundPixel or SelectionBackgroundPixel).
@@ -826,7 +837,9 @@ UINT8 AverageBrightness (
 
     Sum = 0;
     for (i = 0; i < (Image->Width * Image->Height); i++) {
-        Sum += (Image->PixelData[i].r + Image->PixelData[i].g + Image->PixelData[i].b);
+        Sum += Image->PixelData[i].r;
+        Sum += Image->PixelData[i].g;
+        Sum += Image->PixelData[i].b;
     }
     Sum /= (Image->Width * Image->Height * 3);
 
@@ -906,6 +919,7 @@ VOID ComputeSubScreenWindowSize (
     UINTN FontCellWidth;
     UINTN FontCellHeight;
     UINTN BannerBottomEdge;
+    UINTN TheHeightThreshold;
 
 
     *Width     = 20;
@@ -920,7 +934,7 @@ VOID ComputeSubScreenWindowSize (
         }
 
         (*Height)++;
-    }
+    } // for
 
     for (i = 0; i <= State->MaxIndex; i++) {
         ItemWidth = StrLen (Screen->Entries[i]->Title);
@@ -930,7 +944,7 @@ VOID ComputeSubScreenWindowSize (
         }
 
         (*Height)++;
-    }
+    } // for
 
     FontCellWidth  = egGetFontCellWidth();
     *Width = (*Width + 2) * FontCellWidth;
@@ -947,39 +961,40 @@ VOID ComputeSubScreenWindowSize (
         *Width = TitleWidth + 2 * FontCellWidth;
     }
 
-    // Keep it within the bounds of the screen, or 2/3 of the screen's width
-    // for screens over 800 pixels wide
+    // Keep within 2/3 of screen width or
+    // screen bounds if under 800 pixels
+
     if (*Width > ScreenW) {
         *Width = ScreenW;
     }
 
     *XPos = (ScreenW - *Width) / 2;
 
-    // Top of hint text
+    // Top of Hint Text
     FontCellHeight = egGetFontHeight();
     HintTop  = ScreenH - (FontCellHeight * 3);
-    *Height *= TextLineHeight();
 
-    if (Screen->TitleImage &&
-        (*Height < (Screen->TitleImage->Height + TextLineHeight() * 4))
-    ) {
-        *Height = Screen->TitleImage->Height + TextLineHeight() * 4;
+    *Height *= TextLineHeight();
+    if (Screen->TitleImage) {
+        TheHeightThreshold = Screen->TitleImage->Height + (TextLineHeight() * 4);
+
+        if (*Height < TheHeightThreshold) {
+            *Height = TheHeightThreshold;
+        }
     }
 
     if (GlobalConfig.BannerBottomEdge >= HintTop) {
-        // Probably a full-screen image; treat it as an empty banner
+        // Treat as Empty Banner ... Probably Fullscreen Image
         BannerBottomEdge = 0;
     }
     else {
         BannerBottomEdge = GlobalConfig.BannerBottomEdge;
     }
 
-    if (*Height > (HintTop - BannerBottomEdge - FontCellHeight * 2)) {
+    TheHeightThreshold = HintTop - BannerBottomEdge - (FontCellHeight * 2);
+    if (*Height > TheHeightThreshold) {
+        *Height = TheHeightThreshold;
         BannerBottomEdge = 0;
-    }
-
-    if (*Height > (HintTop - BannerBottomEdge - FontCellHeight * 2)) {
-        *Height = (HintTop - BannerBottomEdge - FontCellHeight * 2);
     }
 
     *YPos = ((ScreenH - *Height) / 2);
@@ -993,16 +1008,16 @@ VOID ComputeSubScreenWindowSize (
 static
 VOID DrawMainMenuEntry (
     REFIT_MENU_ENTRY *Entry,
-    BOOLEAN           selected,
+    BOOLEAN           Selected,
     UINTN             XPos,
     UINTN             YPos
 ) {
     EG_IMAGE *Background;
 
 
-    // Do not draw selection image when not hoverin if using pointer
-    if (!selected || !DrawSelection) {
-        // Image not selected ... copy background
+    // Do not draw selection image when not hovering (if using pointer)
+    if (!Selected || !DrawSelection) {
+        // Image not Selected ... Copy Background
         egDrawImageWithTransparency (
             Entry->Image,
             Entry->BadgeImage,
@@ -1077,18 +1092,15 @@ VOID PaintAll (
         }
     }
 
+    DrawTextWithTransparency (L"", 0, textPosY);
     if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_LABEL) &&
         (!PointerActive || DrawSelection)
     ) {
-        DrawTextWithTransparency (L"", 0, textPosY);
         DrawTextWithTransparency (
             Screen->Entries[State->CurrentSelection]->Title,
             (ScreenW - egComputeTextWidth (Screen->Entries[State->CurrentSelection]->Title)) >> 1,
             textPosY
         );
-    }
-    else {
-        DrawTextWithTransparency (L"", 0, textPosY);
     }
 
     if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_HINTS)) {
@@ -1123,8 +1135,7 @@ VOID PaintSelection (
     UINTN YPosCur;
 
 
-    if (
-        (State->CurrentSelection < State->InitialRow1) &&
+    if ((State->CurrentSelection < State->InitialRow1) &&
         (
             (State->CurrentSelection > State->LastVisible) ||
             (State->CurrentSelection < State->FirstVisible)
@@ -1169,18 +1180,15 @@ VOID PaintSelection (
         YPosCur
     );
 
+    DrawTextWithTransparency (L"", 0, textPosY);
     if (!(GlobalConfig.HideUIFlags & HIDEUI_FLAG_LABEL) &&
         (!PointerActive || DrawSelection)
     ) {
-        DrawTextWithTransparency (L"", 0, textPosY);
         DrawTextWithTransparency (
             Screen->Entries[State->CurrentSelection]->Title,
             (ScreenW - egComputeTextWidth (Screen->Entries[State->CurrentSelection]->Title)) >> 1,
             textPosY
         );
-    }
-    else {
-        DrawTextWithTransparency (L"", 0, textPosY);
     }
 } // static VOID MoveSelection (VOID)
 
@@ -1253,6 +1261,7 @@ VOID PaintArrows (
     #endif
 
     UINTN            RightX;
+    UINTN            VetValue;
     static EG_IMAGE *LeftArrow       =  NULL;
     static EG_IMAGE *RightArrow      =  NULL;
     static EG_IMAGE *LeftBackground  =  NULL;
@@ -1303,7 +1312,10 @@ VOID PaintArrows (
     }
 
     if (RightArrow && RightBackground) {
-        (State->LastVisible < (row0Loaders - 1))
+        VetValue = (
+            row0Loaders > 1
+        ) ? row0Loaders - 1 : 0;
+        (State->LastVisible < VetValue)
             ? PaintIcon (RightArrow, RightX, PosY, ALIGN_LEFT)
             : BltImage (RightBackground, RightX, PosY - (RightArrow->Height / 2));
     }
@@ -1655,9 +1667,9 @@ BOOLEAN HideLegacyTag (
         L"%-20s%s%s"
         L"Legacy BIOS Item",
         DEFAULT_STRING_DELIM,
-        (BaseCheck)
-            ? LegacyLoader->me.Title
-            : LegacyLoader->BdsOption->Description
+        (
+            BaseCheck
+        ) ? LegacyLoader->me.Title : LegacyLoader->BdsOption->Description
     );
 
     AddMenuInfoLine (HideLegacyMenu, L"Hide Legacy Entry Below?", FALSE);
@@ -1771,40 +1783,25 @@ VOID HideTag (
             }
             else {
                 HideTagMenu->Title = L"Hide UEFI Entry";
-                if (HideEfiTag (Loader, HideTagMenu, L"HiddenTags")) {
-                    // Changes Triggered
-                    TagFlag = 1;
-                }
-                else {
-                    // No Changes Triggered
-                    TagFlag = 2;
-                }
+                TagFlag = (
+                    HideEfiTag (Loader, HideTagMenu, L"HiddenTags")
+                ) ? 1 : 2; // Changes Triggered : No Changes Triggered
             }
 
             break;
         case TAG_LEGACY:
         case TAG_LEGACY_UEFI:
             HideTagMenu->Title = L"Hide Legacy BIOS Entry";
-            if (HideLegacyTag (LegacyLoader, HideTagMenu)) {
-                // Changes Triggered
-                TagFlag = 1;
-            }
-            else {
-                // No Changes Triggered
-                TagFlag = 2;
-            }
+            TagFlag = (
+                HideLegacyTag (LegacyLoader, HideTagMenu)
+            ) ? 1 : 2; // Changes Triggered : No Changes Triggered
 
             break;
         case TAG_FIRMWARE_LOADER:
             HideTagMenu->Title = L"Hide Firmware BootOption Entry";
-            if (HideFirmwareTag(Loader, HideTagMenu)) {
-                // Changes Triggered
-                TagFlag = 1;
-            }
-            else {
-                // No Changes Triggered
-                TagFlag = 2;
-            }
+            TagFlag = (
+                HideFirmwareTag(Loader, HideTagMenu)
+            ) ? 1 : 2; // Changes Triggered : No Changes Triggered
 
             break;
         case TAG_MOK:
@@ -1840,14 +1837,9 @@ VOID HideTag (
             break;
         case TAG_TOOL:
             HideTagMenu->Title = L"Hide Tool Entry";
-            if (HideEfiTag (Loader, HideTagMenu, L"HiddenTools")) {
-                // Changes Triggered
-                TagFlag = 1;
-            }
-            else {
-                // No Changes Triggered
-                TagFlag = 2;
-            }
+            TagFlag = (
+                HideEfiTag (Loader, HideTagMenu, L"HiddenTags")
+            ) ? 1 : 2; // Changes Triggered : No Changes Triggered
     } // switch
 
     if (TagFlag == 1) {
@@ -1859,14 +1851,16 @@ VOID HideTag (
 
         RescanAll (FALSE);
     }
-    else if (TagFlag == 2) {
-        #if REFIT_DEBUG > 0
-        NoChanges = L"No Changes Made on Hide Entry Call";
-        LOG_MSG("INFO: %s:- '%s'", NoChanges, HideTagMenu->Title);
-        LOG_MSG("\n\n");
-        ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", NoChanges);
-        #endif
+    #if REFIT_DEBUG > 0
+    else {
+        if (TagFlag == 2) {
+            NoChanges = L"No Changes Made on Hide Entry Call";
+            LOG_MSG("INFO: %s:- '%s'", NoChanges, HideTagMenu->Title);
+            LOG_MSG("\n\n");
+            ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", NoChanges);
+        }
     }
+    #endif
 
     FreeMenuScreen (&HideTagMenu);
 } // static VOID HideTag()
@@ -1929,6 +1923,37 @@ VOID FreeLoaderEntry (
     LOG_DECREMENT();
     LOG_SEP(L"X");
 } // static VOID FreeLoaderEntry()
+
+static
+VOID GetStateInfo (
+    IN REFIT_MENU_SCREEN *Screen,
+    IN SCROLL_STATE      *State
+) {
+    UINTN                 i;
+
+    // Layout
+    IconRowCount = 0;
+    ToolRowCount = 0;
+    IconRowItems = 0;
+
+    for (i = 0; i <= State->MaxIndex; i++) {
+        if (Screen->Entries[i]->Row == 1) {
+            ToolRowCount++;
+        }
+        else {
+            IconRowItems++;
+            if (IconRowCount < State->MaxVisible) {
+                IconRowCount++;
+            }
+        }
+    } // for
+
+    IconRowPosX = (ScreenW + TILE_XSPACING - (TileSizes[0] + TILE_XSPACING) * IconRowCount) >> 1;
+    IconRowPosY = ComputeRow0PosY (TRUE);
+    ToolRowPosX = (ScreenW + TILE_XSPACING - (TileSizes[1] + TILE_XSPACING) * ToolRowCount) >> 1;
+    ToolRowPosY = IconRowPosY + TileSizes[0] + TILE_YSPACING;
+
+} // static VOID GetStateInfo()
 
 // Returns a constant ... Do *NOT* Free
 CHAR16 * MenuExitInfo (
@@ -2106,7 +2131,8 @@ UINTN DrawMenuScreen (
     BOOLEAN                     TmpLevel;
     BOOLEAN                     CheckMute = FALSE;
 
-    static BOOLEAN              OnceWait = FALSE;
+    static BOOLEAN              OnceWait  = FALSE;
+    static INTN                 PreviousItem = -1;
     #endif
 
     EFI_STATUS                  Status;
@@ -2133,6 +2159,7 @@ UINTN DrawMenuScreen (
     CHAR16                     *TimeoutMessage;
     CHAR16                      KeyAsString[2];
     SCROLL_STATE                State;
+    POINTER_STATE               PointerState;
     EFI_INPUT_KEY               key;
 
 
@@ -2225,8 +2252,11 @@ UINTN DrawMenuScreen (
         }
 
         while (WaitForRelease) {
-            // Esure no keys are being held down
-            Status = REFIT_CALL_2_WRAPPER(gST->ConIn->ReadKeyStroke, gST->ConIn, &key);
+            // Ensure no keys are being held down
+            Status = REFIT_CALL_2_WRAPPER(
+                gST->ConIn->ReadKeyStroke,
+                gST->ConIn, &key
+            );
             if (!EFI_ERROR(Status)) {
                 // Reset to keep the keystroke buffer clear
                 REFIT_CALL_2_WRAPPER(gST->ConIn->Reset, gST->ConIn, FALSE);
@@ -2320,9 +2350,11 @@ UINTN DrawMenuScreen (
             StyleFunc (Screen, &State, MENU_FUNCTION_PAINT_ALL, NULL);
             State.PaintAll = FALSE;
         }
-        else if (State.PaintSelection) {
-            StyleFunc (Screen, &State, MENU_FUNCTION_PAINT_SELECTION, NULL);
-            State.PaintSelection = FALSE;
+        else {
+            if (State.PaintSelection) {
+                StyleFunc (Screen, &State, MENU_FUNCTION_PAINT_SELECTION, NULL);
+                State.PaintSelection = FALSE;
+            }
         }
         pdDraw();
 
@@ -2432,20 +2464,22 @@ UINTN DrawMenuScreen (
 
                 TimeSinceKeystroke += ElapsCount;
                 if (HaveTimeout) {
-                    TimeoutCountdown = (TimeoutCountdown > ElapsCount)
-                        ? TimeoutCountdown - ElapsCount : 0;
+                    TimeoutCountdown = (
+                        TimeoutCountdown > ElapsCount
+                    ) ? TimeoutCountdown - ElapsCount : 0;
                 }
-                else if (
-                    GlobalConfig.ScreensaverTime > 0 &&
-                    TimeSinceKeystroke > (GlobalConfig.ScreensaverTime * 10)
-                ) {
-                    SaveScreen();
-                    State.PaintAll     = TRUE;
-                    TimeSinceKeystroke =    0;
+                else {
+                    if (GlobalConfig.ScreensaverTime > 0 &&
+                        TimeSinceKeystroke > (GlobalConfig.ScreensaverTime * 10)
+                    ) {
+                        SaveScreen();
+                        State.PaintAll     = TRUE;
+                        TimeSinceKeystroke =    0;
 
-                    if (!AllowGraphicsMode) {
-                        PrepareBlankLine();
-                        DrawScreenHeader (Screen->Title);
+                        if (!AllowGraphicsMode) {
+                            PrepareBlankLine();
+                            DrawScreenHeader (Screen->Title);
+                        }
                     }
                 }
             } // if/else !HaveTimeout
@@ -2511,10 +2545,10 @@ UINTN DrawMenuScreen (
 
             // Flag 'UserKeyPress' on Selection Change
             switch (key.ScanCode) {
-                case SCAN_END:
-                case SCAN_HOME:
-                case SCAN_PAGE_UP:
                 case SCAN_PAGE_DOWN:
+                case SCAN_PAGE_UP:
+                case SCAN_HOME:
+                case SCAN_END:
                 case SCAN_UP:
                 case SCAN_LEFT:
                 case SCAN_DOWN:
@@ -2523,11 +2557,14 @@ UINTN DrawMenuScreen (
 
             // Flag 'UserKeyScan' on Detecting Some Inputs
             switch (key.UnicodeChar) {
+                case CHAR_LINEFEED:
+                case CHAR_CARRIAGE_RETURN:
                 case CHAR_BACKSPACE:
                 case CHAR_TAB:
+                case '\\':
+                case ' ':
                 case '+':
-                case '-':
-                default: UserKeyScan = TRUE;
+                case '-': UserKeyScan = TRUE;
             } // switch
 
             #if REFIT_DEBUG > 0
@@ -2551,29 +2588,15 @@ UINTN DrawMenuScreen (
 
             if (BlockRescan) {
                 if (MenuExit == MENU_EXIT_ESCAPE) {
-                    MenuExit = MENU_EXIT_ZERO;
+                    MenuExit =  MENU_EXIT_ZERO;
                 }
-                else if (MenuExit == MENU_EXIT_ZERO) {
-                    // Unblock Rescan on Selection Change
-                    switch (key.ScanCode) {
-                        case SCAN_END:
-                        case SCAN_HOME:
-                        case SCAN_PAGE_UP:
-                        case SCAN_PAGE_DOWN:
-                        case SCAN_UP:
-                        case SCAN_LEFT:
-                        case SCAN_DOWN:
-                        case SCAN_RIGHT: BlockRescan = FALSE;
-                    } // switch
-
-                    // Unblock Rescan on Detecting Some Inputs
-                    switch (key.UnicodeChar) {
-                        case CHAR_BACKSPACE:
-                        case CHAR_TAB:
-                        case '+':
-                        case '-':
-                        default: BlockRescan = FALSE;
-                    } // switch
+                else {
+                    if (MenuExit == MENU_EXIT_ZERO) {
+                        // Unblock Rescan on Key Press or Key Scan
+                        BlockRescan = (
+                            UserKeyPress || UserKeyScan
+                        ) ? FALSE : TRUE;
+                    }
                 }
             }
 
@@ -2598,7 +2621,7 @@ UINTN DrawMenuScreen (
             }
 
             State.PreviousSelection = State.CurrentSelection;
-            POINTER_STATE PointerState = pdGetState();
+            PointerState = pdGetState();
             Item = FindMainMenuItem (
                 Screen, &State,
                 PointerState.X, PointerState.Y
@@ -2606,9 +2629,21 @@ UINTN DrawMenuScreen (
 
             switch (Item) {
                 case POINTER_NO_ITEM:
+                    #if REFIT_DEBUG > 0
+                    // Reset 'PreviousItem' Flag
+                    if (PreviousItem != -1) {
+                        PreviousItem  = -1;
+                    }
+                    #endif
+
                     if (DrawSelection) {
                         DrawSelection        = FALSE;
-                        State.PaintSelection = TRUE;
+                        State.PaintSelection =  TRUE;
+                    }
+                    else {
+                        if (!PointerState.Press) {
+                            pdUpdateState();
+                        }
                     }
 
                 break;
@@ -2624,11 +2659,15 @@ UINTN DrawMenuScreen (
                         State.PaintSelection = TRUE;
                     }
 
-                    // React to Pointer Event
+                    // Log Pointer Event
                     #if REFIT_DEBUG > 0
-                    ALT_LOG(1, LOG_LINE_NORMAL,
-                        L"Process Pointer Event ... Arrow Left"
-                    );
+                    if (PreviousItem != Item) {
+                        PreviousItem  = Item;
+
+                        ALT_LOG(1, LOG_LINE_NORMAL,
+                            L"Process Pointer Event ... Arrow Left"
+                        );
+                    }
                     #endif
 
                 break;
@@ -2644,28 +2683,42 @@ UINTN DrawMenuScreen (
                         State.PaintSelection = TRUE;
                     }
 
-                    // React to Pointer Event
+                    // Log Pointer Event
                     #if REFIT_DEBUG > 0
-                    ALT_LOG(1, LOG_LINE_NORMAL,
-                        L"Process Pointer Event ... Arrow Right"
-                    );
+                    if (PreviousItem != Item) {
+                        PreviousItem  = Item;
+
+                        ALT_LOG(1, LOG_LINE_NORMAL,
+                            L"Process Pointer Event ... Arrow Right"
+                        );
+                    }
                     #endif
 
                 break;
                 default:
+                    #if REFIT_DEBUG > 0
+                    // Reset 'PreviousItem' Flag
+                    if (PreviousItem != -1) {
+                        PreviousItem  = -1;
+                    }
+                    #endif
+
                     if (!DrawSelection || Item != State.CurrentSelection) {
                         DrawSelection          = TRUE;
                         State.PaintSelection   = TRUE;
                         State.CurrentSelection = Item;
                     }
 
-                    if (PointerState.Press) {
+                    if (!PointerState.Press) {
+                        pdUpdateState();
+                    }
+                    else {
                         MenuExit = MENU_EXIT_ENTER;
 
-                        // React to Pointer Event
+                        // Log Pointer Event
                         #if REFIT_DEBUG > 0
                         ALT_LOG(1, LOG_LINE_NORMAL,
-                            L"Process Pointer Event ... Enter"
+                            L"Process Pointer Event ... Click"
                         );
                         #endif
                     }
@@ -2722,8 +2775,10 @@ UINTN DrawMenuScreen (
             if (GlobalConfig.LogLevel > 1) {
                 MenuExitGate = MenuExitNumb * 5;
             }
-            else if (GlobalConfig.LogLevel > 0) {
-                MenuExitGate = MenuExitNumb * 4;
+            else {
+                if (GlobalConfig.LogLevel > 0) {
+                    MenuExitGate = MenuExitNumb * 4;
+                }
             }
             #endif
 
@@ -2865,9 +2920,17 @@ VOID TextMenuStyle (
                     if (i == State->CurrentSelection) {
                         REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_CHOICE_CURRENT);
                     }
-                    else if (DisplayStrings[i]) {
-                        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_CHOICE_BASIC);
-                        REFIT_CALL_2_WRAPPER(gST->ConOut->OutputString, gST->ConOut, DisplayStrings[i]);
+                    else {
+                        if (DisplayStrings[i]) {
+                            REFIT_CALL_2_WRAPPER(
+                                gST->ConOut->SetAttribute,
+                                gST->ConOut, ATTR_CHOICE_BASIC
+                            );
+                            REFIT_CALL_2_WRAPPER(
+                                gST->ConOut->OutputString,
+                                gST->ConOut, DisplayStrings[i]
+                            );
+                        }
                     }
                 }
             }
@@ -3018,12 +3081,12 @@ VOID GraphicsMenuStyle (
             ItemWidth = egComputeTextWidth (Screen->Title);
 
             if (MenuWidth > ItemWidth) {
-                TitlePosX = EntriesPosX + (MenuWidth - ItemWidth) / 2 - CharWidth;
+                TitlePosX = EntriesPosX + ((MenuWidth - ItemWidth) / 2) - CharWidth;
             }
             else {
                TitlePosX = EntriesPosX;
                if (CharWidth > 0) {
-                  i = MenuWidth / CharWidth - 2;
+                  i = (MenuWidth / CharWidth) - 2;
                   if (i > 0) {
                       Screen->Title[i] = 0;
                   }
@@ -3051,7 +3114,7 @@ VOID GraphicsMenuStyle (
                 BltImageAlpha (
                     Screen->TitleImage,
                     EntriesPosX + TITLEICON_SPACING,
-                    EntriesPosY + TextLineHeight() * 2,
+                    EntriesPosY + (TextLineHeight() * 2),
                     BackgroundPixel
                 );
                 EntriesPosX += (Screen->TitleImage->Width + TITLEICON_SPACING * 2);
@@ -3116,7 +3179,7 @@ VOID GraphicsMenuStyle (
                 Screen->Entries[State->CurrentSelection]->Title,
                 TRUE, LineWidth,
                 EntriesPosX,
-                EntriesPosY + State->CurrentSelection * TextLineHeight()
+                EntriesPosY + (TextLineHeight() * State->CurrentSelection)
             );
 
         break;
@@ -3184,18 +3247,16 @@ VOID MainMenuStyle (
     #endif
 
     INTN   i;
-    UINTN  row0Count;
-    UINTN  row1Count;
     UINTN  row1PosX;
+    UINTN  row0PosXRunning;
     UINTN  row1PosXRunning;
 
-    static UINTN  row0PosX        = 0;
-    static UINTN  row0PosXRunning = 0;
-    static UINTN  row1PosY        = 0;
-    static UINTN  row0Loaders     = 0;
-    static UINTN *itemPosX        = 0;
-    static UINTN  row0PosY        = 0;
-    static UINTN  textPosY        = 0;
+    static UINTN  row0Loaders = 0;
+    static UINTN *itemPosX    = 0;
+    static UINTN  row0PosX    = 0;
+    static UINTN  row0PosY    = 0;
+    static UINTN  row1PosY    = 0;
+    static UINTN  textPosY    = 0;
 
 
     State->ScrollMode = SCROLL_MODE_ICONS;
@@ -3203,37 +3264,22 @@ VOID MainMenuStyle (
         case MENU_FUNCTION_INIT:
             InitScroll (State, Screen->EntryCount, GlobalConfig.MaxTags);
 
-            // Layout
-            row0Count   = 0;
-            row1Count   = 0;
+            GetStateInfo (Screen, State);
+            row0Loaders  =  IconRowItems;
+            row0PosX     =   IconRowPosX;
+            row0PosY     =   IconRowPosY;
+            row1PosX     =   ToolRowPosX;
+            row1PosY     =   ToolRowPosY;
 
-            for (i = 0; i <= State->MaxIndex; i++) {
-                if (Screen->Entries[i]->Row == 1) {
-                    row1Count++;
-                }
-                else {
-                    row0Loaders++;
-                    if (row0Count < State->MaxVisible) {
-                        row0Count++;
-                    }
-                }
-            } // for
+            textPosY = (
+                ToolRowCount == 0
+            ) ? row1PosY : row1PosY + TileSizes[1] + TILE_YSPACING;
 
-            row0PosX = (ScreenW + TILE_XSPACING - (TileSizes[0] + TILE_XSPACING) * row0Count) >> 1;
-            row0PosY = ComputeRow0PosY (TRUE);
-            row1PosX = (ScreenW + TILE_XSPACING - (TileSizes[1] + TILE_XSPACING) * row1Count) >> 1;
-            row1PosY = row0PosY + TileSizes[0] + TILE_YSPACING;
-
-            if (row1Count == 0) {
-                textPosY = row1PosY;
-            }
-            else {
-                textPosY = row1PosY + TileSizes[1] + TILE_YSPACING;
-            }
-
-            itemPosX = AllocatePool (sizeof (UINTN) * Screen->EntryCount);
+            itemPosX = AllocatePool (
+                Screen->EntryCount * sizeof (UINTN)
+            );
             if (itemPosX == NULL) {
-                // Early Return
+                // Early Return on Resource Exhaustion
                 return;
             }
 
@@ -3302,42 +3348,23 @@ UINTN FindMainMenuItem (
 ) {
     UINTN  i;
     UINTN  itemRow;
-    UINTN  ItemIndex;
-    UINTN  row0Loaders;
-    UINTN  row0Count;
-    UINTN  row1Count;
+    UINTN  row0PosX;
+    UINTN  row0PosY;
     UINTN  row1PosX;
+    UINTN  row1PosY;
+    UINTN *itemPosX;
+    UINTN  ItemIndex;
+    UINTN  row0PosXRunning;
     UINTN  row1PosXRunning;
 
-    static UINTN  row0PosX        = 0;
-    static UINTN  row1PosY        = 0;
-    static UINTN  row0PosXRunning = 0;
-    static UINTN *itemPosX        = 0;
-    static UINTN  row0PosY        = 0;
 
-
-    row0Count = 0;
-    row1Count = 0;
-    row0Loaders = 0;
-    for (i = 0; i <= State->MaxIndex; i++) {
-        if (Screen->Entries[i]->Row == 1) {
-            row1Count++;
-        }
-        else {
-            row0Loaders++;
-            if (row0Count < State->MaxVisible) {
-                row0Count++;
-            }
-        }
-    } // for
-
-    row0PosX = (ScreenW + TILE_XSPACING - (TileSizes[0] + TILE_XSPACING) * row0Count) >> 1;
-    row0PosY = ComputeRow0PosY (TRUE);
-    row1PosX = (ScreenW + TILE_XSPACING - (TileSizes[1] + TILE_XSPACING) * row1Count) >> 1;
-    row1PosY = row0PosY + TileSizes[0] + TILE_YSPACING;
+    GetStateInfo (Screen, State);
+    row0PosX     =   IconRowPosX;
+    row0PosY     =   IconRowPosY;
+    row1PosX     =   ToolRowPosX;
+    row1PosY     =   ToolRowPosY;
 
     if (PosY >= row0PosY && PosY <= row0PosY + TileSizes[0]) {
-        itemRow = 0;
         if (PosX <= row0PosX) {
             // Early Return
             return POINTER_LEFT_ARROW;
@@ -3347,6 +3374,8 @@ UINTN FindMainMenuItem (
             // Early Return
             return POINTER_RIGHT_ARROW;
         }
+
+        itemRow = 0;
     }
     else if (PosY >= row1PosY && PosY <= row1PosY + TileSizes[1]) {
         itemRow = 1;
@@ -3357,14 +3386,16 @@ UINTN FindMainMenuItem (
     }
 
     ItemIndex = POINTER_NO_ITEM;
+
     itemPosX = AllocatePool (sizeof (UINTN) * Screen->EntryCount);
     if (itemPosX == NULL) {
-        // Early Return
+        // Resource Exhaustion ... Early Exit
         return POINTER_NO_ITEM;
     }
 
     row0PosXRunning = row0PosX;
     row1PosXRunning = row1PosX;
+
     for (i = 0; i <= State->MaxIndex; i++) {
         if (Screen->Entries[i]->Row == 0) {
             itemPosX[i] = row0PosXRunning;
@@ -3374,7 +3405,7 @@ UINTN FindMainMenuItem (
             itemPosX[i] = row1PosXRunning;
             row1PosXRunning += TileSizes[1] + TILE_XSPACING;
         }
-    }
+    } // for
 
     for (i = State->FirstVisible; i <= State->MaxIndex; i++) {
         if (Screen->Entries[i]->Row == 0 && itemRow == 0) {
@@ -3387,13 +3418,17 @@ UINTN FindMainMenuItem (
                 }
             }
         }
-        else if (Screen->Entries[i]->Row == 1 && itemRow == 1) {
-            if (PosX >= itemPosX[i] && PosX <= itemPosX[i] + TileSizes[1]) {
+        else {
+            if (itemRow == 1                       &&
+                PosX >= itemPosX[i]                &&
+                PosX <= itemPosX[i] + TileSizes[1] &&
+                Screen->Entries[i]->Row == 1
+            ) {
                 ItemIndex = i;
                 break;
             }
         }
-    } // fpr
+    } // for
 
     MY_FREE_POOL(itemPosX);
 
@@ -3495,11 +3530,11 @@ VOID DisplaySimpleMessage (
 ) {
     #if REFIT_DEBUG > 0
     CHAR16            *MsgStr;
+    INTN               MenuExit;
     BOOLEAN            CheckMute = FALSE;
     #endif
 
     INTN               DefaultEntry;
-    INTN               MenuExit;
     BOOLEAN            RetVal;
     MENU_STYLE_FUNC    Style;
     REFIT_MENU_SCREEN *SimpleMessageMenu;
@@ -3550,7 +3585,12 @@ VOID DisplaySimpleMessage (
 
     DefaultEntry = 9999; // Use the Max Index
     Style = (AllowGraphicsMode) ? GraphicsMenuStyle : TextMenuStyle;
-    MenuExit = DrawMenuScreen (
+
+    #if REFIT_DEBUG > 0
+    // DA-TAG: Delibrate for Codacy
+    MenuExit =
+    #endif
+    DrawMenuScreen (
         SimpleMessageMenu, Style,
         &DefaultEntry, &ChosenOption
     );
@@ -3565,8 +3605,7 @@ VOID DisplaySimpleMessage (
 // Present a menu for the user to delete (un-hide) hidden tags.
 VOID ManageHiddenTags (VOID) {
     INTN                 DefaultEntry;
-    UINTN                i;
-    UINTN                MenuExit;
+    UINTN                MenuExit, i;
     CHAR16              *AllTags;
     CHAR16              *OneElement;
     CHAR16              *HiddenTags;
@@ -3588,7 +3627,7 @@ VOID ManageHiddenTags (VOID) {
     ALT_LOG(1, LOG_LINE_NORMAL, L"Screen Title:- '%s'", LABEL_HIDDEN);
     #endif
 
-    AllTags  = NULL;
+    AllTags = NULL;
 
     HiddenTags = ReadHiddenTags (L"HiddenTags");
     if (HiddenTags != NULL &&
@@ -3923,7 +3962,9 @@ BOOLEAN ConfirmRotate (VOID) {
     GetCsrStatus (&CurrentCsr);
     RecordgCsrStatus (CurrentCsr, FALSE);
     TmpStrA = PoolPrint (L"From : %s", gCsrStatus);
-    EmptySIP = (CurrentCsr == SIP_ENABLED_EX) ? TRUE : FALSE;
+    EmptySIP = (
+        CurrentCsr == SIP_ENABLED_EX
+    ) ? TRUE : FALSE;
 
     ListItem = GlobalConfig.CsrValues;
     if (EmptySIP) {
@@ -3935,9 +3976,11 @@ BOOLEAN ConfirmRotate (VOID) {
             ListItem = ListItem->Next;
         } // while
     }
-    TargetCsr = (ListItem == NULL || ListItem->Next == NULL)
-        ? GlobalConfig.CsrValues->Value
-        : ListItem->Next->Value;
+
+    TargetCsr = (
+        ListItem       == NULL ||
+        ListItem->Next == NULL
+    ) ? GlobalConfig.CsrValues->Value : ListItem->Next->Value;
 
     // Set recorded Human Readable String to Target CSR
     RecordgCsrStatus (TargetCsr, FALSE);
@@ -4029,8 +4072,16 @@ UINTN RunMainMenu (
     TileSizes[1] = (GlobalConfig.IconSizes[ICON_SIZE_SMALL] * 4) / 3;
 
     BREAD_CRUMB(L"%a:  2", __func__);
-    DefaultEntryIndex = (DefaultSelection != NULL && *DefaultSelection != NULL)
-        ? FindMenuShortcutEntry (Screen, *DefaultSelection) : -1;
+    if (DefaultSelection == NULL || *DefaultSelection == NULL) {
+        BREAD_CRUMB(L"%a:  2a 1", __func__);
+        DefaultEntryIndex = -1;
+    }
+    else {
+        BREAD_CRUMB(L"%a:  2b 1", __func__);
+        DefaultEntryIndex = FindMenuShortcutEntry (
+            Screen, *DefaultSelection
+        );
+    }
 
     #if REFIT_DEBUG > 0
     BREAD_CRUMB(L"%a:  3", __func__);
@@ -4046,9 +4097,20 @@ UINTN RunMainMenu (
         MY_FREE_POOL(MsgStr);
 
         BREAD_CRUMB(L"%a:  3a 2", __func__);
-        MsgStr = (DefaultSelection != NULL && *DefaultSelection != NULL)
-            ? PoolPrint (L"Configured Default Loader:- '%s'", *DefaultSelection)
-            : StrDuplicate (L"Configured Default Loader:- 'NULL'");
+        if (DefaultSelection == NULL || *DefaultSelection == NULL) {
+            BREAD_CRUMB(L"%a:  3a 2a 1", __func__);
+            MsgStr = StrDuplicate (
+                L"Configured Default Loader:- 'NULL'"
+            );
+        }
+        else {
+            BREAD_CRUMB(L"%a:  3a 2b 1", __func__);
+            MsgStr = PoolPrint (
+                L"Configured Default Loader:- '%s'",
+                *DefaultSelection
+            );
+        }
+
         ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
         LOG_MSG("\n");
         LOG_MSG("%s", MsgStr);
@@ -4252,7 +4314,11 @@ UINTN RunMainMenu (
 VOID FreeMenuScreen (
     IN REFIT_MENU_SCREEN **Screen
 ) {
-    UINTN i, j;
+    #if REFIT_DEBUG > 1
+    UINTN j;
+    #endif
+
+    UINTN i;
 
 
     LOG_SEP(L"X");
@@ -4278,9 +4344,13 @@ VOID FreeMenuScreen (
     if ((*Screen)->InfoLines) {
         BREAD_CRUMB(L"%a:  4a 1 - Free InfoLines", __func__);
         LOG_SEP(L"X");
+        #if REFIT_DEBUG > 1
         j = 0;
+        #endif
         for (i = 0; i < (*Screen)->InfoLineCount; i++) {
+            #if REFIT_DEBUG > 1
             j++;
+            #endif
             BREAD_CRUMB(L"%a:  4a 1a 1 - FOR LOOP:- START ... InfoLine %d of %d", __func__,
                 j, (*Screen)->InfoLineCount
             );
@@ -4298,9 +4368,13 @@ VOID FreeMenuScreen (
     BREAD_CRUMB(L"%a:  5", __func__);
     if ((*Screen)->Entries) {
         BREAD_CRUMB(L"%a:  5a 1 - Free Entries", __func__);
+        #if REFIT_DEBUG > 1
         j = 0;
+        #endif
         for (i = 0; i < (*Screen)->EntryCount; i++) {
+            #if REFIT_DEBUG > 1
             j++;
+            #endif
             LOG_SEP(L"X");
             BREAD_CRUMB(L"%a:  5a 1a 1 - FOR LOOP:- START ... Entry %d of %d", __func__,
                 j, (*Screen)->EntryCount

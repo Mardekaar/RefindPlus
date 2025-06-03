@@ -62,7 +62,7 @@ jobs:
     needs: [handle_enhance_check]
     runs-on: ubuntu-24.04
 
-    if: needs.handle_enhance_check.outputs.status == 'success'
+    if: ${{ github.actor == 'dakanji' && needs.handle_enhance_check.outputs.status == 'success' }}
     steps:
       - id: app-token
         uses: actions/create-github-app-token@v1
@@ -118,7 +118,7 @@ jobs:
     needs: [handle_resolved_check_1]
     runs-on: ubuntu-24.04
 
-    if: needs.handle_resolved_check_1.outputs.status == 'success'
+    if: ${{ github.actor == 'dakanji' && needs.handle_resolved_check_1.outputs.status == 'success' }}
     outputs:
       status: ${{ steps.handle_resolved_check_2_main.outputs.status }}
     steps:
@@ -144,7 +144,7 @@ jobs:
     needs: [handle_resolved_check_2]
     runs-on: ubuntu-24.04
 
-    if: needs.handle_resolved_check_2.outputs.status == 'success'
+    if: ${{ github.actor == 'dakanji' && needs.handle_resolved_check_2.outputs.status == 'success' }}
     steps:
       - id: app-token
         uses: actions/create-github-app-token@v1

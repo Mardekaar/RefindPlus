@@ -18,7 +18,7 @@ A GitHub `Workflow Action` is included in this repository to facilitate this.
 >
 > Replace `YOUR_GITHUB_USERNAME_GOES_HERE` above with your actual GitHub User Name.
 
-Once the action run is completed, click on the action instance displayed and look for `"Artifacts"` near the bottom of the page for available builds to download. The artefacts will be automatically removed from your repository fork after a period of time.
+Once the action run is completed, click on the action instance displayed and look for `"Artifacts"` near the bottom of the page for available builds to download. The artefacts will be automatically removed from your repository fork after a period of time. You might want to `Disable Github Actions` on your fork after downloading the artefacts and only enable this when needed to stop periodic actions for the RefindPlus Repository from running on your fork.
 
 > [!TIP]
 >

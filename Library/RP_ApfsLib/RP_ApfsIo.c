@@ -211,7 +211,7 @@ EFI_STATUS ApfsReadDriver (
             JumpStart->RecordExtents[Index].StartPhysicalAddr,
             &Lba
         );
-        if (EFI_ERROR(Status)) {
+        if (BlockIo == NULL) {
             Status = EFI_SECURITY_VIOLATION;
             break;
         }

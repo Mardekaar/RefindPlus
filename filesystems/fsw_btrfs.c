@@ -575,7 +575,6 @@ static fsw_status_t lower_bound (struct fsw_btrfs_volume *vol,
         int rdepth)
 {
     uint64_t addr = fsw_u64_le_swap (root);
-    int depth = -1;
 
     if (desc)
     {
@@ -601,7 +600,6 @@ static fsw_status_t lower_bound (struct fsw_btrfs_volume *vol,
         fsw_memzero(&head, sizeof (head));
 
 reiter:
-        depth++;
         /* FIXME: preread few nodes into buffer. */
         err = fsw_btrfs_read_logical (vol, addr, &head, sizeof (head),
                 rdepth + 1, depth2cache(rdepth));
@@ -621,7 +619,7 @@ reiter:
                 if (err)
                     return err;
 
-                DPRINT (L"btrfs: internal node (depth %d) %lx %x %lx\n", depth,
+                DPRINT (L"btrfs: internal node %lx %x %lx\n",
                         node.key.object_id, node.key.type,
                         node.key.offset);
 
@@ -673,7 +671,7 @@ reiter:
                 if (err)
                     return err;
 
-                DPRINT (L"btrfs: leaf (depth %d) %lx %x %lx\n", depth,
+                DPRINT (L"btrfs: leaf %lx %x %lx\n",
                         leaf.key.object_id, leaf.key.type, leaf.key.offset);
 
                 if (key_cmp (&leaf.key, key_in) == 0)

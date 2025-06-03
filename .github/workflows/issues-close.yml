@@ -21,7 +21,7 @@ jobs:
     name: Flag or Close Issues
     runs-on: ubuntu-24.04
 
-    if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'stale'
+    if: github.repository == 'RefindPlusRepo/RefindPlus' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'stale')
     steps:
       - id: app-token
         uses: actions/create-github-app-token@v1

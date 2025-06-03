@@ -4,32 +4,17 @@ on:
   pull_request:
     types:
       - closed
-#      - labeled
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: lock
 
 jobs:
-#  decline_pr:
-#    if: github.event.action == 'labeled' && github.event.label.name == 'Declined'
-#    runs-on: ubuntu-latest
-#    permissions:
-#      pull-requests: write
-#    steps:
-#      - id: app-token
-#        uses: actions/create-github-app-token@v1
-#        with:
-#          app-id: ${{ vars.APP_ID }}
-#          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-#
-#      - name: Close PR
-#        run: |
-#          gh pr close ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
-#        env:
-#          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  manage_labels:
-    if: github.actor == 'dakanji' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
+  Add Label:
+    runs-on: ubuntu-24.04
     steps:
       - id: app-token
         uses: actions/create-github-app-token@v1
@@ -37,42 +22,20 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - if: github.actor == 'dakanji'
+        id: add-labels-declined
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'add-labels'
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ github.event.pull_request.number }}
+          labels: 'Declined'
 
-      - name: Check PR closure reason
-        id: pr_info
-        run: |
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          PR_CLOSER="${{ github.actor }}"
-          LABELS=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event.pull_request.labels) }}')
-          HAS_ACCEPTED=false
-          for label in $LABELS; do
-            if [[ "$label" == "Accepted" ]]; then
-              HAS_ACCEPTED=true
-              break
-            fi
-          done
-          echo "author=${PR_AUTHOR}" >> "${GITHUB_ENV}"
-          echo "closer=${PR_CLOSER}" >> "${GITHUB_ENV}"
-          echo "has_accepted=${HAS_ACCEPTED}" >> "${GITHUB_ENV}"
-
-      - name: Determine Action
-        id: determine_action
-        run: |
-          if [[ "${{ env.closer }}" == "${{ env.author }}" ]]; then
-            echo "action=withdrawn" >> "${GITHUB_ENV}"
-          elif [[ "${{ env.closer }}" == "${{ github.repository_owner }}" ]]; then
-            echo "action=declined" >> "${GITHUB_ENV}"
-          else
-            echo "action=merged" >> "${GITHUB_ENV}"
-          fi
-
-      - name: Remove Unwanted Labels
-        run: |
-          UNWANTED_LABELS=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json labels --jq '.labels[].name' | grep -E '^(Queries|Unclear|Uncertain|Parked|Prorogued)' || true)
-          for label in $UNWANTED_LABELS; do
-            gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --remove-label "$label"
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: github.actor != 'refindplusrepo[bot]' && github.actor != 'dakanji'
+        id: add-labels-withdrawn
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'add-labels'
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ github.event.pull_request.number }}
+          labels: 'Withdrawn'

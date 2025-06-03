@@ -32,14 +32,12 @@
 #include "fsw_hfs.h"
 
 #ifdef HOST_POSIX
-#define DPRINT(x) printf(x)
-#define DPRINT2(x,y) printf(x,y)
-#define BP(msg)    do { printf("ERROR: %s", msg); asm("int3"); } while (0)
+#   define DPRINT(x)    printf("%s", x)
+#   define BP(msg)      do { printf("ERROR: %s", msg); asm("int3"); } while (0)
 #else
-#define CONCAT(x,y) x##y
-#define DPRINT(x) Print(CONCAT(L,x))
-#define DPRINT2(x,y) Print(CONCAT(L,x), y)
-#define BP(msg) DPRINT(msg)
+#   define CONCAT(x, y) x##y
+#   define DPRINT(x)    Print(L"%a", x)
+#   define BP(msg)      DPRINT(msg)
 #endif
 
 // functions
@@ -1232,7 +1230,6 @@ static fsw_status_t fsw_hfs_dir_lookup(struct fsw_hfs_volume * vol,
     {
         if (fsw_memeq(g_blacklist[i], catkey.nodeName.unicode, catkey.nodeName.length*2))
         {
-            DPRINT2("Blacklisted %s\n", g_blacklist[i]);
             status = FSW_NOT_FOUND;
             goto done;
         }

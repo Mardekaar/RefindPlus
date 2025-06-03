@@ -182,6 +182,42 @@ CHAR16 * GetSubStrBefore (
     return Result;
 } // CHAR16 * GetSubStrBefore()
 
+// DestSize is size in CHAR16s (including null terminator)
+EFI_STATUS SafeStrCat (
+    OUT       CHAR16 *Dest,
+    IN        UINTN   DestSize,
+    IN  CONST CHAR16 *Src
+) {
+    EFI_STATUS    Status;
+    UINTN              i;
+    BOOLEAN    FoundNull;
+
+    if (Dest     == NULL ||
+        Src      == NULL ||
+        DestSize == 0
+    ) {
+        return EFI_INVALID_PARAMETER;
+    }
+
+    // Check that destination is null-terminated
+    FoundNull = FALSE;
+    for (i = 0; i < DestSize; i++) {
+        if (Dest[i] == L'\0') {
+            FoundNull = TRUE;
+
+            break;
+        }
+    }
+
+    if (!FoundNull) {
+        // Force null-termination
+        Dest[DestSize - 1] = L'\0';
+    }
+
+    Status = StrnCatS (Dest, DestSize, Src, StrLen (Src));
+    return Status;
+} // EFI_STATUS SafeStrCat()
+
 // Performs a case-insensitive string comparison.
 // This function is needed because some StriCmp()
 // implementations are atually case-sensitive.
@@ -396,18 +432,6 @@ BOOLEAN IsStriStr (
     return Found;
 } // BOOLEAN IsStriStr()
 
-/**
- * Convenience/compatibility function for IsStriStr
- */
-BOOLEAN StriSubCmp (
-    IN CHAR16 *SmallStr,
-    IN CHAR16 *BigStr
-) {
-    return IsStriStr (
-        BigStr, SmallStr
-    );
-} // BOOLEAN StriSubCmp()
-
 /*
  * Routine Description:
  *
@@ -569,97 +593,48 @@ VOID MergeStringsHelper (
     IN     CHAR16    AddChar,
     IN     BOOLEAN   UniqueOnly
 ) {
-    #if REFIT_DEBUG > 1
-    CHAR16         *MsgStr;
-    #endif
-
     UINTN    i;
     UINTN    Length1;
     UINTN    Length2;
+    UINTN    BufSize;
     CHAR16  *TestStr;
     CHAR16  *NewString;
     BOOLEAN  SkipMerge;
 
-    #if REFIT_DEBUG > 1
-    MsgStr = PoolPrint (
-        L"Add '%s' to End of '%s' (%s Separator)%s",
-        Second     ? Second  : L"NULL",
-        *First     ? *First  : L"NULL",
-        AddChar    ? L"After a" : L"With no",
-        UniqueOnly ? L" ... If Not Already Present as Substring" : L""
-    );
-    LOG_SEP(L"X");
-    LOG_INCREMENT();
-    BREAD_CRUMB(L"%a:  1 - START:- %s", __func__, MsgStr);
-    MY_FREE_POOL(MsgStr);
-    #endif
 
     if (*First == NULL) {
         *First = StrDuplicate (Second);
-        BREAD_CRUMB(L"%a:  1a 1 - END:- NULL Input - Out String = '%s'", __func__,
-            *First
-        );
-        LOG_DECREMENT();
-        LOG_SEP(L"X");
 
         return;
     }
 
-    //BREAD_CRUMB(L"%a:  2", __func__);
     Length1 = StrLen (*First);
+    Length2 = (Second != NULL) ? StrLen (Second) : 0;
 
-    //BREAD_CRUMB(L"%a:  3", __func__);
-    if (Second == NULL) {
-        //BREAD_CRUMB(L"%a:  3a 1", __func__);
-        Length2 = 0;
-    }
-    else {
-        //BREAD_CRUMB(L"%a:  3b 1", __func__);
-        Length2 = StrLen (Second);
-    }
-
-    //BREAD_CRUMB(L"%a:  4", __func__);
-    NewString = AllocatePool (sizeof (CHAR16) * (Length1 + Length2 + 2));
+    // DA-TAG: Added 2 for AddChar and null terminator
+    BufSize = Length1 + Length2 + 2;
+    NewString = AllocatePool (BufSize * sizeof (CHAR16));
     if (NewString == NULL) {
-        BREAD_CRUMB(L"%a:  4a 1 - END:- OUT OF MEMERY - Out String = '%s'", __func__,
-            *First
-        );
-        LOG_DECREMENT();
-        LOG_SEP(L"X");
-
         return;
     }
 
-    //BREAD_CRUMB(L"%a:  5", __func__);
     if (*First != NULL && Length1 == 0) {
-        //BREAD_CRUMB(L"%a:  5a 1", __func__);
         MY_FREE_POOL(*First);
     }
 
-    //BREAD_CRUMB(L"%a:  6", __func__);
     NewString[0] = L'\0';
-
-    //BREAD_CRUMB(L"%a:  7", __func__);
     if (*First != NULL) {
-        //BREAD_CRUMB(L"%a:  7a 1", __func__);
-        StrCat (NewString, *First);
+        SafeStrCat (NewString, BufSize, *First);
 
-        //BREAD_CRUMB(L"%a:  7a 2", __func__);
         if (AddChar) {
-            //BREAD_CRUMB(L"%a:  7a 2a 1", __func__);
-            NewString[Length1] = AddChar;
-            NewString[Length1 + 1] = '\0';
+            StrnCatS (NewString, BufSize, &AddChar, 1);
         }
     }
 
-    //BREAD_CRUMB(L"%a:  8", __func__);
     if (Second != NULL) {
-        //BREAD_CRUMB(L"%a:  8a 1", __func__);
         SkipMerge = FALSE;
 
-        //BREAD_CRUMB(L"%a:  8a 2", __func__);
         if (UniqueOnly && AddChar) {
-            //BREAD_CRUMB(L"%a:  8a 2a 1", __func__);
             i = 0;
             while (!SkipMerge) {
                 TestStr = FindCommaDelimited (
@@ -667,7 +642,6 @@ VOID MergeStringsHelper (
                 );
                 if (TestStr == NULL) break;
 
-                //BREAD_CRUMB(L"%a:  8a 2a 1a 1 - WHILE LOOP:- START", __func__);
                 NestedStrStr = TRUE;
                 if (MyStriCmp (TestStr, Second)) {
                     SkipMerge = TRUE;
@@ -675,33 +649,20 @@ VOID MergeStringsHelper (
                 NestedStrStr = FALSE;
 
                 MY_FREE_POOL(TestStr);
-                //BREAD_CRUMB(L"%a:  8a 2a 1a 2 - WHILE LOOP:- END", __func__);
             } // while
-            //BREAD_CRUMB(L"%a:  8a 2a 2", __func__);
         }
 
-        //BREAD_CRUMB(L"%a:  8a 3", __func__);
         if (!SkipMerge) {
-            //BREAD_CRUMB(L"%a:  8a 3a 1", __func__);
-            StrCat (NewString, Second);
+            SafeStrCat (NewString, BufSize, Second);
         }
         else if (AddChar) {
-            //BREAD_CRUMB(L"%a:  8a 3b 1", __func__);
             // Remove AddChar if not merging this item
-            NewString[Length1] = '\0';
+            NewString[Length1] = L'\0';
         }
-        //BREAD_CRUMB(L"%a:  8a 4", __func__);
     }
 
-    //BREAD_CRUMB(L"%a:  9", __func__);
     MY_FREE_POOL(*First);
     *First = NewString;
-
-    BREAD_CRUMB(L"%a:  10 - END:- Out String = '%s'", __func__,
-        *First
-    );
-    LOG_DECREMENT();
-    LOG_SEP(L"X");
 } // static VOID MergeStringsHelper()
 
 // Merges two strings, creating a new one and returning a pointer to it.
@@ -1217,7 +1178,7 @@ BOOLEAN DeleteItemFromCsvList (
             TmpStr = PoolPrint (L"%s,", ToDelete);
             PartB = GetSubStrAfter (TmpStr, *List);
             if (PartB == *List) {
-                PartA = GetSubStrAfter (ToDelete, *List);
+                PartB = GetSubStrAfter (ToDelete, *List);
                 if (MyStriCmp (PartB, *List)) {
                     PartB = NULL;
                 }
@@ -1362,14 +1323,14 @@ BOOLEAN IsListItemSubstringIn (
         ElementLength = StrLen (OneElement);
         if (ElementLength > 0                   &&
             ElementLength <= StrLen (BigString) &&
-            StriSubCmp (OneElement, BigString)
+            IsStriStr (BigString, OneElement)
         ) {
             Found = TRUE;
         }
 
         if (!Found) {
             if (ElementLength <= StrLen (BigString) &&
-                StriSubCmp (OneElement, BigString)
+                IsStriStr (BigString, OneElement)
             ) {
                 Found = TRUE;
             }

@@ -117,28 +117,36 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-
       - name: Label - Add - Discussion - 0
-        run: sudo apt-get install -y jq
+        run: sudo apt install jq -y
 
       - name: Label - Add - Discussion - 1
         id: get-issue-details
         env:
-          GET_TOKEN: ${{ steps.app-token.outputs.token }}
-          GET_REPO: ${{ github.repository }}
-          GET_ITEM_ID: ${{ github.event.inputs.item_id }}
+          ENV_TOKEN: ${{ steps.app-token.outputs.token }}
+          ENV_REPO: ${{ github.repository }}
+          ENV_ITEM_ID: ${{ github.event.inputs.item_id }}
+        shell: bash
         run: |
           issue=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${GET_TOKEN}" \
-            "https://api.github.com/repos/${GET_REPO}/issues/${GET_ITEM_ID}")
+            -H "Authorization: token ${ENV_TOKEN}" \
+            "https://api.github.com/repos/${ENV_REPO}/issues/${ENV_ITEM_ID}")
           echo "$issue" > issue.json
           title=$(jq -r '.title' issue.json)
           body=$(jq -r '.body' issue.json)
-          notice="# This Discussion Item is an Automated Converstion of Issue/Enhancement Item #${GET_ITEM_ID}\n\n${body}"
-          echo "title=$title" >> "${GITHUB_ENV}"
-          printf "body=%s\n" "${notice}" >> "${GITHUB_ENV}"
+          notice="# This Discussion Item is an Automated Converstion of Issue/Enhancement Item #${ENV_ITEM_ID}\n\n${body}"
 
-        # The 'category_id' below was derived from https://docs.github.com/en/graphql/overview/explorer
+          # Safe multiline write
+          echo "title<<EOF" >> "${GITHUB_ENV}"
+          echo "${title}" >> "${GITHUB_ENV}"
+          echo "EOF" >> "${GITHUB_ENV}"
+
+          # Safe multiline write
+          echo "body<<EOF" >> "${GITHUB_ENV}"
+          echo "${notice}" >> "${GITHUB_ENV}"
+          echo "EOF" >> "${GITHUB_ENV}"
+
+        # 'category_id' below was derived from https://docs.github.com/en/graphql/overview/explorer
         # query {
         #   repository(owner: "dakanji", name: "RefindPlus") {
         #     id
@@ -153,11 +161,14 @@ jobs:
         # }
       - name: Label - Add - Discussion - 2
         id: create-discussion
+        env:
+          ENV_REPO: ${{ github.repository }}
+        shell: bash
         run: |
             # Make a request to the GitHub API to create a discussion
             response=$(curl -s -X POST -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ steps.app-token.outputs.token }}" \
-            https://api.github.com/repos/${{ github.repository }}/discussions \
+            https://api.github.com/repos/${ENV_REPO}/discussions \
             -d @- << EOF
             {
                 "title": "${{ env.title }}",
@@ -251,7 +262,6 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-
       - name: Label - Add - Noted - 0
         uses: actions-cool/issues-helper@v3
         with:
@@ -263,7 +273,6 @@ jobs:
             The problem is noted and will be considered as required.
 
             ${{ github.event.inputs.comment_data }}
-
 
       - name: Label - Add - Noted - 1
         uses: actions-cool/issues-helper@v3

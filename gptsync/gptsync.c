@@ -45,7 +45,6 @@
 #include "gptsync.h"
 #include "../include/version.h"
 #include "../include/syslinux_mbr.h"
-#include "../include/refit_call_wrapper.h"
 
 
 static
@@ -105,6 +104,7 @@ UINTN write_mbr (VOID) {
     UINTN               status;
     UINTN               i, k;
     UINT8               active;
+    UINT16              sig;
     UINT64              lba;
     MBR_PART_INFO      *table;
     BOOLEAN             have_bootcode;
@@ -118,9 +118,10 @@ UINTN write_mbr (VOID) {
     }
 
     // Write partition table
-    *((UINT16 *)(sector + 510)) = 0xaa55;
+    sig = 0xaa55;
+    CopyMem (sector + 510, &sig, sizeof (sig));
+    CopyMem (&table, sector + 446, sizeof (table));
 
-    table = (MBR_PART_INFO *)(sector + 446);
     active = 0x80;
     for (i = 0; i < 4; i++) {
         for (k = 0; k < new_mbr_part_count; k++) {
@@ -140,11 +141,13 @@ UINTN write_mbr (VOID) {
             table[i].start_chs[0] = 0;
             table[i].start_chs[1] = 0;
             table[i].start_chs[2] = 0;
-        } else {
+        }
+        else {
             if (new_mbr_parts[k].active) {
                 table[i].flags    = active;
                 active = 0x00;
-            } else {
+            }
+            else {
                 table[i].flags    = 0x00;
             }
 
@@ -428,7 +431,8 @@ VOID generate_hybrid_mbr(VOID) {
                     break;
                 }
             }
-        } else if (count_active > 1 && iter == 0) {
+        }
+        else if (count_active > 1 && iter == 0) {
             // Too many active partitions ... Try deactivating the ESP / EFI Protective entry
             if (new_mbr_parts[0].active &&
                 (
@@ -438,15 +442,18 @@ VOID generate_hybrid_mbr(VOID) {
             ) {
                 new_mbr_parts[0].active = FALSE;
             }
-        } else if (count_active > 1 && iter > 0) {
-            // Too many active partitions ... Deactivate all but the first one
-            count_active = 0;
-            for (i = 0; i < new_mbr_part_count; i++) {
-                if (new_mbr_parts[i].active) {
-                    if (count_active > 0) {
-                        new_mbr_parts[i].active = FALSE;
+        }
+        else {
+            if (count_active > 1 && iter > 0) {
+                // Too many active partitions ... Deactivate all but the first one
+                count_active = 0;
+                for (i = 0; i < new_mbr_part_count; i++) {
+                    if (new_mbr_parts[i].active) {
+                        if (count_active > 0) {
+                            new_mbr_parts[i].active = FALSE;
+                        }
+                        count_active++;
                     }
-                    count_active++;
                 }
             }
         }

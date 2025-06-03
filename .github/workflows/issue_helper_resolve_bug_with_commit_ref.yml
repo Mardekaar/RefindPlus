@@ -41,8 +41,8 @@ concurrency:
 
 jobs:
 
-  issue_resolve_bug1:
-    name: Issue - Resolve - Bug1
+  issue_resolve_bug:
+    name: Issue - Resolve - Bug
     runs-on: ubuntu-24.04
 
     steps:

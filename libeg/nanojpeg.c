@@ -29,7 +29,7 @@
  */
 /*
  * Modified for RefindPlus
- * Copyright (c) 2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2024-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
  */
@@ -922,17 +922,20 @@ NJ_INLINE void njConvert(void) {
             pcb += nj.comp[1].stride;
             pcr += nj.comp[2].stride;
         }
-    } else if (nj.comp[0].width != nj.comp[0].stride) {
-        // grayscale -> only remove stride
-        unsigned char *pin = &nj.comp[0].pixels[nj.comp[0].stride];
-        unsigned char *pout = &nj.comp[0].pixels[nj.comp[0].width];
-        int y;
-        for (y = nj.comp[0].height - 1;  y;  --y) {
-            njCopyMem(pout, pin, nj.comp[0].width);
-            pin += nj.comp[0].stride;
-            pout += nj.comp[0].width;
+    }
+    else {
+        if (nj.comp[0].width != nj.comp[0].stride) {
+            // grayscale -> only remove stride
+            unsigned char *pin = &nj.comp[0].pixels[nj.comp[0].stride];
+            unsigned char *pout = &nj.comp[0].pixels[nj.comp[0].width];
+            int y;
+            for (y = nj.comp[0].height - 1;  y;  --y) {
+                njCopyMem(pout, pin, nj.comp[0].width);
+                pin += nj.comp[0].stride;
+                pout += nj.comp[0].width;
+            }
+            nj.comp[0].stride = nj.comp[0].width;
         }
-        nj.comp[0].stride = nj.comp[0].width;
     }
 }
 

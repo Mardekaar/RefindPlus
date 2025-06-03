@@ -2345,10 +2345,16 @@ VOID egInitScreen (VOID) {
     #ifdef __MAKEWITH_TIANO
     if (UGADraw != NULL && GOPDraw == NULL) {
         if (!GlobalConfig.PassGopThrough) {
+            #if REFIT_DEBUG > 0
             Status = EFI_NOT_STARTED;
+            #endif
         }
         else {
-            Status = RefitProvideGopPassThrough (FALSE);
+            #if REFIT_DEBUG > 0
+            // DA-TAG: Delibrate for Codacy
+            Status =
+            #endif
+            RefitProvideGopPassThrough (FALSE);
         }
 
         #if REFIT_DEBUG > 0
@@ -2377,8 +2383,10 @@ VOID egInitScreen (VOID) {
         egHasGraphics =  TRUE;
         FlagUGA       = FALSE;
 
+        #if REFIT_DEBUG > 0
         // Prime Status for Text Renderer
         Status = EFI_NOT_STARTED;
+        #endif
 
         // DA-TAG: Limit to TianoCore
         #ifdef __MAKEWITH_TIANO
@@ -2386,7 +2394,11 @@ VOID egInitScreen (VOID) {
             (AppleFirmware && GlobalConfig.TextOnly)
         ) {
             // Implement Text Renderer
-            Status = OcUseBuiltinTextOutput (
+            #if REFIT_DEBUG > 0
+            // DA-TAG: Delibrate for Codacy
+            Status =
+            #endif
+            OcUseBuiltinTextOutput (
                 (egHasGraphics)
                     ? EfiConsoleControlScreenGraphics
                     : EfiConsoleControlScreenText

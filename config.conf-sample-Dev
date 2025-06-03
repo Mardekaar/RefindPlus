@@ -788,11 +788,12 @@
 #         * One Value (corresponding to one UEFI GOP video mode)
 #         * Two Values (corresponding to the X and Y resolutions)
 # Note that not all resolutions are supported. On UEFI 2.x systems,
-# passing an incorrect value results in a message being shown on the
-# screen to that effect, along with a list of supported modes. With
-# EFI 1.x systems, such as legacy Macs, setting an incorrect mode
-# silently fails. On both types of systems, setting an invalid
-# resolution results in the default resolution being used.
+# passing an incorrect value results in an attempt to forcefully set
+# the indicated resolution, which may result in undesirable results.
+# On EFI 1.x systems, such as legacy Macs, setting incorrect modes
+# may silently fail. On both types of systems, setting modes that
+# are unavailable results in the default resolution being used.
+# NB: A forcefully set mode is considered an available mode.
 #
 # Uses the maximum screen resolution when commented out
 #

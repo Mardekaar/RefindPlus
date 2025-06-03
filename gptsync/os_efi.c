@@ -41,7 +41,6 @@
  */
 
 #include "gptsync.h"
-#include "../include/refit_call_wrapper.h"
 #ifdef __MAKEWITH_TIANO
 //#include "tiano_includes.h"
 #include "AutoGen.h"

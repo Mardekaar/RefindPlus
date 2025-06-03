@@ -23,10 +23,9 @@ jobs:
     name: Lock Resolved Issues
     runs-on: ubuntu-24.04
 
+    if: github.repository == 'RefindPlusRepo/RefindPlus' && (github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock')
     steps:
-
-      - if: github.event_name == 'schedule' || github.event.inputs.job_id == 'all' || github.event.inputs.job_id == 'lock'
-        id: app-token
+      - id: app-token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.APP_ID }}

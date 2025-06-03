@@ -6285,6 +6285,7 @@ match:
                 if (t >= 4)
                 {
                     UA_COPY4(op,m_pos);
+                    /* coverity[overflow_const: SUPPRESS] */
                     op += 4; m_pos += 4; t -= 4;
                 }
                 if (t > 0)

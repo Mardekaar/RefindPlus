@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 /**
  * Modified for RefindPlus
- * Copyright (c) 2020-2024 Dayo Akanji (sf.net/u/dakanji/profile)
+ * Copyright (c) 2020-2025 Dayo Akanji (sf.net/u/dakanji/profile)
  *
  * Modifications distributed under the preceding terms.
 **/
@@ -898,7 +898,12 @@ VOID EFIAPI BdsLibConnectAllDriversToAllControllers (
     if (GlobalConfig.ReloadGOP) {
         if (EFI_ERROR(Status) && ResetGOP && !ReLoaded && DetectedDevices) {
             ReLoaded = TRUE;
-            Status   = ApplyGOPFix();
+
+            #if REFIT_DEBUG > 0
+            // DA-TAG: Delibrate for Codacy
+            Status =
+            #endif
+            ApplyGOPFix();
 
             #if REFIT_DEBUG > 0
             if (!AcquireErrorGOP) {

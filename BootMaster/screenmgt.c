@@ -901,18 +901,21 @@ VOID DrawScreenHeader (
 BOOLEAN ReadAllKeyStrokes (VOID) {
     #if REFIT_DEBUG > 0
     CHAR16              *MsgStr;
+    BOOLEAN              EmptyBuffer;
     #endif
 
     EFI_STATUS           Status;
     BOOLEAN              GotKeyStrokes;
-    BOOLEAN              EmptyBuffer;
     EFI_INPUT_KEY        key;
 
     static BOOLEAN       FirstCall = TRUE;
 
 
     GotKeyStrokes = FALSE;
-    EmptyBuffer   = FALSE;
+
+    #if REFIT_DEBUG > 0
+    EmptyBuffer = FALSE;
+    #endif
 
     if (FirstCall || !GlobalConfig.DirectBoot) {
         while (1) {
@@ -932,7 +935,11 @@ BOOLEAN ReadAllKeyStrokes (VOID) {
 
                 // No Break
                 default:
+                    Status = EFI_ALREADY_STARTED;
+
+                    #if REFIT_DEBUG > 0
                     EmptyBuffer = TRUE;
+                    #endif
             } // switch
 
             if (EFI_ERROR(Status)) {
@@ -1221,20 +1228,20 @@ VOID RefitDeadLoop (VOID) {
 
     UINTN   index;
 
-    #if REFIT_DEBUG > 0
-    MY_MUTELOGGER_SET;
-    #endif
     while (1) {
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_SET;
+        #endif
         ReadAllKeyStrokes();
 
         REFIT_CALL_3_WRAPPER(
             gBS->WaitForEvent, 1,
             &gST->ConIn->WaitForKey, &index
         );
+        #if REFIT_DEBUG > 0
+        MY_MUTELOGGER_OFF;
+        #endif
     } // while {Infinite}
-    #if REFIT_DEBUG > 0
-    MY_MUTELOGGER_OFF;
-    #endif
 } // VOID RefitDeadLoop()
 
 BOOLEAN CheckFatalError (

@@ -178,6 +178,8 @@
 #define DEFAULT_STRING_DELIM  L" @+@ "
 #define INITIAL_STRING_DELIM  L" @@ "
 
+#define LABEL_UNKNOWN         L"Unknown"
+
 // Define some colours
 #define COLOR_LIGHTBLUE {255, 175, 100, 0}
 #define COLOR_AMBER {255, 177, 0, 0}

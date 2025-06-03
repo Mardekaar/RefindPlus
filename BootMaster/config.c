@@ -855,7 +855,6 @@ BOOLEAN AddSubmenu (
     CHAR16              *GraphicsTag;
     CHAR16              *TmpName;
     CHAR16             **TokenList;
-    BOOLEAN              TitleVolume;
     REFIT_VOLUME        *TargetVolume;
 
 
@@ -906,7 +905,6 @@ BOOLEAN AddSubmenu (
     }
 
     BREAD_CRUMB(L"%a:  5", __func__);
-    TitleVolume       = TRUE;
     SubEntry->Enabled = TRUE;
 
     SetVolumeBadgeIcon (TargetVolume);
@@ -977,28 +975,17 @@ BOOLEAN AddSubmenu (
 
     BREAD_CRUMB(L"%a:  7", __func__);
     MY_FREE_POOL(SubEntry->me.Title);
-    if (!TitleVolume) {
-        BREAD_CRUMB(L"%a:  7a 1", __func__);
+    TmpName = (Title != NULL)
+        ? Title : L"Instance: Unknown";
 
-        SubEntry->me.Title = StrDuplicate (
-            (Title != NULL) ? Title : L"Instance: Unknown"
-        );
-    }
-    else {
-        BREAD_CRUMB(L"%a:  7b 1", __func__);
-
-        TmpName = (Title != NULL)
-            ? Title : L"Instance: Unknown";
-
-        SubEntry->me.Title = PoolPrint (
-            L"Load %s%s%s%s%s",
-            TmpName,
-            SetVolJoin (TmpName, TRUE                           ),
-            SetVolKind (TmpName, Volume->VolName, Volume->FSType),
-            SetVolFlag (TmpName, Volume->VolName                ),
-            SetVolType (TmpName, Volume->VolName, Volume->FSType)
-        );
-    }
+    SubEntry->me.Title = PoolPrint (
+        L"Load %s%s%s%s%s",
+        TmpName,
+        SetVolJoin (TmpName, TRUE                           ),
+        SetVolKind (TmpName, Volume->VolName, Volume->FSType),
+        SetVolFlag (TmpName, Volume->VolName                ),
+        SetVolType (TmpName, Volume->VolName, Volume->FSType)
+    );
 
     BREAD_CRUMB(L"%a:  8", __func__);
     if (SubEntry->InitrdPath != NULL) {
@@ -3186,12 +3173,13 @@ VOID ReadConfig (
             }
             #endif
 
-            if (MyStriCmp (TokenList[1], L"noscale")) {
+            Flag = TokenList[i];
+            if (MyStriCmp (Flag, L"noscale")) {
                 GlobalConfig.BannerScale = BANNER_NOSCALE;
             }
             else if (
-                MyStriCmp (TokenList[1], L"fillscreen") ||
-                MyStriCmp (TokenList[1], L"fullscreen")
+                MyStriCmp (Flag, L"fillscreen") ||
+                MyStriCmp (Flag, L"fullscreen")
             ) {
                 GlobalConfig.BannerScale = BANNER_FILLSCREEN;
             }
@@ -3234,7 +3222,7 @@ VOID ReadConfig (
                 TokenList, TokenCount, &i
             );
             if (i >= 32) {
-                GlobalConfig.IconSizes[ICON_SIZE_BIG] = i;
+                GlobalConfig.IconSizes[ICON_SIZE_BIG]   = i;
                 GlobalConfig.IconSizes[ICON_SIZE_BADGE] = i / 4;
             }
         }

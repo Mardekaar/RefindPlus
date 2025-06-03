@@ -1306,23 +1306,23 @@ CHAR16 * FSTypeName (
 
 
     switch (Volume->FSType) {
-        case FS_TYPE_WHOLEDISK: retval = L"Whole Disk";       break;
-        case FS_TYPE_HFSPLUS:   retval = L"HFS+"      ;       break;
-        case FS_TYPE_APFS:      retval = L"APFS"      ;       break;
-        case FS_TYPE_NTFS:      retval = L"NTFS"      ;       break;
-        case FS_TYPE_EXT4:      retval = L"Ext4"      ;       break;
-        case FS_TYPE_EXT3:      retval = L"Ext3"      ;       break;
-        case FS_TYPE_EXT2:      retval = L"Ext2"      ;       break;
-        case FS_TYPE_FAT32:     retval = L"FAT-32"    ;       break;
-        case FS_TYPE_FAT16:     retval = L"FAT-16"    ;       break;
-        case FS_TYPE_FAT12:     retval = L"FAT-12"    ;       break;
-        case FS_TYPE_EXFAT:     retval = L"ExFAT"     ;       break;
-        case FS_TYPE_XFS:       retval = L"XFS"       ;       break;
-        case FS_TYPE_JFS:       retval = L"JFS"       ;       break;
-        case FS_TYPE_BTRFS:     retval = L"BtrFS"     ;       break;
-        case FS_TYPE_ISO9660:   retval = L"ISO-9660"  ;       break;
-        case FS_TYPE_REISERFS:  retval = L"ReiserFS"  ;       break;
-        default:                retval = L"Unknown"   ;       break;
+        case FS_TYPE_WHOLEDISK: retval = L"Whole Disk";  break;
+        case FS_TYPE_HFSPLUS:   retval = L"HFS+"      ;  break;
+        case FS_TYPE_APFS:      retval = L"APFS"      ;  break;
+        case FS_TYPE_NTFS:      retval = L"NTFS"      ;  break;
+        case FS_TYPE_EXT4:      retval = L"Ext4"      ;  break;
+        case FS_TYPE_EXT3:      retval = L"Ext3"      ;  break;
+        case FS_TYPE_EXT2:      retval = L"Ext2"      ;  break;
+        case FS_TYPE_FAT32:     retval = L"FAT-32"    ;  break;
+        case FS_TYPE_FAT16:     retval = L"FAT-16"    ;  break;
+        case FS_TYPE_FAT12:     retval = L"FAT-12"    ;  break;
+        case FS_TYPE_EXFAT:     retval = L"ExFAT"     ;  break;
+        case FS_TYPE_XFS:       retval = L"XFS"       ;  break;
+        case FS_TYPE_JFS:       retval = L"JFS"       ;  break;
+        case FS_TYPE_BTRFS:     retval = L"BtrFS"     ;  break;
+        case FS_TYPE_ISO9660:   retval = L"ISO-9660"  ;  break;
+        case FS_TYPE_REISERFS:  retval = L"ReiserFS"  ;  break;
+        default:                retval = LABEL_UNKNOWN;  break;
     } // switch
 
     if (0);
@@ -1344,12 +1344,12 @@ CHAR16 * FSTypeName (
 
         MY_FREE_POOL(VentoyName);
 
-        if (FoundVentoy && MyStriCmp (retval, L"Unknown")) {
+        if (FoundVentoy && MyStriCmp (retval, LABEL_UNKNOWN)) {
             return L"ExFAT (Assumed)";
         }
     } // while
 
-    if (!MyStriCmp (retval, L"Unknown")) {
+    if (!MyStriCmp (retval, LABEL_UNKNOWN)) {
         return retval;
     }
 
@@ -1361,6 +1361,7 @@ CHAR16 * FSTypeName (
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidESP       )) retval = L"FAT-32 (Assumed)";
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidLinux     )) retval = L"Ext4 (Assumed)"  ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidRecoveryHD)) retval = L"HFS+ (Assumed)"  ;
+    else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHFS       )) retval = L"HFS+ (Assumed)"  ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &gRootGuid     )) retval = L"Linux Root"      ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidHome      )) retval = L"Linux Home"      ;
     else if (GuidsAreEqual (&(Volume->PartTypeGuid), &GuidSwap      )) retval = L"Linux Swap"      ;
@@ -3375,7 +3376,7 @@ VOID ScanVolumes (VOID) {
                     Volume->FSType = FS_TYPE_UNKNOWN;
 
                     #if REFIT_DEBUG > 0
-                    PartType = L"Unknown";
+                    PartType = LABEL_UNKNOWN;
                     #endif
                 }
             }

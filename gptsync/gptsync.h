@@ -34,13 +34,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /* Changes copyright (c) 2013 Roderick W. Smith */
+/*
+ * Modified for RefindPlus
+ * Copyright (c) 2025 Dayo Akanji (sf.net/u/dakanji/profile)
+ *
+ * Modifications distributed under the preceding terms.
+ */
 
-//#define VERSION L"0.9.1"
 
 //
 // config
 //
-
 
 #if defined(EFI32) || defined(EFIX64) || defined(EFIAARCH64)
 #define CONFIG_EFI
@@ -58,6 +62,8 @@
 #else
 #include "../include/tiano_includes.h"
 #endif
+
+#include "../include/refit_call_wrapper.h"
 
 #define copy_guid(destguid, srcguid) (CopyMem(destguid, srcguid, 16))
 #define guids_are_equal(guid1, guid2) (CompareMem(guid1, guid2, 16) == 0)
@@ -226,5 +232,3 @@ UINTN detect_mbrtype_fs(UINT64 partlba, UINTN *parttype, CHARN **fsname);
 
 UINTN gptsync(VOID);
 UINTN showpart(VOID);
-
-/* EOF */

@@ -51,6 +51,7 @@ BOOLEAN                         MouseTouchActive   =                            
 BOOLEAN                         PointerAvailable   =                              FALSE;
 POINTER_STATE                   State;
 
+extern BOOLEAN                  RunningOC;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Initialise Pointer Devices
@@ -64,9 +65,8 @@ VOID pdInitialize (VOID) {
 
     EFI_STATUS Status;
     EFI_STATUS HandleStatus;
-    UINTN      Index;
-    UINTN      Counter;
     UINTN      NumPointerHandles;
+    UINTN      Index;
 
 
     #if REFIT_DEBUG > 0
@@ -117,7 +117,7 @@ VOID pdInitialize (VOID) {
     EnableStatusTouch = EFI_NOT_STARTED;
     #endif
 
-    if (GlobalConfig.EnableTouch) {
+    if (GlobalConfig.EnableTouch && !RunningOC) {
         // Get handles that support the absolute pointer protocol
         // These are usually touchscreens but some mice also do
         NumPointerHandles = 0;
@@ -164,7 +164,7 @@ VOID pdInitialize (VOID) {
 
     #if REFIT_DEBUG > 0
     MsgStr = PoolPrint (
-        L"Enable Type 'A' (Touchlike) Pointer ... %r",
+        L"Enable Type 'A' (Touch Style) Pointer ... %r",
         EnableStatusTouch
     );
     ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", MsgStr);
@@ -174,7 +174,7 @@ VOID pdInitialize (VOID) {
     EnableStatusMouse = EFI_NOT_STARTED;
     #endif
 
-    if (GlobalConfig.EnableMouse) {
+    if (GlobalConfig.EnableMouse && !RunningOC) {
         // Get handles that support the simple pointer protocol (mice)
         NumPointerHandles = 0;
         HandleStatus = REFIT_CALL_5_WRAPPER(
@@ -208,15 +208,13 @@ VOID pdInitialize (VOID) {
                         SelfImageHandle, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL
                     );
                     if (!EFI_ERROR(Status)) {
-                        Counter = 1;
+                        NumSPointerDevices += 1;
 
                         #if REFIT_DEBUG > 0
                         EnableStatusMouse = EFI_SUCCESS;
                         #endif
                     }
                     else {
-                        Counter = 0;
-
                         #if REFIT_DEBUG > 0
                         if (Status != EFI_NOT_FOUND &&
                             EFI_ERROR(EnableStatusMouse)
@@ -225,8 +223,6 @@ VOID pdInitialize (VOID) {
                         }
                         #endif
                     }
-
-                    NumSPointerDevices = NumSPointerDevices + Counter;
                 } // for
             } // if ProtocolS
         } // if/else EFI_ERROR(HandleStatus)
@@ -234,7 +230,7 @@ VOID pdInitialize (VOID) {
 
     #if REFIT_DEBUG > 0
     MsgStr = PoolPrint (
-        L"Enable Type 'S' (Mouselike) Pointer ... %r",
+        L"Enable Type 'S' (Mouse Style) Pointer ... %r",
         EnableStatusMouse
     );
     ALT_LOG(1, LOG_THREE_STAR_MID, L"%s", MsgStr);
@@ -246,20 +242,25 @@ VOID pdInitialize (VOID) {
     if (NumAPointerDevices > 0 ||
         NumSPointerDevices > 0
     ) {
-        PointerAvailable = TRUE;
+        if (GlobalConfig.EnableMouse) {
+            MouseImage = BuiltinIcon (BUILTIN_ICON_MOUSE);
+        }
+
+        PointerAvailable =  TRUE;
     }
     else {
         PointerAvailable = FALSE;
-    }
-    if (GlobalConfig.EnableMouse && PointerAvailable) {
-        MouseImage = BuiltinIcon (BUILTIN_ICON_MOUSE);
-    }
-    else {
         MouseTouchActive = FALSE;
     }
 
     #if REFIT_DEBUG > 0
-    if (!EFI_ERROR(EnableStatusTouch) || !EFI_ERROR(EnableStatusMouse)) {
+    if (RunningOC) {
+        Status = EFI_NOT_STARTED;
+    }
+    else if (
+        !EFI_ERROR(EnableStatusTouch) ||
+        !EFI_ERROR(EnableStatusMouse)
+    ) {
         Status = EFI_SUCCESS;
     }
     else {
@@ -295,7 +296,11 @@ VOID pdCleanup (VOID) {
     PointerAvailable = FALSE;
     pdClear();
 
-    if (HandleA) {
+    if (RunningOC) {
+        return;
+    }
+
+    if (HandleA != NULL) {
         for (Index = 0; Index < NumAPointerDevices; Index++) {
             REFIT_CALL_4_WRAPPER(
                 gBS->CloseProtocol, HandleA[Index],
@@ -304,7 +309,7 @@ VOID pdCleanup (VOID) {
         }
     }
 
-    if (HandleS) {
+    if (HandleS != NULL) {
         for (Index = 0; Index < NumSPointerDevices; Index++) {
             REFIT_CALL_4_WRAPPER(
                 gBS->CloseProtocol, HandleS[Index],
@@ -393,7 +398,14 @@ static
 UINTN Uint64ToUintn (
     UINT64 TempUINT64
 ) {
+    /* coverity[unsigned_compare: SUPPRESS] */
+    /* coverity[dead_error_condition: SUPPRESS] */
+    /* coverity[dead_error_line: SUPPRESS] */
     if (TempUINT64 > UINTN_MAX) return UINTN_MAX;
+
+    /* coverity[unsigned_compare: SUPPRESS] */
+    /* coverity[dead_error_condition: SUPPRESS] */
+    /* coverity[dead_error_line: SUPPRESS] */
     if (TempUINT64 < UINTN_MIN) return UINTN_MIN;
 
     return (UINTN) TempUINT64;
@@ -403,7 +415,15 @@ static
 UINTN Int32ToUintn (
     INT32 TempINT32
 ) {
+    /* coverity[result_independent_of_operands: SUPPRESS] */
+    /* coverity[dead_error_condition: SUPPRESS] */
+    /* coverity[dead_error_line: SUPPRESS] */
     if (TempINT32 > UINTN_MAX) return UINTN_MAX;
+
+    /* coverity[unsigned_conversion: SUPPRESS] */
+    /* coverity[unsigned_compare: SUPPRESS] */
+    /* coverity[dead_error_condition: SUPPRESS] */
+    /* coverity[dead_error_line: SUPPRESS] */
     if (TempINT32 < UINTN_MIN) return UINTN_MIN;
 
     return (UINTN) TempINT32;
@@ -413,7 +433,13 @@ static
 UINTN Int64ToUintn (
     INT64 TempINT64
 ) {
+    /* coverity[result_independent_of_operands: SUPPRESS] */
+    /* coverity[dead_error_condition: SUPPRESS] */
+    /* coverity[dead_error_line: SUPPRESS] */
     if (TempINT64 > UINTN_MAX) return UINTN_MAX;
+
+    /* coverity[unsigned_conversion: SUPPRESS] */
+    /* coverity[unsigned_compare: SUPPRESS] */
     if (TempINT64 < UINTN_MIN) return UINTN_MIN;
 
     return (UINTN) TempINT64;
@@ -550,10 +576,12 @@ VOID pdDraw (VOID) {
 
     MY_FREE_IMAGE(Background);
     if (MouseImage != NULL) {
-        Width  = ((State.X + MouseImage->Width)  > ScreenW)
-            ? ScreenW - State.X : MouseImage->Width;
-        Height = ((State.Y + MouseImage->Height) > ScreenH)
-            ? ScreenH - State.Y : MouseImage->Height;
+        Width = (
+            (State.X + MouseImage->Width) > ScreenW
+        ) ? ScreenW - State.X : MouseImage->Width;
+        Height = (
+            (State.Y + MouseImage->Height) > ScreenH
+        ) ? ScreenH - State.Y : MouseImage->Height;
 
         Background = egCopyScreenArea (
             State.X, State.Y,

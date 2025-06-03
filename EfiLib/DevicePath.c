@@ -20,6 +20,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include "Platform.h"
 #include "../BootMaster/rp_funcs.h"
+#include "../BootMaster/mystrings.h"
 #include "../include/refit_call_wrapper.h"
 
 /**
@@ -43,6 +44,7 @@ CHAR16 * EFIAPI MyCatPrint (
     VA_LIST  Args;
     UINTN    StringSize;
 
+
     AppendStr = AllocateZeroPool (0x1000);
     if (AppendStr == NULL) {
         return Str->Str;
@@ -52,12 +54,12 @@ CHAR16 * EFIAPI MyCatPrint (
     UnicodeVSPrint (AppendStr, 0x1000, Fmt, Args);
     VA_END(Args);
 
-    if (NULL == Str->Str) {
-        StringSize = StrSize (AppendStr);
-        Str->Str   = AllocateZeroPool (StringSize);
+    StringSize  = StrSize (AppendStr);
+    if (Str->Str == NULL) {
+        Str->Str = AllocateZeroPool (StringSize);
     }
     else {
-        StringSize  = StrSize (AppendStr);
+        // Extend StringSize
         StringSize += (StrSize (Str->Str) - sizeof (UINT16));
 
         Str->Str = EfiReallocatePool (
@@ -71,7 +73,16 @@ CHAR16 * EFIAPI MyCatPrint (
         Str->Maxlen = MAX_CHAR * sizeof (UINT16);
 
         if (StringSize < Str->Maxlen) {
-            StrCat (Str->Str, AppendStr);
+            // Ensure null termination before appending
+            if (StrLen (Str->Str) == 0) {
+                Str->Str[0] = L'\0';
+            }
+
+            SafeStrCat (
+                Str->Str,
+                StringSize / sizeof (CHAR16),
+                AppendStr
+            );
             Str->Len = StringSize - sizeof (UINT16);
         }
 

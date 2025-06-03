@@ -7,7 +7,7 @@
  */
  /*
   * Modified for RefindPlus
-  * Copyright (c) 2024 Dayo Akanji (sf.net/u/dakanji/profile)
+  * Copyright (c) 2024-2025 Dayo Akanji (sf.net/u/dakanji/profile)
   *
   * Modifications distributed under the preceding terms.
   */
@@ -79,7 +79,10 @@ MSABI EFI_STATUS security2_policy_authentication (
     EFI_STATUS Status;
 
     /* Chain original security policy */
-    Status = uefi_call_wrapper(es2fa, 5, This, DevicePath, FileBuffer, FileSize, BootPolicy);
+    Status = uefi_call_wrapper(
+        es2fa, 5, This, DevicePath,
+        FileBuffer, FileSize, BootPolicy
+    );
 
     /* if OK, do not bother with MOK check */
     if (!EFI_ERROR(Status)) {
@@ -117,9 +120,11 @@ MSABI EFI_STATUS security_policy_authentication (
 
     if (DevicePathConst == NULL) {
         return EFI_INVALID_PARAMETER;
-    } else {
-        DevPath = OrigDevPath = DuplicateDevicePath((EFI_DEVICE_PATH_PROTOCOL *) DevicePathConst);
     }
+
+    DevPath = OrigDevPath = DuplicateDevicePath (
+        (EFI_DEVICE_PATH_PROTOCOL *) DevicePathConst
+    );
 
     Status = REFIT_CALL_3_WRAPPER(
         gBS->LocateDevicePath, &SIMPLE_FS_PROTOCOL,
@@ -144,9 +149,13 @@ MSABI EFI_STATUS security_policy_authentication (
 
     if (ShimValidate(FileBuffer, FileSize)) {
         Status = EFI_SUCCESS;
-    } else {
+    }
+    else {
         // Try using the platform's native policy.
-        Status = uefi_call_wrapper(esfas, 3, This, AuthenticationStatus, DevicePathConst);
+        Status = uefi_call_wrapper(
+            esfas, 3, This,
+            AuthenticationStatus, DevicePathConst
+        );
     }
     FreePool(FileBuffer);
 
@@ -190,6 +199,7 @@ EFI_STATUS security_policy_install(void) {
 
     esfas = security_protocol->FileAuthenticationState;
     security_protocol->FileAuthenticationState = security_policy_authentication;
+
     return EFI_SUCCESS;
 }
 

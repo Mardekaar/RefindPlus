@@ -14,10 +14,18 @@ jobs:
     name: Prune Runs
     runs-on: ubuntu-24.04
 
+    if: github.repository == 'RefindPlusRepo/RefindPlus'
     steps:
-      - uses: Mattraks/delete-workflow-runs@v2
+      - id: app-token
+        uses: actions/create-github-app-token@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: prune-workflows
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
           repository: ${{ github.repository }}
           retain_days: 61
           keep_minimum_runs: 0

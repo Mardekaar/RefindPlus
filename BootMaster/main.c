@@ -1838,9 +1838,9 @@ CHAR16 * GetMacVersion (
     BOOLEAN  CheckNext;
     BOOLEAN  ExitLoop;
 
-    TypeMacOS = L"Unknown";
-    CheckNext =      FALSE;
-    ExitLoop  =      FALSE;
+    TypeMacOS = LABEL_UNKNOWN;
+    CheckNext =         FALSE;
+    ExitLoop  =         FALSE;
 
     for (i = 0; i < 100; i++) {
         Line = ReadLine (File);
@@ -1944,7 +1944,8 @@ VOID HandleToolMenu (
         AddMenuInfoLine (*Menu, L"Could *NOT* Find Valid Instance", FALSE);
         AddMenuInfoLine (*Menu, L"  Remove from 'showtools' List",  FALSE);
         AddMenuInfoLine (*Menu, L"",                                FALSE);
-    } else {
+    }
+    else {
         for (i = 0; i < EntryCount; i++) {
             AddMenuEntry (
                 *Menu, (REFIT_MENU_ENTRY *) EntryItems[i]
@@ -2577,6 +2578,7 @@ BOOLEAN ShowInfoCleanNvram (
     BOOLEAN                    RetVal;
     MENU_STYLE_FUNC            Style;
     REFIT_MENU_ENTRY          *ChosenOption;
+    REFIT_MENU_ENTRY          *MenuEntryCleanNvram;
 
     static BOOLEAN             RunOnce = FALSE;
     static REFIT_MENU_SCREEN  *ToolInfoMenu = NULL;
@@ -2633,7 +2635,7 @@ BOOLEAN ShowInfoCleanNvram (
 
         AddMenuInfoLine (ToolInfoMenu, L"", FALSE);
 
-        REFIT_MENU_ENTRY *MenuEntryCleanNvram = AllocateZeroPool (sizeof (REFIT_MENU_ENTRY));
+        MenuEntryCleanNvram = AllocateZeroPool (sizeof (REFIT_MENU_ENTRY));
         if (MenuEntryCleanNvram == NULL) {
             FreeMenuScreen (&ToolInfoMenu);
             break;
@@ -2797,7 +2799,7 @@ VOID AboutRefindPlus (VOID) {
             LimitStringLength (TmpStr, (MAX_LINE_LENGTH - 16));
         }
     }
-    AddMenuInfoLine (AboutMenu, PoolPrint (L"CSR Setting   : %s", TmpStr),                  TRUE);
+    AddMenuInfoLine (AboutMenu, PoolPrint (L"CSR Setting   : %s", TmpStr), TRUE);
     MY_FREE_POOL(TmpStr);
 
     AddMenuInfoLine (
@@ -2816,15 +2818,15 @@ VOID AboutRefindPlus (VOID) {
     if (ScreenSize < 801) {
         LimitStringLength (TmpStr, (MAX_LINE_LENGTH - 16));
     }
-    AddMenuInfoLine (AboutMenu, PoolPrint (L"Screen Output : %s", TmpStr),                  TRUE);
+    AddMenuInfoLine (AboutMenu, PoolPrint (L"Screen Output : %s", TmpStr), TRUE);
     MY_FREE_POOL(TmpStr);
 
-    AddMenuInfoLine (AboutMenu, L"",                                                       FALSE);
-    AddMenuInfoLine (AboutMenu, L"Copyright 2020-2025 Dayo Akanji and Others",             FALSE);
-    AddMenuInfoLine (AboutMenu, L"Portions Copyright 2012-2024 Roderick W. Smith",         FALSE);
-    AddMenuInfoLine (AboutMenu, L"Portions Copyright 2006-2010 Christoph Pfisterer",       FALSE);
-    AddMenuInfoLine (AboutMenu, L"Portions Copyright The Intel Corporation and Others",    FALSE);
-    AddMenuInfoLine (AboutMenu, L"Provided under the GNU General Public License v3/Later", FALSE);
+    AddMenuInfoLine (AboutMenu, L"",                                                         FALSE);
+    AddMenuInfoLine (AboutMenu, L"Copyright 2020-2025 Dayo Akanji & Contributors",           FALSE);
+    AddMenuInfoLine (AboutMenu, L"Copyright 2012-2024 Roderick W. Smith (Portions)",         FALSE);
+    AddMenuInfoLine (AboutMenu, L"Copyright 2006-2010 Christoph Pfisterer (Portions)",       FALSE);
+    AddMenuInfoLine (AboutMenu, L"Copyright The Intel Corporation and Others (Portions)",    FALSE);
+    AddMenuInfoLine (AboutMenu, L"Provided under the GNU General Public License (v3/Later)", FALSE);
 
     RetVal = GetMenuEntryReturn (&AboutMenu);
     if (RetVal) {
@@ -2876,6 +2878,7 @@ VOID PrepToolMenu (
         case TAG_FWUPDATE:      TypeStr = LABEL_FWUPDATE    ; break;
         case TAG_RECOVERY_MAC:  TypeStr = LABEL_RECOVERY_MAC; break;
         case TAG_RECOVERY_WIN:  TypeStr = LABEL_RECOVERY_WIN; break;
+        default:                TypeStr = LABEL_UNKNOWN     ; break;
     } // switch
 
     #if REFIT_DEBUG > 0
@@ -2883,8 +2886,7 @@ VOID PrepToolMenu (
     LOG_MSG("%s  - Show 'Run %s Tool' Menu", OffsetNext, TypeStr);
     #endif
 
-    OurEntry =  NULL;
-    ToolFlag = FALSE;
+    OurEntry = NULL;
 
     switch (TypeTag) {
         case TAG_MOK:           ToolFlag = ShowInfoMOK         (TypeStr, &OurEntry); break;
@@ -2896,9 +2898,12 @@ VOID PrepToolMenu (
         case TAG_FWUPDATE:      ToolFlag = ShowInfoFwUpdate    (TypeStr, &OurEntry); break;
         case TAG_RECOVERY_MAC:  ToolFlag = ShowInfoRecoveryMac (TypeStr, &OurEntry); break;
         case TAG_RECOVERY_WIN:  ToolFlag = ShowInfoRecoveryWin (TypeStr, &OurEntry); break;
+        default:                ToolFlag = FALSE                                   ; break;                                                   break;
     } // switch
 
-    HandleToolRun (TypeStr, ToolFlag, OurEntry);
+    if (!MyStriCmp (TypeStr, LABEL_UNKNOWN)) {
+        HandleToolRun (TypeStr, ToolFlag, OurEntry);
+    }
 } // static VOID PrepToolMenu()
 
 // DA-TAG: Caller responsible for returned buffer
@@ -3012,11 +3017,6 @@ VOID StoreLoaderName (
     UINTN      NameSize;
 
 
-    if (Name == NULL) {
-        // Early Return
-        return;
-    }
-
     // Clear current PreviousBoot if TransientBoot is active
     if (GlobalConfig.TransientBoot) {
         EfivarSetRaw (
@@ -3024,6 +3024,11 @@ VOID StoreLoaderName (
             NULL, 0, TRUE
         );
 
+        return;
+    }
+
+    if (Name == NULL) {
+        // Early Return
         return;
     }
 
@@ -3806,7 +3811,7 @@ EFI_STATUS EFIAPI efi_main (
     ArchType = L"ARM_64";
     ArchBits = L"64 bit";
 #else
-    ArchType = L"Unknown";
+    ArchType = LABEL_UNKNOWN;
 #endif
 
     #if REFIT_DEBUG > 0
@@ -3960,7 +3965,15 @@ EFI_STATUS EFIAPI efi_main (
             #if REFIT_DEBUG > 0
             LOG_MSG("** WARN: RefindPlus Chainload via OpenCore Detected\n");
             LOG_MSG("      1. Some Features *MAY NOT* Function as Expected\n");
-            LOG_MSG("      2. The 'NvramProtect' Feature Has Been Disabled\n\n");
+            if (!AppleFirmware) {
+                LOG_MSG("      2. ");
+            }
+            else {
+                LOG_MSG("      2. The 'NvramProtect' Feature Has Been Disabled\n");
+                LOG_MSG("      3. ");
+            }
+            LOG_MSG("RefindPlus Pointer Device Settings are Ignored");
+            LOG_MSG("\n\n");
             #endif
         }
     }
@@ -4456,9 +4469,15 @@ EFI_STATUS EFIAPI efi_main (
         PrintUglyText (L"        RefindPlus Chainload via OpenCore Detected        ", NEXTLINE);
         PrintUglyText (L"                                                          ", NEXTLINE);
 
-        REFIT_CALL_2_WRAPPER(gST->ConOut->SetAttribute, gST->ConOut, ATTR_BASIC);
-        PrintUglyText (L"    1. Some Features *MAY NOT* Function as Expected       ", NEXTLINE);
-        PrintUglyText (L"    2. The 'NvramProtect' Feature Has Been Disabled       ", NEXTLINE);
+        REFIT_CALL_2_WRAPPER(
+            gST->ConOut->SetAttribute,
+            gST->ConOut, ATTR_BASIC
+        );
+        PrintUglyText (L"    - Some Features *MAY NOT* Function as Expected       ", NEXTLINE);
+        if (AppleFirmware) {
+            PrintUglyText (L"    - The 'NvramProtect' Feature Has Been Disabled       ", NEXTLINE);
+        }
+        PrintUglyText (L"    - RefindPlus Pointer Device Settings are Ignored      ", NEXTLINE);
         PrintUglyText (L"                                                          ", NEXTLINE);
         PrintUglyText (L"  -- This Notice *IS NOT* Displayed by the 'REL' File --  ", NEXTLINE);
         PrintUglyText (L"                                                          ", NEXTLINE);
@@ -4735,6 +4754,7 @@ EFI_STATUS EFIAPI efi_main (
             break;
             case TAG_LOADER:   // Boot OS via *.efi File
                 OurLoaderEntry = (LOADER_ENTRY *) ChosenOption;
+                FoundVentoy    = FALSE;
                 EntryVol       = OurLoaderEntry->Volume;
 
                 if (!IsStriStr (OurLoaderEntry->Title, L"Mac OS"  ) &&
@@ -5161,7 +5181,6 @@ EFI_STATUS EFIAPI efi_main (
                     }
                 }
                 else {
-                    FoundVentoy = FALSE;
                     i = 0;
                     while (GlobalConfig.HandleVentoy && !FoundVentoy) {
                         VentoyName = FindCommaDelimited (
@@ -5342,7 +5361,7 @@ EFI_STATUS EFIAPI efi_main (
 
                 #if REFIT_DEBUG > 0
                 LOG_MSG("Received User Input:");
-                LOG_MSG("%s  - Exit '%s' Screen", OffsetNext, LABEL_ABOUT);
+                LOG_MSG("%s  - Exit '%s' Menu", OffsetNext, LABEL_ABOUT);
                 LOG_MSG("\n\n");
                 #endif
 
@@ -5359,7 +5378,7 @@ EFI_STATUS EFIAPI efi_main (
 
                 #if REFIT_DEBUG > 0
                 LOG_MSG("Received User Input:");
-                LOG_MSG("%s  - Exit '%s' Screen", OffsetNext, LABEL_HIDDEN);
+                LOG_MSG("%s  - Exit '%s' Menu", OffsetNext, LABEL_HIDDEN);
                 LOG_MSG("\n\n");
                 #endif
 
@@ -5424,7 +5443,7 @@ EFI_STATUS EFIAPI efi_main (
 
                 #if REFIT_DEBUG > 0
                 LOG_MSG("Received User Input:");
-                LOG_MSG("%s  - Exit '%s' Screen", OffsetNext, LABEL_BOOTORDER);
+                LOG_MSG("%s  - Exit '%s' Menu", OffsetNext, LABEL_BOOTORDER);
                 LOG_MSG("\n\n");
                 #endif
 

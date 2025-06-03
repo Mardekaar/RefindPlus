@@ -220,9 +220,15 @@ EFI_STATUS RecoveryBootAPFS (
 
 
     // Set Relevant NVRAM Variable
-    DataNVRAM = NULL;
     InitNVRAM = L"RecoveryModeDisk";
     NameNVRAM = L"internet-recovery-mode";
+
+    DataNVRAM = AllocateZeroPool (
+        (StrLen (InitNVRAM) + 1) * sizeof (CHAR8)
+    );
+    if (DataNVRAM == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+    }
 
     UnicodeStrToAsciiStr (InitNVRAM, DataNVRAM);
 
@@ -303,6 +309,7 @@ EFI_STATUS RecoveryBootAPFS (
         EFI_SUCCESS, 0, NULL
     );
 
+    // Only gets here on failure
     return EFI_LOAD_ERROR;
 } // static EFI_STATUS RecoveryBootAPFS()
 
@@ -601,11 +608,11 @@ EFI_STATUS StartEFIImage (
     OUT  EFI_HANDLE    *NewImageHandle OPTIONAL
 ) {
     #if REFIT_DEBUG > 0
-    CHAR16  *ConstMsgStr;
-    BOOLEAN  CheckMute = FALSE;
+    EFI_STATUS                           Status;
+    CHAR16                              *ConstMsgStr;
+    BOOLEAN                              CheckMute = FALSE;
     #endif
 
-    EFI_STATUS                           Status;
     EFI_STATUS                           ReturnStatus;
     EFI_GUID                             SystemdGuid = SYSTEMD_GUID_VALUE;
     CHAR16                              *FullLoadOptions;
@@ -907,19 +914,24 @@ EFI_STATUS StartEFIImage (
                     );
                     ALT_LOG(1, LOG_LINE_NORMAL, L"%s", MsgStr);
                     MY_FREE_POOL(MsgStr);
+
+                    // DA-TAG: Delibrate for Codacy
+                    Status =
                     #endif
 
-                    Status = EfivarSetRaw (
+                    EfivarSetRaw (
                         &SystemdGuid, L"LoaderDevicePartUUID",
                         EspGUID, StrLen (EspGUID) * 2 + 2, FALSE
                     );
                     #if REFIT_DEBUG > 0
-                    if (EFI_ERROR(Status)) {
+                    if (EFI_ERROR(Status) &&
+                        Status != EFI_ALREADY_STARTED
+                    ) {
                         MsgStr = PoolPrint (
                             L"'%r' When Setting 'LoaderDevicePartUUID' UEFI Variable",
                             Status
                         );
-                        ALT_LOG(1, LOG_STAR_SEPARATOR, L"WARN: '%s'", MsgStr);
+                        ALT_LOG(1, LOG_STAR_SEPARATOR, L"WARN: %s", MsgStr);
                         LOG_MSG("\n\n");
                         LOG_MSG("WARN: %s", MsgStr);
                         MY_FREE_POOL(MsgStr);
@@ -1220,7 +1232,8 @@ VOID StartLoader (
     IN CHAR16       *SelectionName,
     IN BOOLEAN       TrustSynced
 ) {
-    CHAR16 *LoaderPath;
+    CHAR16  *LoaderPath;
+    BOOLEAN  IsVerbose;
 
 
     IsBoot        = TRUE;
@@ -1239,6 +1252,7 @@ VOID StartLoader (
     BeginExternalScreen (Entry->UseGraphicsMode, SelectionName);
 
     LoaderPath = Basename (Entry->LoaderPath);
+    IsVerbose  = !Entry->UseGraphicsMode;
 
     StartEFIImage (
         Entry->Volume,
@@ -1246,7 +1260,7 @@ VOID StartLoader (
         Entry->LoadOptions,
         LoaderPath,
         Entry->OSType,
-        !Entry->UseGraphicsMode,
+        IsVerbose,
         FALSE, NULL
     );
 
@@ -1264,6 +1278,7 @@ VOID StartTool (
     EFI_STATUS  Status;
     CHAR16     *MsgStr;
     CHAR16     *LoaderPath;
+    BOOLEAN     IsVerbose;
 
 
     IsBoot     = FALSE;
@@ -1283,6 +1298,7 @@ VOID StartTool (
 
         /* APFS Recovery Instance */
         if (SingleAPFS) {
+            // Only returns on failure
             Status = RecoveryBootAPFS (Entry);
         }
         else {
@@ -1315,9 +1331,10 @@ VOID StartTool (
             #endif
 
             PauseForKey();
-        }
 
-        MY_FREE_POOL(MsgStr);
+            MY_FREE_POOL(MsgStr);
+        }
+        MY_FREE_POOL(LoaderPath);
 
         return;
     }
@@ -1325,13 +1342,15 @@ VOID StartTool (
     BeginExternalScreen (Entry->UseGraphicsMode, MsgStr);
     MY_FREE_POOL(MsgStr);
 
+    IsVerbose = !Entry->UseGraphicsMode;
+
     StartEFIImage (
         Entry->Volume,
         Entry->LoaderPath,
         Entry->LoadOptions,
         LoaderPath,
         Entry->OSType,
-        !Entry->UseGraphicsMode,
+        IsVerbose,
         FALSE, NULL
     );
 

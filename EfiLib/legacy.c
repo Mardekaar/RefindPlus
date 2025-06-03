@@ -104,15 +104,15 @@ VOID BdsBuildLegacyDevNameString (
     } // switch
 
     switch (CurBBSEntry->DeviceType) {
-        case BBS_FLOPPY:        Type = L"Floppy";   break;
-        case BBS_HARDDISK:      Type = L"Harddisk"; break;
-        case BBS_CDROM:         Type = L"CDROM";    break;
-        case BBS_PCMCIA:        Type = L"PCMCIAe";  break;
-        case BBS_USB:           Type = L"USB";      break;
-        case BBS_EMBED_NETWORK: Type = L"Network";  break;
-        case BBS_BEV_DEVICE:    Type = L"BEVe";     break;
+        case BBS_FLOPPY:        Type = L"Floppy"    ; break;
+        case BBS_HARDDISK:      Type = L"Harddisk"  ; break;
+        case BBS_CDROM:         Type = L"CDROM"     ; break;
+        case BBS_PCMCIA:        Type = L"PCMCIAe"   ; break;
+        case BBS_USB:           Type = L"USB"       ; break;
+        case BBS_EMBED_NETWORK: Type = L"Network"   ; break;
+        case BBS_BEV_DEVICE:    Type = L"BEVe"      ; break;
         case BBS_UNKNOWN:
-        default:                Type = L"Unknown";  break;
+        default:                Type = LABEL_UNKNOWN; break;
     } // switch
 
     // If current BBS entry has its description then use it.

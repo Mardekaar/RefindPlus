@@ -33,6 +33,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+ * Modified for RefindPlus
+ * Copyright (c) 2025 Dayo Akanji (sf.net/u/dakanji/profile)
+ *
+ * Modifications distributed under the preceding terms.
+*/
 
 #include "gptsync.h"
 
@@ -40,16 +46,22 @@
 // memory string search
 //
 
-static INTN FindMem(VOID *Buffer, UINTN BufferLength, VOID *SearchString, UINTN SearchStringLength)
-{
+static
+INTN FindMem (
+    VOID *Buffer,
+    UINTN BufferLength,
+    VOID *SearchString,
+    UINTN SearchStringLength
+) {
     UINT8 *BufferPtr;
     UINTN Offset;
 
     BufferPtr = Buffer;
     BufferLength -= SearchStringLength;
     for (Offset = 0; Offset < BufferLength; Offset++, BufferPtr++) {
-        if (CompareMem(BufferPtr, SearchString, SearchStringLength) == 0)
-            return (INTN)Offset;
+        if (CompareMem (BufferPtr, SearchString, SearchStringLength) == 0) {
+            return (INTN) Offset;
+        }
     }
 
     return -1;
@@ -81,54 +93,68 @@ static UINTN detect_bootcode(UINT64 partlba, CHARN **bootcodename)
         CompareMem(sector + 6, "LILO", 4) == 0) {
         *bootcodename = STR("LILO");
 
-    } else if (CompareMem(sector + 3, "SYSLINUX", 8) == 0) {
+    }
+    else if (CompareMem(sector + 3, "SYSLINUX", 8) == 0) {
         *bootcodename = STR("SYSLINUX");
 
-    } else if (FindMem(sector, 512, "ISOLINUX", 8) >= 0) {
+    }
+    else if (FindMem (sector, 512, "ISOLINUX", 8) >= 0) {
         *bootcodename = STR("ISOLINUX");
 
-    } else if (FindMem(sector, 512, "Geom\0Hard Disk\0Read\0 Error", 26) >= 0) {
+    }
+    else if (FindMem (sector, 512, "Geom\0Hard Disk\0Read\0 Error", 26) >= 0) {
         *bootcodename = STR("GRUB");
 
-    } else if ((*((UINT32 *)(sector + 502)) == 0 &&
+    }
+    else if ((*((UINT32 *)(sector + 502)) == 0 &&
                 *((UINT32 *)(sector + 506)) == 50000 &&
                 *((UINT16 *)(sector + 510)) == 0xaa55) ||
-               FindMem(sector, 512, "Starting the BTX loader", 23) >= 0) {
+               FindMem (sector, 512, "Starting the BTX loader", 23) >= 0) {
         *bootcodename = STR("FreeBSD");
 
-    } else if (FindMem(sector, 512, "!Loading", 8) >= 0 ||
-               FindMem(sector, 512, "/cdboot\0/CDBOOT\0", 16) >= 0) {
+    }
+    else if (FindMem (sector, 512, "!Loading", 8) >= 0 ||
+               FindMem (sector, 512, "/cdboot\0/CDBOOT\0", 16) >= 0) {
         *bootcodename = STR("OpenBSD");
 
-    } else if (FindMem(sector, 512, "Not a bootxx image", 18) >= 0) {
+    }
+    else if (FindMem (sector, 512, "Not a bootxx image", 18) >= 0) {
         *bootcodename = STR("NetBSD");
 
-    } else if (FindMem(sector, 512, "NTLDR", 5) >= 0) {
+    }
+    else if (FindMem (sector, 512, "NTLDR", 5) >= 0) {
         *bootcodename = STR("Windows NTLDR");
 
-    } else if (FindMem(sector, 512, "BOOTMGR", 7) >= 0) {
+    }
+    else if (FindMem (sector, 512, "BOOTMGR", 7) >= 0) {
         *bootcodename = STR("Windows BOOTMGR (Vista)");
 
-    } else if (FindMem(sector, 512, "CPUBOOT SYS", 11) >= 0 ||
-               FindMem(sector, 512, "KERNEL  SYS", 11) >= 0) {
+    }
+    else if (FindMem (sector, 512, "CPUBOOT SYS", 11) >= 0 ||
+               FindMem (sector, 512, "KERNEL  SYS", 11) >= 0) {
         *bootcodename = STR("FreeDOS");
 
-    } else if (FindMem(sector, 512, "OS2LDR", 6) >= 0 ||
-               FindMem(sector, 512, "OS2BOOT", 7) >= 0) {
+    }
+    else if (FindMem (sector, 512, "OS2LDR", 6) >= 0 ||
+               FindMem (sector, 512, "OS2BOOT", 7) >= 0) {
         *bootcodename = STR("eComStation");
 
-    } else if (FindMem(sector, 512, "Be Boot Loader", 14) >= 0) {
+    }
+    else if (FindMem (sector, 512, "Be Boot Loader", 14) >= 0) {
         *bootcodename = STR("BeOS");
 
-    } else if (FindMem(sector, 512, "yT Boot Loader", 14) >= 0) {
+    }
+    else if (FindMem (sector, 512, "yT Boot Loader", 14) >= 0) {
         *bootcodename = STR("ZETA");
 
-    } else if (FindMem(sector, 512, "\x04" "beos\x06" "system\x05" "zbeos", 18) >= 0) {
-        *bootcodename = STR("Haiku");
-
+    }
+    else {
+        if (FindMem (sector, 512, "\x04" "beos\x06" "system\x05" "zbeos", 18) >= 0) {
+            *bootcodename = STR("Haiku");
+        }
     }
 
-    if (FindMem(sector, 512, "Non-system disk", 15) >= 0)   // dummy FAT boot sector
+    if (FindMem (sector, 512, "Non-system disk", 15) >= 0)   // dummy FAT boot sector
         *bootcodename = STR("None (Non-system disk message)");
 
     // TODO: Add a note if a specific code was detected, but the sector is not bootable?
