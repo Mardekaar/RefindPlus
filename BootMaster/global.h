@@ -315,8 +315,9 @@ L"Data,Daten,Datos,Donnees,Dados,Dati,Tiedot,Gegevens,Podaci"
 #define GRAPHICS_FOR_ELILO       (16) // Binary: 0000 0001 0000
 #define GRAPHICS_FOR_TOOLS       (32) // Binary: 0000 0010 0000
 #define GRAPHICS_FOR_CLOVER      (64) // Binary: 0000 0100 0000
-#define GRAPHICS_FOR_OPENCORE   (128) // Binary: 0000 1000 0000
-#define GRAPHICS_FOR_EVERYTHING (255) // Binary: 0000 1111 1111 (1 + 2 + 4 + 8 + 16 + 32 + 64 + 128)
+#define GRAPHICS_FOR_SYSTEMD    (128) // Binary: 0000 1000 0000
+#define GRAPHICS_FOR_OPENCORE   (256) // Binary: 0001 0000 0000
+#define GRAPHICS_FOR_EVERYTHING (511) // Binary: 0001 1111 1111 (1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 + 256)
 
 // Bit codes (Actual Decimal) ... Used in GlobalConfig.HideUIFlags
 #define HIDEUI_FLAG_NONE          (0) // Binary: 0000 0000 0000

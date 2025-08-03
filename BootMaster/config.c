@@ -2779,6 +2779,7 @@ VOID ReadConfig (
                         else if (MyStriCmp (Flag, L"linux"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_LINUX;
                         else if (MyStriCmp (Flag, L"elilo"   )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_ELILO;
                         else if (MyStriCmp (Flag, L"clover"  )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_CLOVER;
+                        else if (MyStriCmp (Flag, L"systemd" )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_SYSTEMD;
                         else if (MyStriCmp (Flag, L"windows" )) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_WINDOWS;
                         else if (MyStriCmp (Flag, L"opencore")) GlobalConfig.GraphicsFor |= GRAPHICS_FOR_OPENCORE;
                     }

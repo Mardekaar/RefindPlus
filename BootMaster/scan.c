@@ -442,7 +442,8 @@ REFIT_MENU_SCREEN * InitializeSubScreen (
         else if (
             Entry->OSType == 'L' ||
             Entry->OSType == 'E' ||
-            Entry->OSType == 'G'
+            Entry->OSType == 'G' ||
+            Entry->OSType == 'S'
         ) {
             Found = FALSE;
 
@@ -468,15 +469,19 @@ REFIT_MENU_SCREEN * InitializeSubScreen (
 
                         if (Entry->OSType == 'L') {
                             DisplayName = PoolPrint (
-                                L"Instance: Linux - %s%s",
-                                ShowName,
-                                (IsStriStr (Entry->LoaderPath, L"SystemD"))
-                                    ? L" via SD Boot" : L""
+                                L"Instance: Linux - %s",
+                                ShowName
                             );
                         }
                         else if (Entry->OSType == 'G') {
                             DisplayName = PoolPrint (
                                 L"Instance: Linux - %s via Grub",
+                                ShowName
+                            );
+                        }
+                        else if (Entry->OSType == 'S') {
+                            DisplayName = PoolPrint (
+                                L"Instance: Linux - %s via SD Boot",
                                 ShowName
                             );
                         }
@@ -496,15 +501,11 @@ REFIT_MENU_SCREEN * InitializeSubScreen (
             }
 
             if (!Found) {
-                if (Entry->OSType == 'L') {
-                    NameOS = L"Instance: Linux";
-                }
-                else if (Entry->OSType == 'G') {
-                    NameOS = L"Instance: Grub";
-                }
-                else {
-                    NameOS = L"Instance: Elilo";
-                }
+                if (0);
+                else if (Entry->OSType == 'L') NameOS = L"Instance: Linux"  ;
+                else if (Entry->OSType == 'E') NameOS = L"Instance: Elilo"  ;
+                else if (Entry->OSType == 'G') NameOS = L"Instance: Grub"   ;
+                else if (Entry->OSType == 'S') NameOS = L"Instance: SD Boot";
             }
         }
         else if (Entry->OSType == 'R'                    ) NameOS = L"Instance: rEFit Variant";
@@ -1522,6 +1523,28 @@ VOID SetLoaderDefaults (
                 );
             }
         }
+        else if (
+            IsStriStr (NameClues, L"SystemD") ||
+            IsStriStr (NameClues, L"gummiboot")
+        ) {
+            BREAD_CRUMB(L"%a:  5c_b 1", __func__);
+            if (GetImage) {
+                MergeUniqueItems (
+                    &TmpIconName,
+                    L"systemd,gummiboot,linux",
+                    L','
+                );
+            }
+
+            BREAD_CRUMB(L"%a:  5c_b 2", __func__);
+            GotFlag       = TRUE;
+            Entry->OSType =  'S';
+            if (!Entry->UseGraphicsMode) {
+                Entry->UseGraphicsMode = (
+                    GlobalConfig.GraphicsFor & GRAPHICS_FOR_SYSTEMD
+                );
+            }
+        }
         else if (IsListItemSubstringIn (NameClues, GlobalConfig.LinuxPrefixes)) {
             BREAD_CRUMB(L"%a:  5d 1", __func__);
             if (Volume->DiskKind != DISK_KIND_NET) {
@@ -1822,7 +1845,8 @@ VOID SetLoaderDefaults (
     BREAD_CRUMB(L"%a:  8", __func__);
     if (Entry->OSType == 'L' ||
         Entry->OSType == 'E' ||
-        Entry->OSType == 'G'
+        Entry->OSType == 'G' ||
+        Entry->OSType == 'S'
     ) {
         BREAD_CRUMB(L"%a:  8a 1", __func__);
         if (GlobalConfig.ToolLocationsExtra == NULL) {
@@ -2066,22 +2090,18 @@ LOADER_ENTRY * AddLoaderEntry (
     else {
         Found = FALSE;
         if (CheckLinux) {
-            if (IsStriStr (LoaderPath, L"Grub")) {
-                GotElilo = FALSE;
-                GotSysD  = FALSE;
-                GotGrub  =  TRUE;
-            }
-            else if (IsStriStr (LoaderPath, L"SystemD")) {
-                GotSysD  =  TRUE;
-                GotGrub  = FALSE;
-                GotElilo = FALSE;
-            }
-            else {
-                GotGrub  = FALSE;
-                GotSysD  = FALSE;
-                GotElilo = (IsStriStr (LoaderPath, L"Elilo"))
-                    ? TRUE : FALSE;
-            }
+            GotGrub = (
+                IsStriStr (LoaderPath, L"Grub")
+            ) ? TRUE : FALSE;
+
+            GotSysD = (
+                IsStriStr (LoaderPath, L"SystemD") ||
+                IsStriStr (LoaderPath, L"GummiBoot")
+            ) ? TRUE : FALSE;
+
+            GotElilo = (
+                IsStriStr (LoaderPath, L"Elilo")
+            ) ? TRUE : FALSE;
 
             IsStub = FALSE;
             if (!GotGrub && !GotSysD && !GotElilo) {
@@ -2126,7 +2146,7 @@ LOADER_ENTRY * AddLoaderEntry (
                                 )
                                 : (GotSysD)
                                     ? PoolPrint (
-                                        L"Instance: Linux - %s via SystemdBoot",
+                                        L"Instance: Linux - %s via SD Boot",
                                         ShowName
                                     )
                                     : PoolPrint (
@@ -2234,7 +2254,7 @@ LOADER_ENTRY * AddLoaderEntry (
                                     )
                                     : (GotSysD)
                                         ? PoolPrint (
-                                            L"Instance: Linux - %s via SystemdBoot",
+                                            L"Instance: Linux - %s via SD Boot",
                                             ShowName
                                         )
                                         : PoolPrint (

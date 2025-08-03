@@ -5101,6 +5101,43 @@ EFI_STATUS EFIAPI efi_main (
                     }
                 }
                 else if (
+                    OurLoaderEntry->OSType == 'S'                              ||
+                    (SubScreenBoot && IsStriStr (SelectionName, L"SystemD"))   ||
+                    IsStriStr (EntryTitle,                      L"SystemD")    ||
+                    (SubScreenBoot && IsStriStr (SelectionName, L"GummiBoot")) ||
+                    IsStriStr (EntryTitle,                      L"GummiBoot")
+                ) {
+                    #if REFIT_DEBUG > 0
+                    MsgStr = StrDuplicate (
+                        L"Load Instance: Linux (SD-Boot)"
+                    );
+                    ALT_LOG(1, LOG_THREE_STAR_SEP, L"%s", MsgStr);
+                    // DA-TAG: Using separate instances of 'Received User Input'
+                    LOG_MSG("%s:",
+                        (GlobalConfig.DirectBoot)
+                            ? L"Run DirectBoot"
+                            : L"Received User Input"
+                    );
+                    LOG_MSG(
+                        "%s  - %s:- '%s'",
+                        OffsetNext, MsgStr, EntryPath
+                    );
+
+                    MY_FREE_POOL(MsgStr);
+                    #endif
+
+                    SkipTrustChain = TRUE;
+                    if (GlobalConfig.SyncTrust & ENFORCE_TRUST_LINUX) {
+                        KeepTrustChain = TRUE;
+                    }
+
+                    if (!OurLoaderEntry->UseGraphicsMode) {
+                        OurLoaderEntry->UseGraphicsMode = (
+                            GlobalConfig.GraphicsFor & GRAPHICS_FOR_SYSTEMD
+                        );
+                    }
+                }
+                else if (
                     OurLoaderEntry->OSType == 'L'                          ||
                     (SubScreenBoot && IsStriStr (SelectionName, L"Linux")) ||
                     IsStriStr (EntryTitle,                      L"Linux")

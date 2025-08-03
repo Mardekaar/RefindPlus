@@ -918,6 +918,7 @@
 #   grub        - The GRUB Boot Loader
 #   elilo       - The ELILO Boot Loader
 #   clover      - The Clover Boot Loader
+#   systemd     - The SystemD Boot Loader
 #   opencore    - The OpenCore Boot Loader
 #   tools       - 2nd Row Items:- All Tools
 #   everything  - For All Loaders and Tools
@@ -1408,7 +1409,7 @@
 #  ostype      - OS type code to determine boot options available via
 #                  the 'Insert' key. Accepted options (case sensitive):
 #                  "MacOS", "Linux", "Windows", "XOM", "Grub", "Elilo",
-#                  "RefitVariant", "OpenCore", and "Clover".
+#                  "RefitVariant", "SystemD", "OpenCore", and "Clover".
 #  graphics    - Set to "on" to enable graphics-mode boot (mainly useful
 #                  for MacOS) or "off" for text-mode boot. The default
 #                  setting is auto-detected from the loader filename.
