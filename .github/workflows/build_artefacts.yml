@@ -254,7 +254,7 @@ jobs:
         if: contains(github.event.inputs.build_type, 'REL')
         uses: actions/upload-artifact@v4
         with:
-          name: x64_RefindPlus-Artefacts_REL [[Signed]]
+          name: x64_RefindPlus-Artefacts_REL [Signed]
           path: |
               ${{ env.CER_PATH }}
               ${{ env.CRT_PATH }}
@@ -264,7 +264,7 @@ jobs:
         if: contains(github.event.inputs.build_type, 'DBG')
         uses: actions/upload-artifact@v4
         with:
-          name: x64_RefindPlus-Artefacts_DBG [[Signed]]
+          name: x64_RefindPlus-Artefacts_DBG [Signed]
           path: |
               ${{ env.CER_PATH }}
               ${{ env.CRT_PATH }}
@@ -274,7 +274,7 @@ jobs:
         if: contains(github.event.inputs.build_type, 'NPT')
         uses: actions/upload-artifact@v4
         with:
-          name: x64_RefindPlus-Artefacts_NPT [[Signed]]
+          name: x64_RefindPlus-Artefacts_NPT [Signed]
           path: |
               ${{ env.CER_PATH }}
               ${{ env.CRT_PATH }}
