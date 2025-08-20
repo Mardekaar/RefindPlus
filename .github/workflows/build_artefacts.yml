@@ -211,44 +211,60 @@ jobs:
         run: |
           sign_artefacts() {
             local target=$1
-            local filepath="${target}_signed_DIR"
-            mkdir -p "${filepath}"
+            local outdir="${target}_signed_DIR"
+            mkdir -p "${outdir}"
+            echo "=== Signing target: ${target} ==="
+            echo ""
 
+            # Sign main binaries
             for prefix in "x64_RefindPlus" "x64_gptsync"; do
               local base="${prefix}_${target}"
-              local file="Unsigned_${target}/${base}.efi"
-              local xout="${filepath}/${base}_SIGNED--${NOW_FLAG}.efi"
-
-              if [[ -f "${file}" ]]; then
-                echo "Signing ${xout}"
+              local infile="Unsigned_${target}/${base}.efi"
+              local outfile="${outdir}/${base}_SIGNED--${NOW_FLAG}.efi"
+              
+              if [[ -f "${infile}" ]]; then
+                echo "[SIGN] ${infile} -> ${outfile}"
                 sbsign --key "${KEY_PATH}" \
-                  --cert "${CRT_PATH}" \
-                  --output "${xout}" "${file}"
+                       --cert "${CRT_PATH}" \
+                       --output "${outfile}" "${infile}" || {
+                  echo "Failed signing ${infile}"
+                  exit 1
+                }
+              else
+                echo "[SKIP] File not found: ${infile}"
               fi
             done
 
+            # Sign filesystem drivers
             for fs in btrfs ext2 ext4 hfs iso9660 ntfs reiserfs; do
               local base="DRIVER_${target}--x64_${fs}"
-              local file="Unsigned_${target}/${base}.efi"
-              local xout="${filepath}/${base}_SIGNED--${NOW_FLAG}.efi"
+              local infile="Unsigned_${target}/${base}.efi"
+              local outfile="${outdir}/${base}_SIGNED--${NOW_FLAG}.efi"
 
-              if [[ -f "${file}" ]]; then
-                echo "Signing ${xout}"
+              if [[ -f "${infile}" ]]; then
+                echo "[SIGN] ${infile} -> ${outfile}"
                 sbsign --key "${KEY_PATH}" \
-                  --cert "${CRT_PATH}" \
-                  --output "${xout}" "${file}"
+                       --cert "${CRT_PATH}" \
+                       --output "${outfile}" "${infile}" || {
+                  echo "Failed signing ${infile}"
+                  exit 1
+                }
+              else
+                echo "[SKIP] File not found: ${infile}"
               fi
             done
-
+  
             echo ""
-            echo "Signed '${target}' Build Artefacts"
-            echo ""
+            echo "Completed signing target: ${target}"
             echo ""
           }
 
+          # Execute based on BUILD_TYPE
+          set +e  # Disable fail-fast
           [[ "${BUILD_TYPE}" == "REL" || "${BUILD_TYPE}" == "ALL" || "${BUILD_TYPE}" == "TWO" ]] && sign_artefacts REL
           [[ "${BUILD_TYPE}" == "DBG" || "${BUILD_TYPE}" == "ALL" || "${BUILD_TYPE}" == "TWO" ]] && sign_artefacts DBG
           [[ "${BUILD_TYPE}" == "NPT" || "${BUILD_TYPE}" == "ALL" ]] && sign_artefacts NPT
+          set -e  # Restore fail-fast
 
       - name: Update Artefacts (REL)
         if: contains(github.event.inputs.build_type, 'REL')
