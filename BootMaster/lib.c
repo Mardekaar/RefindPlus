@@ -2575,24 +2575,22 @@ VOID ScanVolume (
         Volume->HasBootCode || Volume->RootDir != NULL
     ) ? TRUE : FALSE;
 
-    // Set 'AllowSymlinks' Flag
+    // Set default 'AllowSymlinks' Flag
     Volume->AllowSymlinks = FALSE;
-    if (GlobalConfig.FollowSymlinks == NULL) {
+    
+	if (GlobalConfig.FollowSymlinks == NULL) {
+        // No config ... Never follow symlinks
+		return;
+    }
+    
+	// Handles the case of config being 'SYMLINK_VOLUMES_TAG'.
+    // This signifies a complete symlink exclusion list.
+    // Return early ... Never follow symlinks.
+    if (MyStriCmp (SYMLINK_VOLUMES_TAG, GlobalConfig.FollowSymlinks)) {
         return;
     }
 
-    if (MyStriCmp (
-            SYMLINK_VOLUMES_TAG,
-            GlobalConfig.FollowSymlinks
-        )
-    ) {
-        Volume->AllowSymlinks = TRUE;
-        return;
-    }
-
-    VolGuid = GuidAsString (
-        &(Volume->PartGuid)
-    );
+    VolGuid = GuidAsString (&(Volume->PartGuid));
     if (MyStrBegins (SYMLINK_VOLUMES_TAG,  GlobalConfig.FollowSymlinks)) {
         if (!IsListItem (Volume->VolName,  GlobalConfig.FollowSymlinks) &&
             !IsListItem (Volume->FsName,   GlobalConfig.FollowSymlinks) &&
