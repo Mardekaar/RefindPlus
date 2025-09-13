@@ -150,6 +150,11 @@ In addition to the new functionality listed above, the following upstream tokens
     - When run on Apple firmware, RefindPlus will additionally trigger nvRAM garbage collection
 - **menuentry:** Additional OSTypes added for manual stanzas:
   - `RefitVariant`, `SystemD`, `OpenCore`, and `Clover` can be additionally defined
+- **"follow_symlinks":** Accepts optional additional parameters
+    - `follow_symlinks ON` : Symlinks always followed
+    - `follow_symlinks OFF` : Symlinks never followed
+    - `follow_symlinks OFF "Vol_1,Vol_2"`: Symlinks followed unless on list
+    - `follow_symlinks ON "Vol_9,Vol_10"`: Symlinks followed only if listed
 - **"csr_values":** A value of `0` can be set as the `Enabled` value to allow `Over The Air (OTA)` updates when running Mac OS 11.x (Big Sur) or newer with SIP enabled.
   - This is equivalent to activating the `csr_normalise` token.
 - **"log_level":** Controls the native log format and an implementation of the upstream format.

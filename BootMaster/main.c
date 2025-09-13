@@ -137,7 +137,6 @@ REFIT_CONFIG GlobalConfig = {
     .DisableNvramPanicLog      =                   FALSE,
     .DecoupleKeyF10            =                   FALSE,
     .NvramProtectEx            =                   FALSE,
-    .FollowSymlinks            =                   FALSE,
     .GzippedLoaders            =                   FALSE,
     .SupplyUEFI                =                   FALSE,
     .SupplyNVME                =                   FALSE,
@@ -199,6 +198,7 @@ REFIT_CONFIG GlobalConfig = {
     .DontScanFirmware          =                    NULL,
     .WindowsRecoveryFiles      =                    NULL,
     .MacOSRecoveryFiles        =                    NULL,
+    .FollowSymlinks            =                    NULL,
     .DriverDirs                =                    NULL,
     .IconsDir                  =                    NULL,
     .SetBootArgs               =                    NULL,
@@ -4126,7 +4126,15 @@ EFI_STATUS EFIAPI efi_main (
         LOG_MSG("'%s'", (GlobalConfig.NvramProtectEx) ? L"Active" : L"Inactive"    );
     }
 
-    LOG_MSG("%s      FollowSymlinks:- '%s'",   TAG_ITEM_C(GlobalConfig.FollowSymlinks));
+    LOG_MSG("%s      FollowSymlinks:- ",      OffsetNext                           );
+    if (GlobalConfig.FollowSymlinks == NULL ||
+        MyStriCmp (SYMLINK_VOLUMES_TAG, GlobalConfig.FollowSymlinks)
+    ) {
+        LOG_MSG("'Inactive'"                                                       );
+    }
+    else {
+        LOG_MSG("'Active'"                                                         );
+    }
     LOG_MSG("\n\n");
 
     // DA-TAG: Prime Status for SupplyUEFI

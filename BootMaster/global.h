@@ -175,6 +175,7 @@
 #endif
 
 #define DEFAULT_ICONS_DIR     L"icons"
+#define SYMLINK_VOLUMES_TAG   L"X@X@X"
 #define DEFAULT_STRING_DELIM  L" @+@ "
 #define INITIAL_STRING_DELIM  L" @@ "
 
@@ -437,6 +438,7 @@ typedef struct {
     MBR_PARTITION_INFO        *MbrPartitionTable;
     BOOLEAN                    IsReadable;
     UINT32                     FSType;
+    BOOLEAN                    AllowSymlinks;
 } REFIT_VOLUME;
 
 typedef struct _refit_menu_entry {
@@ -522,7 +524,6 @@ typedef struct {
     BOOLEAN                     DisableNvramPanicLog;
     BOOLEAN                     DecoupleKeyF10;
     BOOLEAN                     NvramProtectEx;
-    BOOLEAN                     FollowSymlinks;
     BOOLEAN                     GzippedLoaders;
     BOOLEAN                     SupplyUEFI;
     BOOLEAN                     SupplyNVME;
@@ -584,6 +585,7 @@ typedef struct {
     CHAR16                     *DontScanFirmware;
     CHAR16                     *WindowsRecoveryFiles;
     CHAR16                     *MacOSRecoveryFiles;
+    CHAR16                     *FollowSymlinks;
     CHAR16                     *DriverDirs;
     CHAR16                     *IconsDir;
     CHAR16                     *SetBootArgs;

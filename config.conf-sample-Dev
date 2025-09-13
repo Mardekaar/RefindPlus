@@ -748,6 +748,25 @@
 #
 #enable_touch
 
+# When this option is activated, RefindPlus will process symlinked loaders.
+# Symlinks are ignored by default as they may result in undesirable outcomes.
+# This token may however be useful on Linux setups that use symlinked loaders.
+# The token can be set with optional additional parameters to target its action.
+#
+# Example Settings:
+#    follow_symlinks                   - Symlinks Followed: Always
+#    follow_symlinks ON                - Symlinks Followed: Always
+#    follow_symlinks OFF               - Symlinks Followed: Never
+#    follow_symlinks OFF "Vol_1,Vol_2" - Symlinks Followed: If Not on List
+#    follow_symlinks ON "Vol_9,Vol_10" - Symlinks Followed: Only if Listed
+#
+# Refer to 'dont_scan_volumes' entry
+# for options on identifying volumes.
+#
+# Inactive when commented out (Symlinks never followed)
+#
+#follow_symlinks ON "Volume_A,Volume_B,Volume_C"
+
 # Hide user interface elements for personal preference or for security:
 #  banner      - RefindPlus title banner (built-in or loaded via "banner")
 #  label       - Boot option text label in the menu
@@ -1159,14 +1178,6 @@
 # Active when commented out (Combines Linux kernel entries)
 #
 #fold_linux_kernels 0
-
-# When this option is activated, RefindPlus will process symlinked loaders.
-# Symlinks are ignored by default as they may result in undesirable outcomes.
-# This token may however be useful on Linux setups that use symlinked loaders.
-#
-# Inactive when commented out (Does not process symlinked loaders)
-#
-#follow_symlinks
 
 # Set the font to be used for all textual displays in graphics mode.
 # For the best results, fonts used should be in PNG format with alpha

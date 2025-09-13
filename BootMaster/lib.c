@@ -2349,6 +2349,7 @@ VOID ScanVolume (
     #endif
 
     EFI_STATUS                 Status;
+    CHAR16                    *VolGuid;
     EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
     EFI_DEVICE_PATH_PROTOCOL  *NextDevicePath;
     EFI_DEVICE_PATH_PROTOCOL  *DiskDevicePath;
@@ -2573,6 +2574,45 @@ VOID ScanVolume (
     Volume->IsReadable = (
         Volume->HasBootCode || Volume->RootDir != NULL
     ) ? TRUE : FALSE;
+
+    // Set 'AllowSymlinks' Flag
+    Volume->AllowSymlinks = FALSE;
+    if (GlobalConfig.FollowSymlinks == NULL) {
+        return;
+    }
+
+    if (MyStriCmp (
+            SYMLINK_VOLUMES_TAG,
+            GlobalConfig.FollowSymlinks
+        )
+    ) {
+        Volume->AllowSymlinks = TRUE;
+        return;
+    }
+
+    VolGuid = GuidAsString (
+        &(Volume->PartGuid)
+    );
+    if (MyStrBegins (SYMLINK_VOLUMES_TAG,  GlobalConfig.FollowSymlinks)) {
+        if (!IsListItem (Volume->VolName,  GlobalConfig.FollowSymlinks) &&
+            !IsListItem (Volume->FsName,   GlobalConfig.FollowSymlinks) &&
+            !IsListItem (Volume->PartName, GlobalConfig.FollowSymlinks) &&
+            !IsListItem (VolGuid,          GlobalConfig.FollowSymlinks)
+        ) {
+            Volume->AllowSymlinks = TRUE;
+        }
+    }
+    else {
+        if (MyStriCmp  (L"all",           GlobalConfig.FollowSymlinks) ||
+            IsListItem (Volume->VolName,  GlobalConfig.FollowSymlinks) ||
+            IsListItem (Volume->FsName,   GlobalConfig.FollowSymlinks) ||
+            IsListItem (Volume->PartName, GlobalConfig.FollowSymlinks) ||
+            IsListItem (VolGuid,          GlobalConfig.FollowSymlinks)
+        ) {
+            Volume->AllowSymlinks = TRUE;
+        }
+    }
+    MY_FREE_POOL(VolGuid);
 } // ScanVolume()
 
 static

@@ -2986,7 +2986,7 @@ BOOLEAN ScanLoaderDir (
             CleanUpPathNameSlashes (FullName);
 
             //BREAD_CRUMB(L"%a:  4a 1a 4", __func__);
-            if (!GlobalConfig.FollowSymlinks) {
+            if (!Volume->AllowSymlinks) {
                 //BREAD_CRUMB(L"%a:  4a 1a 4a 1", __func__);
                 if (IsSymbolicLink (Volume, FullName, DirEntry)) {
                     BREAD_CRUMB(L"%a:  4a 1a 5a 1a 1 - Skip Symlink", __func__);

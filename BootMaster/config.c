@@ -3753,9 +3753,29 @@ VOID ReadConfig (
             }
             #endif
 
-            GlobalConfig.FollowSymlinks = HandleBoolean (
-                TokenList, TokenCount
-            );
+            MY_FREE_POOL(GlobalConfig.FollowSymlinks);
+            if (TokenCount == 1) {
+                // Token set alone
+                GlobalConfig.FollowSymlinks = StrDuplicate (L"ALL");
+            }
+            else {
+                // Token set with parameters
+                if (!MyStriCmp (TokenList[1], L"false") &&
+                    !MyStriCmp (TokenList[1], L"off")   &&
+                    !MyStriCmp (TokenList[1], L"0")
+                ) {
+                    GlobalConfig.FollowSymlinks = StrDuplicate (
+                        (TokenCount == 2) ? L"ALL" : TokenList[2]
+                    );
+                }
+                else {
+                    GlobalConfig.FollowSymlinks = (TokenCount == 2)
+                        ? StrDuplicate (SYMLINK_VOLUMES_TAG)
+                        : PoolPrint (
+                            L"%s,%s", SYMLINK_VOLUMES_TAG, TokenList[2]
+                        );
+                }
+            }
         }
         else if (
             MyStriCmp (TokenList[0], L"csr_normalise") ||

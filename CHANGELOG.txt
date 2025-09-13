@@ -8,6 +8,15 @@
     - Ref: https://github.com/torvalds/linux/blob/master/include/linux/pe.h
 - Fixes `Auto Defined BadRAM` Handling
   * This element of the `TagBadRAM` feature was previously a `NOOP`
+- Improves `FollowSymlinks` Handling
+  * Can now be targeted at specific volumes
+    - Removes impacts on other installed instances
+  * The `follow_symlinks` token now accepts optional additional parameters
+    - `follow_symlinks`: Symlinks always followed
+    - `follow_symlinks ON`: Symlinks always followed
+    - `follow_symlinks OFF`: Symlinks never followed
+    - `follow_symlinks OFF "Vol_1,Vol_2"`: Symlinks followed unless on list
+    - `follow_symlinks ON "Vol_9,Vol_10"`: Symlinks followed only if listed
 - Improves `UEFI Secure Boot` Handling
   * `SBAT` sections now added to binaries at compile time
   * Signed binaries now available
